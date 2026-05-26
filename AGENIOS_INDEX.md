@@ -17,8 +17,8 @@
 
 | Status | Count |
 |:-------|:------|
-| ✅ BUILT | 12 |
-| 🔧 PARTIAL | 2 |
+| ✅ BUILT | 13 |
+| 🔧 PARTIAL | 1 |
 | ❌ MISSING | 2 |
 | **TOTAL** | **16** |
 
@@ -52,41 +52,39 @@
 
 | ID | Task | Status | Notes |
 |:---|:-----|:-------|:------|
-| P1 | Approval dialog detection | 🔧 PARTIAL | role=dialog absent in AG DOM; need live button delta probe |
+| P1 | Approval dialog detection | ✅ BUILT | data-tooltip-id co-presence (Skip+Submit); commit 593c12c |
 | P2 | Code syntax highlighting in PWA | 🔧 PARTIAL | Prism not re-applying after class strip |
 
 ### ❌ MISSING — Not Started
 
 | ID | Task | Status | Notes |
 |:---|:-----|:-------|:------|
-| M4 | Approval option selection relay | ❌ MISSING | Blocked by P1 |
+| M4 | Approval option selection relay | ❌ MISSING | P1 unblocked — needs live test of submit/skip relay |
 | M5 | cloud-api migration to AGenIOS hosting | ❌ MISSING | Blocked by domain decision; cloud-api/ has reference copies |
 
 ---
 
-## Open Investigation: Approval Dialog Detection (P1)
+## ✅ RESOLVED: Approval Dialog Detection (P1) — 2026-05-26
 
-**Problem:** `scrapePendingActions` always returns `[]` even when dialog is visible.
+**Fix:** `data-tooltip-id` co-presence strategy. Commit: `593c12c`
 
-**What has been tried:**
-- Text regex on innerText — failed (container too large, > 2000 chars)
-- Submit+Skip exact button text match — failed (`/^submit$/i` misses `Submit ↵`)
-- Submit+Skip loose match — still returned `[]`
-- `role="dialog"` / `role="alertdialog"` — NOT present in AG's DOM
+**Root cause confirmed:** AG approval dialog has no `role`, no `aria-label`, no `data-testid`.
+Only the Skip + Submit buttons carry `data-tooltip-id` — unique across all ~164 baseline buttons.
 
-**Confirmed DOM facts (2026-05-26):**
-- Roles present: `navigation, button, article, combobox, region, listbox` — NO `dialog`
-- No Shadow DOM, no iframe — full CDP access
-- macOS system notification appears alongside inline HTML dialog
-- The AG approval dialog uses NO ARIA role
-
-**Next step:**
-Live CDP button delta probe — connect directly to CDP WS, poll
-`document.querySelectorAll('button')` every 200ms, capture new buttons
-when approval dialog appears. Get fresh page ID first:
-```bash
-node -e "require('http').get('http://localhost:9222/json', r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>console.log(JSON.parse(d).map(p=>p.id+' '+p.title?.slice(0,40))))})"
+**Detection logic:**
+```javascript
+const tooltipBtns = document.querySelectorAll('button[data-tooltip-id]');
+const skipBtn   = tooltipBtns.find(b => /^skip$/i.test(b.innerText.trim()));
+const submitBtn = tooltipBtns.find(b => /^submit/i.test(b.innerText.trim()));
+// Both present simultaneously → dialog is visible
 ```
+
+**Why previous attempts failed:**
+- `role="dialog"` — not present
+- `/^submit$/i` — text is `"Submit\n↵"` (child span breaks exact match)
+- `/submit/i` loose — still `[]` because `data-tooltip-id` buttons weren't in the query scope
+
+**Next:** Live test of M4 — relay option selection + Submit click through PWA.
 
 ---
 
@@ -127,4 +125,4 @@ Task: M5 above.
 
 ---
 
-*Last updated: 2026-05-26T22:00+03:00 by Sovereign Console a7a666a2*
+*Last updated: 2026-05-26T22:28+03:00 by AGenIOS Studio 23aba18b — P1 resolved (commit 593c12c)*
