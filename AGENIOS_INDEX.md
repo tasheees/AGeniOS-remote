@@ -18,8 +18,8 @@
 | Status | Count |
 |:-------|:------|
 | ✅ BUILT | 13 |
-| 🔧 PARTIAL | 1 |
-| ❌ MISSING | 2 |
+| 🔧 PARTIAL | 2 |
+| ❌ MISSING | 1 |
 | **TOTAL** | **16** |
 
 ---
@@ -59,7 +59,7 @@
 
 | ID | Task | Status | Notes |
 |:---|:-----|:-------|:------|
-| M4 | Approval option selection relay | ❌ MISSING | P1 unblocked — needs live test of submit/skip relay |
+| M4 | Approval option selection relay | 🔧 PARTIAL | permSubmit→submitSelector ✅; container walk fixed to extract all 4 options; pending live confirm |
 | M5 | cloud-api migration to AGenIOS hosting | ❌ MISSING | Blocked by domain decision; cloud-api/ has reference copies |
 
 ---
@@ -125,4 +125,4 @@ Task: M5 above.
 
 ---
 
-*Last updated: 2026-05-26T22:28+03:00 by AGenIOS Studio 23aba18b — P1 resolved (commit 593c12c)*
+*Last updated: 2026-05-26T22:38+03:00 by AGenIOS Studio 23aba18b — options container walk fixed*

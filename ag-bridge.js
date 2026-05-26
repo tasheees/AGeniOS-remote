@@ -421,10 +421,12 @@ async function scrapePendingActions() {
           // Both must be present simultaneously — this is the approval dialog signature
           if (!skipBtn || !submitBtn) return [];
 
-          // Walk up from Skip to find the nearest ancestor with meaningful text content
+          // Walk up from Skip to find the dialog root — must contain title + options + buttons
+          // Threshold: >150 chars + newline + not starting with "Skip" (avoids stopping at button row)
           let container = skipBtn.parentElement;
-          for (let i = 0; i < 12 && container; i++) {
-            if (container.innerText && container.innerText.trim().length > 20) break;
+          for (let i = 0; i < 20 && container && container !== document.body; i++) {
+            const txt = (container.innerText || '').trim();
+            if (txt.length > 150 && txt.includes('\\n') && !/^skip/i.test(txt)) break;
             container = container.parentElement;
           }
 
