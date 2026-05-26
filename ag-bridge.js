@@ -399,61 +399,66 @@ async function scrapeTheme() {
   } catch { return {}; }
 }
 
-
 async function scrapePendingActions() {
   try {
     const result = await cdpSend('Runtime.evaluate', {
       expression: `
         (function() {
-          // Deep Research confirmed:
-          // - No Shadow DOM, no iframe — full access via document.querySelectorAll
-          // - Container has role="dialog" or role="alertdialog"
-          // - Buttons are standard <button> elements, optionally with aria-label
-          // - Numbered options are text content of the buttons themselves
+          // P1 FIX — 2026-05-26
+          // Live CDP button delta probe confirmed:
+          //   - AG approval dialog has NO role="dialog", no aria-label, no data-testid
+          //   - Detection key: co-presence of a Skip button AND a Submit button,
+          //     both carrying data-tooltip-id attribute (unique to this dialog)
+          //   - Submit innerText is "Submit\\n↵" (child <span> for the ↵ glyph)
+          //   - No other button pair in the ~164 baseline buttons has this signature
 
-          // Step 1: Find the dialog container via role attribute (most stable selector)
-          const dialog = document.querySelector('[role="dialog"], [role="alertdialog"]');
-          if (!dialog) return [];
+          const tooltipBtns = Array.from(document.querySelectorAll('button[data-tooltip-id]'));
+          if (tooltipBtns.length === 0) return [];
 
-          // Step 2: Verify it's visible (not a hidden template dialog)
-          if (getComputedStyle(dialog).display === 'none') return [];
-          if (getComputedStyle(dialog).visibility === 'hidden') return [];
+          const skipBtn   = tooltipBtns.find(b => /^skip$/i.test((b.innerText || b.textContent || '').trim()));
+          const submitBtn = tooltipBtns.find(b => /^submit/i.test((b.innerText || b.textContent || '').trim()));
 
-          // Step 3: Extract title — first text line of the dialog
-          const fullText = (dialog.innerText||'').trim();
-          if (!fullText) return [];
-          const dialogTitle = fullText.split('\\n')[0].trim();
+          // Both must be present simultaneously — this is the approval dialog signature
+          if (!skipBtn || !submitBtn) return [];
 
-          // Step 4: Extract command code block if present
-          const codeEl = dialog.querySelector('pre, code');
-          const command = (codeEl?.innerText||'').trim();
+          // Walk up from Skip to find the nearest ancestor with meaningful text content
+          let container = skipBtn.parentElement;
+          for (let i = 0; i < 12 && container; i++) {
+            if (container.innerText && container.innerText.trim().length > 20) break;
+            container = container.parentElement;
+          }
 
-          // Step 5: Get ALL buttons in dialog
-          const allDialogBtns = [...dialog.querySelectorAll('button')];
+          const fullText = (container?.innerText || '').trim();
+          const lines    = fullText.split('\\n').map(l => l.trim()).filter(Boolean);
+          const dialogTitle = lines[0] || 'Approval required';
 
-          // Step 6: Extract numbered option buttons (text starts with digit)
-          //         Per Deep Research: numbered labels are inside button textContent
+          // Command: first <code> or <pre> near the dialog
+          const codeEl  = container?.querySelector('pre, code');
+          const command = (codeEl?.innerText || '').trim();
+
+          // Numbered options: lines starting with a digit
           const seenTexts = new Set();
-          const options = allDialogBtns
-            .map(b => (b.innerText||b.textContent||'').trim())
+          const options = lines
             .filter(t => /^[1-9]/.test(t) && t.length > 3 && t.length < 300)
-            .filter(t => { if(seenTexts.has(t)) return false; seenTexts.add(t); return true; })
+            .filter(t => { if (seenTexts.has(t)) return false; seenTexts.add(t); return true; })
             .map((t, i) => ({ index: i, text: t, isDefault: i === 0 }));
 
-          // Step 7: Detect skip button
-          const skipBtn = allDialogBtns.find(b => /skip/i.test((b.innerText||b.textContent||'').trim()));
+          const skipId   = skipBtn.getAttribute('data-tooltip-id');
+          const submitId = submitBtn.getAttribute('data-tooltip-id');
 
           return [{
-            type: 'dialog',
+            type:            'dialog',
             occurrenceIndex: 0,
-            title: dialogTitle,
+            title:           dialogTitle,
             command,
             options,
-            hasSubmit: true,
-            hasSkip: !!skipBtn,
-            selector: 'button',
-            matchText: options[0]?.text || 'Yes, allow this time',
-            text: dialogTitle,
+            hasSubmit:       true,
+            hasSkip:         true,
+            submitSelector:  'button[data-tooltip-id="' + submitId + '"]',
+            skipSelector:    'button[data-tooltip-id="' + skipId   + '"]',
+            selector:        'button',
+            matchText:       options[0]?.text || 'Yes, allow this time',
+            text:            dialogTitle,
           }];
         })()
       `,
@@ -470,6 +475,7 @@ async function scrapePendingActions() {
     return [];
   }
 }
+
 
 
 
