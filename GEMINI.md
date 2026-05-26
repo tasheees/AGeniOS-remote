@@ -42,6 +42,16 @@ scrapes the conversation DOM, and relays clicks, messages, and approvals.
 | npm publish | `npm publish` |
 | Any production API write | External service mutations |
 
+**Remote Operation Protocol (mandatory):**
+Before ANY `git push`, the Studio MUST:
+1. Stop — do NOT run `git push`
+2. Send a message to Sovereign Console (`a7a666a2`) via `send_message` requesting authorization
+3. Wait for Console to confirm Marwan's approval
+4. Only then run `git push`
+
+Bypassing this by just waiting silently is a governance violation.
+The Console cannot approve what it doesn't know about.
+
 ---
 
 ## 3. Verification Before Commit
@@ -104,8 +114,10 @@ Verify task appears as `[ ]` in `AGENIOS_INDEX.md`. If not — stop.
 **Rule 2 — Start from a clean tree.**
 Run `git status` before touching any file.
 
-**Rule 3 — Update INDEX before committing.**
-Update task row + Last Sync Signature in `AGENIOS_INDEX.md`.
+**Rule 3 — Update INDEX in the same commit as the code.**
+Stage `AGENIOS_INDEX.md` together with all changed source files.
+`git add ag-bridge.js AGENIOS_INDEX.md && git commit` — one atomic commit.
+Committing code without a simultaneous INDEX update is a governance violation.
 
 **Rule 4 — No new .md files without Marwan approval.**
 All notes go into `AGENIOS_INDEX.md` rows.
