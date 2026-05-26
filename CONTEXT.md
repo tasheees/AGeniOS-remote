@@ -12,9 +12,9 @@
 | Bridge process | PM2 `ag-bridge`, PID varies, port **9100** |
 | AG CDP port | **9222** |
 | CDP page ID | `62FFF415E659B47793214664A5CA9DFC` (changes on AG restart — rediscover via `GET localhost:9222/json`) |
-| ngrok tunnel | PM2 `ngrok-tunnel`, port 4040 admin |
-| Telegram daemon | PM2 `telegram-daemon` (stays in GeniOS, NOT in AGenIOS) |
-| ngrok URL | Dynamic — sent to Telegram on bridge start. Last known: `https://703f-178-135-16-4.ngrok-free.app` |
+| cloudflared tunnel | Spawned by ag-bridge.js; no separate PM2 process; URL sent to Telegram on start |
+| Telegram daemon | PM2 `telegram-daemon` (id 2) — running from `~/projects/AGenIOS/` ✅ (extracted 2026-05-26) |
+| Tunnel URL | Dynamic (cloudflared) — sent to Telegram on bridge start. No persistent URL. |
 | Bridge WS endpoint | `ws://localhost:9100/ws` (password-protected via cookie) |
 | PWA URL | `http://localhost:9100/` |
 
@@ -321,46 +321,35 @@ Prism.js needs to be loaded in index.html:
 
 ---
 
-## 7. GeniOS Cleanup (M2 — NOT YET DONE)
+## 7. GeniOS Cleanup (M2 — DONE 2026-05-26)
 
-After PM2 is confirmed running from AGenIOS root, clean GeniOS:
+Completed by Sovereign Console a7a666a2 during extraction.
 
-```bash
-cd /Users/marwantzenios/projects/genios
+**Removed from GeniOS:**
+- `scripts/ag-bridge.js` — deleted
+- `scripts/remote-ui/` — deleted
+- `scripts/telegram-daemon.js` — deleted
+- `logs/ag-bridge-*.log` — deleted
+- `logs/telegram-daemon-*.log` — deleted
+- `ecosystem.config.js` — emptied (`apps: []`)
 
-# Remove bridge files
-rm scripts/ag-bridge.js
-rm -rf scripts/remote-ui/
-
-# Update ecosystem.config.js — remove ag-bridge entry, keep telegram-daemon only
-# Update GENIOS_INDEX.md §13.3 — mark as extracted
-# Commit
-git add -A
-git commit -m "chore: extract ag-bridge + remote-ui to AGenIOS standalone project"
-```
+**GENIOS_INDEX.md §13 updated:**
+- §13.1: marked "HOSTED HERE — logically AGenIOS, migrate when own domain"
+- §13.2: marked "EXTRACTED to AGeniOS-remote 2026-05-26"
+- §13.3: marked "EXTRACTED to AGeniOS-remote 2026-05-26"
 
 ---
 
-## 8. PM2 Migration (M1 — NOT YET DONE)
+## 8. PM2 Migration (M1 — DONE 2026-05-26)
 
-Currently `ag-bridge` runs from GeniOS. Migration steps:
+Both processes now running from `~/projects/AGenIOS/`.
 
-```bash
-# 1. Stop current process
-pm2 stop ag-bridge
-pm2 delete ag-bridge
+| PM2 ID | Name | Status |
+|:-------|:-----|:-------|
+| 0 | `ag-bridge` | ✅ online |
+| 2 | `telegram-daemon` | ✅ online |
 
-# 2. Start from AGenIOS
-cd /Users/marwantzenios/projects/AGenIOS
-pm2 start ecosystem.config.js
-
-# 3. Persist
-pm2 save
-
-# 4. Verify
-pm2 status
-curl http://localhost:9100/status
-```
+Completed by Sovereign Console a7a666a2 during extraction.
 
 ---
 
