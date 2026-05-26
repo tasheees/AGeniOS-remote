@@ -2468,21 +2468,52 @@ function showPermModal(action) {
 }
 
 function permSkip() {
-  document.getElementById('perm-modal').classList.remove('open');
+  const modal = document.getElementById('perm-modal');
+  const action = modal._action;
+  modal.classList.remove('open');
+  if (action?.skipSelector && ws?.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'evaluate',
+      expression: `(function(){ var b = document.querySelector(${JSON.stringify(action.skipSelector)}); if(b){b.click();return true;} return false; })()`
+    }));
+    toast('⏭ Skipped');
+  }
 }
 
 function permSubmit() {
   const modal = document.getElementById('perm-modal');
   const action = modal._action;
   if (!action) return;
-  if (_selectedPermOpt === 0) {
-    // Yes, allow — click the approve button in AG
-    clickAction(action.selector, action.occurrenceIndex);
-  } else {
-    dismissAction(action.occurrenceIndex);
-  }
   modal.classList.remove('open');
-  toast(_selectedPermOpt === 0 ? '✅ Approved' : '❌ Dismissed');
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
+
+  if (_selectedPermOpt === 0) {
+    // Option 1: Yes, allow — click the numbered option then Submit
+    // First select option 1 in AG (click numbered choice if present)
+    const optText = (action.options?.[0]?.text || '').slice(0, 60);
+    if (optText) {
+      ws.send(JSON.stringify({
+        type: 'evaluate',
+        expression: `(function(){
+          var opts = Array.from(document.querySelectorAll('[role="radio"],[role="option"],input[type="radio"]'));
+          if (opts.length > 0) { opts[0].click(); }
+          return true;
+        })()`
+      }));
+    }
+    // Then click the Submit button via its exact data-tooltip-id
+    setTimeout(() => {
+      ws.send(JSON.stringify({
+        type: 'evaluate',
+        expression: `(function(){ var b = document.querySelector(${JSON.stringify(action.submitSelector || 'button[data-tooltip-id]')}); if(b){b.click();return true;} return false; })()`
+      }));
+    }, 150);
+    toast('✅ Approved — Submit sent');
+  } else {
+    // Any other option: dismiss locally (No / Always deny)
+    dismissAction(action.occurrenceIndex);
+    toast('❌ Dismissed');
+  }
 }
 
 // Keyboard shortcut: Enter = submit when modal open
