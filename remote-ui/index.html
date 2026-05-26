@@ -2405,7 +2405,7 @@ function renderActions() {
       <div class="action-card-title">⚡ Pending Action #${action.occurrenceIndex + 1}</div>
       <div class="action-card-text">${escHtml(action.text)}</div>
       <div class="action-btns">
-        <button class="btn-approve" onclick="clickAction('${escAttr(action.selector)}', ${action.occurrenceIndex})">
+        <button class="btn-approve" onclick="approveActionDirect('${escAttr(action.submitSelector || '')}')">
           ✅ Allow
         </button>
         <button class="btn-reject" onclick="dismissAction(${action.occurrenceIndex})">
@@ -2422,6 +2422,17 @@ function clickAction(selector, occurrenceIndex) {
   if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
   ws.send(JSON.stringify({ type: 'click', selector, occurrenceIndex }));
   toast('✅ Clicking...');
+}
+
+// Direct approve via submitSelector — bypasses generic selector, fires the exact button
+function approveActionDirect(submitSelector) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
+  if (!submitSelector) { toast('❌ No selector'); return; }
+  ws.send(JSON.stringify({
+    type: 'evaluate',
+    expression: '(function(){ var b = document.querySelector(' + JSON.stringify(submitSelector) + '); if(b){b.click();return true;} return false; })()'
+  }));
+  toast('✅ Approved');
 }
 
 function dismissAction(idx) {

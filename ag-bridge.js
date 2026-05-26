@@ -344,6 +344,20 @@ async function scrapeChat() {
         // Remove non-content elements
         Array.from(clone.querySelectorAll('textarea,input,[contenteditable],script,style,[role="dialog"],[role="alertdialog"],form')).forEach(function(e){e.remove();});
         Array.from(clone.querySelectorAll('[aria-hidden="true"]')).forEach(function(e){e.remove();});
+        // Strip approval dialog — AG has no role="dialog" so detect by data-tooltip-id co-presence
+        // (Skip + Submit buttons both carry data-tooltip-id — unique to the approval dialog)
+        var tipBtns = Array.from(clone.querySelectorAll('button[data-tooltip-id]'));
+        var skipEl   = tipBtns.find(function(b){ return /^skip$/i.test((b.innerText||'').trim()); });
+        var submitEl = tipBtns.find(function(b){ return /^submit/i.test((b.innerText||'').trim()); });
+        if (skipEl && submitEl) {
+          var dlgNode = skipEl.parentElement;
+          for (var ki = 0; ki < 20 && dlgNode && dlgNode !== clone; ki++) {
+            var dtxt = (dlgNode.innerText || '').trim();
+            if (dtxt.length > 150 && dtxt.includes('\n') && !/^skip/i.test(dtxt)) break;
+            dlgNode = dlgNode.parentElement;
+          }
+          if (dlgNode && dlgNode !== clone) dlgNode.remove();
+        }
         // Remove AG input placeholder text nodes
         Array.from(clone.querySelectorAll('*')).forEach(function(e){
           if (e.children.length===0 && /^(Ask anything|Message AG|@ to mention)/.test((e.textContent||'').trim())) e.remove();
