@@ -1,0 +1,34 @@
+◇ injected env (40) from .env.local // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (40) from .env.local // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (40) from .env.local // tip: ⌘ override existing { override: true }
+◇ injected env (40) from .env.local // tip: ⌘ enable debugging { debug: true }
+◇ injected env (40) from .env.local // tip: ⌘ override existing { override: true }
+◇ injected env (40) from .env.local // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (40) from .env.local // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (40) from .env.local // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (40) from .env.local // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (40) from .env.local // tip: ⌘ enable debugging { debug: true }
+◇ injected env (40) from .env.local // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (40) from .env.local // tip: ⌘ override existing { override: true }
+◇ injected env (40) from .env.local // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (40) from .env.local // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (40) from .env.local // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (40) from .env.local // tip: ⌘ override existing { override: true }
+◇ injected env (40) from .env.local // tip: ⌘ enable debugging { debug: true }
+◇ injected env (40) from .env.local // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injected env (40) from .env.local // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+[daemon] ✅ Firestore connected
+[daemon] ═══════════════════════════════════════════════
+[daemon] GeniOS Telegram Daemon §13.2 starting...
+[daemon] Authorized chat ID: 7587868333
+[daemon] Firestore: connected
+[daemon] Arbitrary run: false
+[daemon] ═══════════════════════════════════════════════
+◇ injected env (40) from .env.local // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+[daemon] ✅ Firestore connected
+[daemon] ═══════════════════════════════════════════════
+[daemon] GeniOS Telegram Daemon §13.2 starting...
+[daemon] Authorized chat ID: 7587868333
+[daemon] Firestore: connected
+[daemon] Arbitrary run: false
+[daemon] ═══════════════════════════════════════════════

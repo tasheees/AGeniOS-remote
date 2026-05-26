@@ -1,0 +1,288 @@
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}
+Error: Cannot find module 'firebase-admin'
+Require stack:
+- /Users/marwantzenios/projects/AGenIOS/telegram-daemon.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js:38:17)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Object.<anonymous> (/Users/marwantzenios/.nvm/versions/node/v20.18.0/lib/node_modules/pm2/lib/ProcessContainerFork.js:32:23) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/Users/marwantzenios/projects/AGenIOS/telegram-daemon.js' ]
+}

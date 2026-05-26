@@ -21,6 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "dotenv": "^17.4.2",
+    "firebase-admin": "^13.10.0",
     "ws": "^8.21.0"
   }
 }
