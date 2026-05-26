@@ -1,0 +1,19 @@
+{
+  "name": "agenios",
+  "version": "0.1.0",
+  "description": "Remote control bridge for Antigravity AI — CDP + PWA + Telegram",
+  "main": "ag-bridge.js",
+  "scripts": {
+    "start": "pm2 start ecosystem.config.js",
+    "stop": "pm2 stop ag-bridge",
+    "restart": "pm2 restart ag-bridge",
+    "logs": "pm2 logs ag-bridge",
+    "status": "pm2 status"
+  },
+  "keywords": ["antigravity", "ag", "remote-control", "cdp", "pwa"],
+  "author": "Marwan Tzenios",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.0.0"
+  }
+}

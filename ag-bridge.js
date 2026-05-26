@@ -1,0 +1,1350 @@
+/**
+ * scripts/ag-bridge.js
+ *
+ * §13.3 — GeniOS AG Remote Control Bridge
+ *
+ * Bridges the Antigravity desktop app (via Chrome DevTools Protocol) to a
+ * mobile-friendly PWA served over a cloudflared tunnel.
+ *
+ * Architecture:
+ *   Phone browser ─── HTTPS ──► cloudflared ──► HTTP :9100 (this server)
+ *                                                  │
+ *                               WebSocket :9100/ws ◄──── AG DOM events
+ *                                                  │
+ *                                              CDP ◄──── localhost:9222
+ *                                                  │
+ *                                         Antigravity.app (Electron/Chrome 146)
+ *
+ * CDP SELECTORS (discovered via chrome://inspect on AG 2.0.6 / Electron 41):
+ *   ─────────────────────────────────────────────────────────────────────────
+ *   NOTE: AG uses Electron/React. Selectors below are best-effort placeholders.
+ *   To discover real selectors:
+ *     1. Run: open -a "Antigravity" --args --remote-debugging-port=9222
+ *     2. Open Chrome → chrome://inspect/#devices → inspect the AG window
+ *     3. Use DevTools Elements panel to find actual data-testid / class names
+ *     4. Update SELECTOR_* constants below with real values
+ *   ─────────────────────────────────────────────────────────────────────────
+ *   SELECTOR_MESSAGES  : '[data-testid="chat-message"]'   (message bubbles)
+ *   SELECTOR_INPUT     : 'textarea[data-testid="chat-input"], textarea.chat-input, div[contenteditable="true"]'
+ *   SELECTOR_SEND      : 'button[data-testid="send-button"], button[aria-label="Send"]'
+ *   SELECTOR_ALLOW_BTN : 'button[data-testid="allow-button"], button:contains("Allow")'
+ *
+ * Environment (from .env.local):
+ *   TELEGRAM_BOT_TOKEN  — for startup notification
+ *   TELEGRAM_CHAT_ID    — authorized chat
+ *   REMOTE_PASSWORD     — PWA login password (default: random 8-char)
+ *
+ * Usage:
+ *   pm2 start ecosystem.config.js --only ag-bridge
+ *   # Or: node scripts/ag-bridge.js
+ *
+ * Governance: GEMINI.md §2a — local process, no remote ops.
+ */
+
+'use strict';
+
+require('dotenv').config({ path: '.env.local' });
+
+const http      = require('http');
+const https     = require('https');
+const fs        = require('fs');
+const path      = require('path');
+const { exec, execSync, spawn } = require('child_process');
+const { WebSocketServer, WebSocket } = require('ws');
+
+// ─── Config ───────────────────────────────────────────────────────────────────
+
+const BOT_TOKEN       = process.env.TELEGRAM_BOT_TOKEN || '';
+const ALLOWED_CHAT_ID = String(process.env.TELEGRAM_CHAT_ID || '');
+const REMOTE_PASSWORD = process.env.REMOTE_PASSWORD || randomPassword();
+const BRIDGE_PORT     = parseInt(process.env.BRIDGE_PORT || '9100', 10);
+const CDP_HOST        = 'localhost';
+const CDP_PORT        = 9222;
+const EOD_TIME        = process.env.EOD_TIME || '';  // e.g. "18:00" — auto EOD summary
+
+// CDP selectors — CONFIRMED via live CDP probe of AG 2.0.6 / Electron 41 / Chrome 146
+// Probed: 2026-05-26 — [role="article"] = 14 messages, div[aria-label="Message input"] = contenteditable
+const SEL = {
+  // AG 2.0 uses class-based bubbles: 'msg-bubble user' / 'msg-bubble ai'
+  messages: '.msg-bubble',
+  input:    'div[aria-label="Message input"]',
+  send:     'button[aria-label="Send"]',
+  allow:    null,
+};
+
+function randomPassword() {
+  return Math.random().toString(36).slice(2, 10).toUpperCase();
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+let cdpWs        = null;   // WebSocket to CDP
+let cdpConnected = false;
+let cdpReconnectAttempts = 0;
+const MAX_CDP_RECONNECTS = 20;
+
+let pendingRequests = {};  // id → {resolve, reject}
+let cdpMsgId = 1;
+let sessionId = null;      // CDP session ID for the AG page
+
+const wsClients = new Set(); // Connected PWA browsers
+
+let tunnelUrl = null;
+
+// ─── Logging ─────────────────────────────────────────────────────────────────
+
+const log = (...args) => console.log(`[ag-bridge] ${new Date().toISOString()}`, ...args);
+
+// ─── Telegram notification ────────────────────────────────────────────────────
+
+function telegramNotify(text) {
+  if (!BOT_TOKEN || !ALLOWED_CHAT_ID) return;
+  const body = JSON.stringify({ chat_id: ALLOWED_CHAT_ID, text, parse_mode: 'Markdown' });
+  const opts = {
+    hostname: 'api.telegram.org',
+    path: `/bot${BOT_TOKEN}/sendMessage`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+  };
+  const req = https.request(opts, (res) => { res.resume(); });
+  req.on('error', (err) => log('Telegram notify error:', err.message));
+  req.write(body);
+  req.end();
+}
+
+// ─── Smart channel router ─────────────────────────────────────────────────────
+// PWA open  → result goes to WebSocket only (no Telegram noise)
+// PWA closed → result goes to Telegram (maintenance/fallback channel)
+
+function smartNotify(text, { alwaysTelegram = false } = {}) {
+  const pwaOpen = wsClients.size > 0;
+  if (pwaOpen && !alwaysTelegram) {
+    broadcast('notification', { text });
+  } else {
+    telegramNotify(text);
+  }
+}
+
+// ─── Telegram inline keyboard helper ─────────────────────────────────────────
+function telegramNotifyInline(text, buttons = []) {
+  if (!BOT_TOKEN || !ALLOWED_CHAT_ID) return;
+  const body = {
+    chat_id:    ALLOWED_CHAT_ID,
+    text,
+    parse_mode: 'Markdown',
+  };
+  if (buttons.length > 0) body.reply_markup = { inline_keyboard: [buttons] };
+  const bodyStr = JSON.stringify(body);
+  const req = require('https').request({
+    hostname: 'api.telegram.org',
+    path:     `/bot${BOT_TOKEN}/sendMessage`,
+    method:   'POST',
+    headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) },
+  }, () => {});
+  req.on('error', () => {});
+  req.write(bodyStr);
+  req.end();
+}
+
+// ─── Background Watch: action inline buttons ──────────────────────────────────
+function sendActionToTelegram(action) {
+  if (!BOT_TOKEN || !ALLOWED_CHAT_ID) return;
+  const label = action.label || action.text || 'Approval needed';
+  const idx   = action.occurrenceIndex ?? action.index ?? 0;
+  telegramNotifyInline(
+    `⚠️ *AG needs approval*\n\n\`${label.slice(0, 300)}\``,
+    [
+      { text: '✅ Allow', callback_data: `ag_allow:${idx}` },
+      { text: '❌ Reject', callback_data: `ag_reject:${idx}` },
+    ]
+  );
+}
+
+// ─── Background Watch: idle digest ───────────────────────────────────────────
+let _digestPending = false;
+function scheduleIdleDigest(lastSnippet) {
+  if (_digestPending) return;
+  _digestPending = true;
+  // Short delay to let AG fully settle
+  setTimeout(async () => {
+    _digestPending = false;
+    if (wsClients.size > 0) return; // PWA open - skip Telegram digest
+    try {
+      const { exec } = require('child_process');
+      exec(
+        'cd /Users/marwantzenios/projects/genios && git log --oneline -3 && echo "---" && git diff --stat HEAD 2>/dev/null | tail -3',
+        { timeout: 5000 },
+        (err, stdout) => {
+          const gitInfo = (stdout || '').trim().slice(0, 400);
+          const snippet = (lastSnippet || '').slice(0, 200);
+          const msg =
+            `📋 *AG stopped*\n\n` +
+            (snippet ? `_Last: ${snippet}_\n\n` : '') +
+            (gitInfo  ? `\`\`\`\n${gitInfo}\n\`\`\`` : '_No git changes_');
+          telegramNotifyInline(msg, []);
+        }
+      );
+    } catch {}
+  }, 3000);
+}
+
+// ─── Local command executor ───────────────────────────────────────────────────
+// Whitelist of safe read/local commands executable directly from the bridge.
+// Remote ops (git push, firebase deploy) still require Sovereign Console approval.
+
+const CMD_WHITELIST = {
+  '/status':  () => new Promise((resolve) => {
+    exec('pm2 jlist', (err, stdout) => {
+      if (err) return resolve('❌ pm2 status error');
+      try {
+        const procs = JSON.parse(stdout);
+        const lines = procs.map(p => `${p.name}: ${p.pm2_env.status} ↺${p.pm2_env.restart_time}`);
+        resolve('📊 *PM2 Status*\n' + lines.join('\n'));
+      } catch { resolve(stdout.slice(0, 400)); }
+    });
+  }),
+  '/tsc':     () => new Promise((resolve) => {
+    exec('cd /Users/marwantzenios/projects/genios && npx tsc --noEmit 2>&1', { timeout: 60000 }, (err, stdout, stderr) => {
+      const out = (stdout + stderr).trim().slice(0, 800);
+      resolve(err ? `❌ TSC errors:\n${out}` : '✅ tsc: 0 errors');
+    });
+  }),
+  '/logs':    () => new Promise((resolve) => {
+    exec('pm2 logs --lines 20 --nostream 2>&1', { timeout: 10000 }, (err, stdout) => {
+      resolve('📋 *Recent logs*\n```\n' + stdout.slice(-600) + '\n```');
+    });
+  }),
+  '/pending': async () => {
+    const actions = await scrapePendingActions();
+    if (!actions.length) return '✅ No pending approvals';
+    return '⏳ *Pending approvals:*\n' + actions.map(a => `• ${a.text}`).join('\n');
+  },
+  '/git':     () => new Promise((resolve) => {
+    exec('cd /Users/marwantzenios/projects/genios && git status --short && git log --oneline -3 2>&1', (err, stdout) => {
+      resolve('🔀 *Git status*\n```\n' + stdout.slice(0, 500) + '\n```');
+    });
+  }),
+  '/eod':     async () => {
+    // Inject EOD summary prompt into AG, capture response, send to Telegram
+    const prompt = `Please give me a concise end-of-day summary for today's session:
+- What was completed (bullet points)
+- What is in progress
+- Next steps / open items
+Keep it under 15 bullets. Use plain text, no markdown headers.`;
+    await typeIntoInput(prompt);
+    await new Promise(r => setTimeout(r, 300));
+    await clickSend();
+    log('EOD prompt injected, waiting for AG response...');
+
+    // Poll for AG to finish responding (up to 90s)
+    const startSnapshot = (await scrapeChat()).length;
+    let summary = '';
+    for (let i = 0; i < 45; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      const state = await scrapeAGState();
+      if (state.state === 'idle') {
+        const msgs = await scrapeChat();
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg && lastMsg.text && msgs.length > startSnapshot) {
+          summary = lastMsg.text;
+          break;
+        }
+      }
+    }
+
+    if (!summary) return '⚠️ EOD: AG did not respond in time. Check the PWA.';
+
+    const now = new Date().toLocaleString('fr-FR', { timeZone: 'Asia/Beirut', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+    const msg = `📋 *EOD Summary — ${now}*\n\n${summary.slice(0, 3500)}`;
+    telegramNotify(msg);  // Always send to Telegram regardless of PWA state
+    return '✅ EOD summary sent to Telegram';
+  },
+};
+
+// EOD auto-schedule: fires once per day at EOD_TIME ("HH:MM" local Beirut time)
+let eodFiredToday = '';
+async function checkEODSchedule() {
+  if (!EOD_TIME) return;
+  const now = new Date();
+  const beirut = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Beirut' }));
+  const hhmm = `${String(beirut.getHours()).padStart(2,'0')}:${String(beirut.getMinutes()).padStart(2,'0')}`;
+  const today = beirut.toDateString();
+  if (hhmm === EOD_TIME && eodFiredToday !== today) {
+    eodFiredToday = today;
+    log(`EOD auto-schedule firing at ${hhmm}`);
+    try {
+      const result = await CMD_WHITELIST['/eod']();
+      log('EOD auto-result:', result);
+    } catch (e) {
+      log('EOD auto-error:', e.message);
+    }
+  }
+}
+
+// Remote ops — always require Sovereign Console approval
+const CMD_REMOTE = ['/push', '/deploy', '/gcloud'];
+
+async function executeCommand(cmd) {
+  const key = cmd.trim().split(' ')[0].toLowerCase();
+
+  if (CMD_REMOTE.some(r => key.startsWith(r))) {
+    return `🔒 *Remote op blocked*\n\`${cmd}\` requires Sovereign Console approval.\nSend to Console chat manually.`;
+  }
+
+  const handler = CMD_WHITELIST[key];
+  if (handler) {
+    try { return await handler(); }
+    catch (e) { return `❌ Error: ${e.message}`; }
+  }
+
+  return `❓ Unknown command: \`${cmd}\`\nAvailable: ${Object.keys(CMD_WHITELIST).join(' ')}`;
+}
+
+// ─── CDP client ───────────────────────────────────────────────────────────────
+
+
+function cdpSend(method, params = {}, sid = sessionId) {
+  return new Promise((resolve, reject) => {
+    if (!cdpWs || cdpWs.readyState !== WebSocket.OPEN) {
+      return reject(new Error('CDP not connected'));
+    }
+    const id = cdpMsgId++;
+    pendingRequests[id] = { resolve, reject };
+    const msg = { id, method, params };
+    if (sid) msg.sessionId = sid;
+    cdpWs.send(JSON.stringify(msg));
+    // Timeout after 10s
+    setTimeout(() => {
+      if (pendingRequests[id]) {
+        delete pendingRequests[id];
+        reject(new Error(`CDP timeout: ${method}`));
+      }
+    }, 10_000);
+  });
+}
+
+async function cdpEvaluate(expression, sid = sessionId) {
+  const result = await cdpSend('Runtime.evaluate', {
+    expression,
+    returnByValue: true,
+    awaitPromise: false,
+  }, sid);
+  return result?.result?.result?.value;
+}
+
+// ─── Scrape AG chat ───────────────────────────────────────────────────────────
+
+async function scrapeChat() {
+  try {
+    const result = await cdpSend('Runtime.evaluate', {
+      expression: `(function(){
+        var c = document.querySelector('div.relative.flex.flex-col.gap-y-3.px-4');
+        if (!c) return {dump:'', count:0};
+        var clone = c.cloneNode(true);
+        // Remove non-content elements
+        Array.from(clone.querySelectorAll('textarea,input,[contenteditable],script,style,[role="dialog"],[role="alertdialog"],form')).forEach(function(e){e.remove();});
+        Array.from(clone.querySelectorAll('[aria-hidden="true"]')).forEach(function(e){e.remove();});
+        // Remove AG input placeholder text nodes
+        Array.from(clone.querySelectorAll('*')).forEach(function(e){
+          if (e.children.length===0 && /^(Ask anything|Message AG|@ to mention)/.test((e.textContent||'').trim())) e.remove();
+        });
+        // Strip all Tailwind classes and inline styles — PWA applies its own CSS
+        Array.from(clone.querySelectorAll('[class]')).forEach(function(e){ e.removeAttribute('class'); });
+        Array.from(clone.querySelectorAll('[style]')).forEach(function(e){ e.removeAttribute('style'); });
+         // Replace images with emoji — img.src paths are local/relative, never load in PWA
+         Array.from(clone.querySelectorAll('img')).forEach(function(img){
+           var sp = document.createElement('span');
+           sp.textContent = img.getAttribute('alt') || '\uD83D\uDCC4';
+           img.parentNode.replaceChild(sp, img);
+         });
+         // Strip data-* but PRESERVE data-state (open/closed collapsible state)
+         Array.from(clone.querySelectorAll('*')).forEach(function(n){
+           Array.from(n.attributes).filter(function(a){
+             return a.name.startsWith('data-') && a.name !== 'data-state';
+           }).forEach(function(a){ n.removeAttribute(a.name); });
+         });
+        return {dump: clone.innerHTML, count: c.children.length};
+      })()`,
+      returnByValue: true,
+      awaitPromise: false,
+    }, sessionId);
+    const val = result?.result?.result?.value;
+    const exc = result?.result?.exceptionDetails;
+    if (exc) log('scrapeChat exception:', exc.exception?.description?.slice(0, 120));
+    else if (val) log('scrapeChat OK: dump', val.dump.length, 'chars,', val.count, 'turns');
+    return val?.dump || '';
+  } catch (err) {
+    log('scrapeChat error:', err.message);
+    return '';
+  }
+}
+
+async function scrapeTheme() {
+  try {
+    const result = await cdpSend('Runtime.evaluate', {
+      expression: `(function(){
+        var s = getComputedStyle(document.documentElement);
+        var vars = {};
+        ['--background','--foreground','--muted','--muted-foreground','--primary',
+         '--secondary','--secondary-foreground','--border','--card','--accent',
+         '--accent-foreground','--ring'].forEach(function(v){
+          var val = s.getPropertyValue(v).trim();
+          if(val) vars[v] = val;
+        });
+        return vars;
+      })()`,
+      returnByValue: true, awaitPromise: false,
+    }, sessionId);
+    return result?.result?.result?.value || {};
+  } catch { return {}; }
+}
+
+
+async function scrapePendingActions() {
+  try {
+    const result = await cdpSend('Runtime.evaluate', {
+      expression: `
+        (function() {
+          // Deep Research confirmed:
+          // - No Shadow DOM, no iframe — full access via document.querySelectorAll
+          // - Container has role="dialog" or role="alertdialog"
+          // - Buttons are standard <button> elements, optionally with aria-label
+          // - Numbered options are text content of the buttons themselves
+
+          // Step 1: Find the dialog container via role attribute (most stable selector)
+          const dialog = document.querySelector('[role="dialog"], [role="alertdialog"]');
+          if (!dialog) return [];
+
+          // Step 2: Verify it's visible (not a hidden template dialog)
+          if (getComputedStyle(dialog).display === 'none') return [];
+          if (getComputedStyle(dialog).visibility === 'hidden') return [];
+
+          // Step 3: Extract title — first text line of the dialog
+          const fullText = (dialog.innerText||'').trim();
+          if (!fullText) return [];
+          const dialogTitle = fullText.split('\\n')[0].trim();
+
+          // Step 4: Extract command code block if present
+          const codeEl = dialog.querySelector('pre, code');
+          const command = (codeEl?.innerText||'').trim();
+
+          // Step 5: Get ALL buttons in dialog
+          const allDialogBtns = [...dialog.querySelectorAll('button')];
+
+          // Step 6: Extract numbered option buttons (text starts with digit)
+          //         Per Deep Research: numbered labels are inside button textContent
+          const seenTexts = new Set();
+          const options = allDialogBtns
+            .map(b => (b.innerText||b.textContent||'').trim())
+            .filter(t => /^[1-9]/.test(t) && t.length > 3 && t.length < 300)
+            .filter(t => { if(seenTexts.has(t)) return false; seenTexts.add(t); return true; })
+            .map((t, i) => ({ index: i, text: t, isDefault: i === 0 }));
+
+          // Step 7: Detect skip button
+          const skipBtn = allDialogBtns.find(b => /skip/i.test((b.innerText||b.textContent||'').trim()));
+
+          return [{
+            type: 'dialog',
+            occurrenceIndex: 0,
+            title: dialogTitle,
+            command,
+            options,
+            hasSubmit: true,
+            hasSkip: !!skipBtn,
+            selector: 'button',
+            matchText: options[0]?.text || 'Yes, allow this time',
+            text: dialogTitle,
+          }];
+        })()
+      `,
+      returnByValue: true,
+      awaitPromise: false,
+    }, sessionId);
+    const raw = result?.result?.result;
+    const exc = result?.result?.exceptionDetails;
+    if (exc) log('scrapePendingActions EXCEPTION:', exc.exception?.description?.slice(0,200));
+    else log('scrapePendingActions raw type:', raw?.type, 'value:', JSON.stringify(raw?.value)?.slice(0,200));
+    return raw?.value || [];
+  } catch (err) {
+    log('scrapePendingActions CATCH:', err.message);
+    return [];
+  }
+}
+
+
+
+// ─── Broadcast to PWA clients ─────────────────────────────────────────────────
+
+function broadcast(type, data) {
+  const payload = JSON.stringify({ type, data, ts: Date.now() });
+  for (const client of wsClients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  }
+}
+
+async function scrapeChatList() {
+  try {
+    const result = await cdpEvaluate(`
+      (function() {
+        // Active chat name from page title
+        const rawTitle = document.title || 'AG';
+        const activeName = rawTitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&').trim();
+
+        // Current conversation ID from URL
+        const currentId = (window.location.pathname.match(/\/c\/([a-f0-9-]+)/) || [])[1] || '';
+
+        // Conversation links
+        const convLinks = [...document.querySelectorAll('a[href*="/c/"]')]
+          .map(a => {
+            const href = a.href || '';
+            const id = (href.match(/\/c\/([a-f0-9-]+)/) || [])[1] || '';
+            const text = (a.innerText || a.textContent || '').trim().replace(/\n+/g, ' ').slice(0, 70);
+            const isActive = id === currentId;
+            // Detect spinner: SVG with animation, or class with spin/load
+            const hasSpinner = !!a.querySelector('svg[class*="spin"], [class*="spin"], [class*="load"], [class*="generating"]');
+            // Timestamp
+            const timeEl = a.querySelector('time, [class*="time"], [class*="date"], [class*="ago"]');
+            const time = timeEl ? (timeEl.innerText || '').trim().slice(0, 12) : '';
+            // Project/workspace label (walk up to find group heading)
+            let project = '';
+            let el = a.parentElement;
+            for (let i = 0; i < 8 && el; i++) {
+              const h = el.querySelector?.('h2, h3, [class*="project"], [class*="group"], [class*="workspace"]');
+              if (h && h !== a) { project = (h.innerText || '').trim().slice(0, 30); break; }
+              el = el.parentElement;
+            }
+            return { id: id.slice(0, 36), text, isActive, hasSpinner, time, project };
+          })
+          .filter(c => c.text && c.id)
+          .slice(0, 30);
+
+        return { activeName, currentId: currentId.slice(0, 8), convLinks };
+      })()
+    `);
+    return result || { activeName: 'AG', currentId: '', convLinks: [] };
+  } catch {
+    return { activeName: 'AG', currentId: '', convLinks: [] };
+  }
+}
+
+async function broadcastState() {
+  const [chatDump, actions, chatList, cssVars] = await Promise.all([
+    scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(),
+  ]);
+  if (actions.length > 0) {
+    log('⚠️  actions detected:', JSON.stringify(actions.map(a => ({type:a.type, text:(a.text||'').slice(0,50), opts:a.options?.length}))));
+  }
+  broadcast('state', {
+    chatDump,          // full AG HTML dump
+    cssVars,           // AG CSS custom properties for theming
+    actions,
+    cdpConnected,
+    chatName: chatList.activeName,
+    conversations: chatList.convLinks,
+  });
+}
+
+// ─── AG state detection (typing indicator) ─────────────────────────────────
+
+let lastAgState   = 'idle';
+let lastPwaActivity = 0; // epoch ms of last PWA WebSocket message
+let _lastArticleCount = 0;
+let _lastArticleLen   = 0;
+let _growthTicks      = 0;    // consecutive polls where text is growing
+
+async function scrapeAGState() {
+  try {
+    const result = await cdpEvaluate(`
+      (function() {
+        const metaSpans = [...document.querySelectorAll('span.text-secondary-foreground')];
+        const thinkingSpan = metaSpans.find(s => /^Thinking for\s*\d/i.test((s.innerText||'').trim()));
+        const hasStop = !!thinkingSpan;
+        const thinkingText = thinkingSpan ? (thinkingSpan.innerText||'').trim() : '';
+
+        const toolSpans = [...document.querySelectorAll('span.truncate.inline-block.text-sm.text-left')];
+        const lastTool = toolSpans.length ? (toolSpans[toolSpans.length-1].innerText||'').trim() : '';
+
+        let snippet = thinkingText;
+        if (lastTool && lastTool !== thinkingText) {
+          snippet = thinkingText ? thinkingText + '  ·  ' + lastTool : lastTool;
+        }
+
+        // AI content: p elements NOT inside the input area or sidebar
+        const inputArea = document.querySelector('[contenteditable]');
+        const paras = [...document.querySelectorAll('p')].filter(p => {
+          const t = (p.innerText||'').trim();
+          if (t.length < 10) return false;
+          if (inputArea && inputArea.contains(p)) return false;
+          if (p.closest('.sr-only')) return false;
+          return true;
+        });
+        const lastPara = paras.length ? (paras[paras.length-1].innerText||'').trim() : '';
+
+        const inputEl = document.querySelector('[contenteditable]');
+        const isInputBusy =
+          (inputEl && inputEl.getAttribute('contenteditable') === 'false') ||
+          (inputEl && inputEl.getAttribute('aria-disabled') === 'true') ||
+          !!document.querySelector('[aria-busy="true"]');
+
+        return { hasStop, isInputBusy, snippet, thinkingText, lastTool,
+                 lastParaLen: lastPara.length, currentText: lastPara.slice(0, 800) };
+      })()
+    `);
+    if (!result) return { state: 'idle', label: '' };
+
+    const { hasStop, isInputBusy, snippet, thinkingText, lastTool, lastParaLen, currentText } = result;
+    if (hasStop || isInputBusy) log(`[scrape] thinking="${thinkingText}" tool="${lastTool}" paraLen=${lastParaLen}`);
+
+    if (hasStop) {
+      if (lastParaLen < 30) return { state: 'thinking', label: 'Thinking…', snippet, currentText };
+      return { state: 'writing', label: 'Writing…', snippet: lastTool || snippet, currentText };
+    }
+    if (isInputBusy) {
+      return { state: 'thinking', label: 'Thinking…', snippet: snippet || 'Working on it…', currentText };
+    }
+
+    if (lastParaLen > _lastArticleLen + 5) _growthTicks = 8;
+    else if (_growthTicks > 0) _growthTicks--;
+    _lastArticleLen = lastParaLen;
+
+    if (_growthTicks > 0) return { state: 'writing', label: 'Writing…', snippet: lastTool || '', currentText };
+    return { state: 'idle', label: '', snippet: '', currentText: '' };
+  } catch (err) {
+    log('scrapeAGState error:', err.message);
+    return { state: 'idle', label: '' };
+  }
+}
+
+
+// Fast 500ms interval just for typing indicator
+let _tickCount = 0;
+let _lastSnippetSeen = '';
+setInterval(async () => {
+  if (!cdpConnected) return;  // run even if no PWA, for background watch
+  const hasClients = wsClients.size > 0;
+  if (!hasClients && lastAgState === 'idle') return; // nothing to track
+  _tickCount++;
+  if (_tickCount % 10 === 1) log(`[tick] #${_tickCount} clients=${wsClients.size} lastState=${lastAgState}`);
+  try {
+    const agStateData = await scrapeAGState();
+    if (agStateData.snippet) _lastSnippetSeen = agStateData.snippet;
+    if (agStateData.state !== 'idle' || lastAgState !== 'idle') {
+      log(`[state] ${lastAgState}\u2192${agStateData.state} ticks=${_growthTicks}`);
+    }
+    if (agStateData.state !== lastAgState) {
+      const prev = lastAgState;
+      lastAgState = agStateData.state;
+      if (hasClients) broadcast('ag_state', agStateData);
+      log(`[broadcast] ag_state=${agStateData.state}`);
+      // When AG finishes (writing/thinking → idle): push full message list to PWA
+      if (agStateData.state === 'idle' && (prev === 'writing' || prev === 'thinking')) {
+        broadcastState().catch(() => {}); // push updated chat messages
+        scheduleIdleDigest(_lastSnippetSeen);
+      }
+    } else if (hasClients && agStateData.state !== 'idle') {
+      // Still writing/thinking — stream currentText to ghost bubble every tick
+      broadcast('ag_state', agStateData);
+    }
+  } catch(e) { log('[interval-err]', e.message); }
+}, 500);
+
+// Background Watch: push new actions to Telegram when PWA is closed
+let _lastActionCount = 0;
+setInterval(async () => {
+  if (!cdpConnected || wsClients.size > 0) { return; } // PWA open — it handles actions
+  try {
+    const acts = await scrapePendingActions();
+    if (acts.length > _lastActionCount) {
+      const newActs = acts.slice(_lastActionCount);
+      newActs.forEach(sendActionToTelegram);
+      _lastActionCount = acts.length;
+    } else if (acts.length < _lastActionCount) {
+      _lastActionCount = acts.length; // actions were dismissed
+    }
+  } catch { /* ignore */ }
+}, 3000);
+
+
+// ─── CDP click/input injection ────────────────────────────────────────────────
+
+async function clickElement(selector, occurrenceIndex = 0, matchText = null) {
+  await cdpEvaluate(`
+    (function() {
+      let els = Array.from(document.querySelectorAll(${JSON.stringify(selector)}));
+      // If matchText provided, filter by button text (for allow buttons)
+      if (${JSON.stringify(matchText)}) {
+        els = els.filter(el => (el.innerText || el.textContent || '').trim().includes(${JSON.stringify(matchText)}));
+      }
+      if (els[${occurrenceIndex}]) els[${occurrenceIndex}].click();
+    })()
+  `);
+}
+
+async function typeIntoInput(text) {
+  // Step 1: Focus the contenteditable div via JS
+  await cdpEvaluate(`
+    (function() {
+      const el = document.querySelector('div[aria-label="Message input"]') ||
+                 document.querySelector('div[contenteditable="true"]');
+      if (!el) return false;
+      el.focus();
+      // Clear any existing content
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('delete', false);
+      return true;
+    })()
+  `);
+  await new Promise(r => setTimeout(r, 100));
+  // Step 2: Use CDP Input.insertText — works natively with React contenteditable
+  await cdpSend('Input.insertText', { text }, null);
+  await new Promise(r => setTimeout(r, 100));
+}
+
+async function clickSend() {
+  // Use CDP Input.dispatchKeyEvent with Enter — native keypress, React handles it
+  await cdpSend('Input.dispatchKeyEvent', {
+    type: 'keyDown',
+    key: 'Enter',
+    code: 'Enter',
+    windowsVirtualKeyCode: 13,
+    nativeVirtualKeyCode: 13,
+  }, null);
+  await new Promise(r => setTimeout(r, 50));
+  await cdpSend('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'Enter',
+    code: 'Enter',
+    windowsVirtualKeyCode: 13,
+    nativeVirtualKeyCode: 13,
+  }, null);
+}
+
+// ─── CDP connection ───────────────────────────────────────────────────────────
+
+function getCdpPageList() {
+  return new Promise((resolve, reject) => {
+    const req = http.get(`http://${CDP_HOST}:${CDP_PORT}/json`, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(3000, () => { req.destroy(); reject(new Error('CDP timeout')); });
+  });
+}
+
+async function connectCDP() {
+  try {
+    log('Getting CDP page list...');
+    const pages = await getCdpPageList();
+    log(`CDP: ${pages.length} page(s) found`);
+
+    // Find the main AG window (not devtools, not extensions)
+    const page = pages.find(p =>
+      p.type === 'page' &&
+      !p.url.startsWith('devtools://') &&
+      !p.url.startsWith('chrome-extension://')
+    ) || pages[0];
+
+    if (!page?.webSocketDebuggerUrl) {
+      throw new Error('No suitable CDP page found');
+    }
+
+    log('Connecting to CDP page:', page.title, page.url);
+
+    cdpWs = new WebSocket(page.webSocketDebuggerUrl);
+
+    cdpWs.on('open', async () => {
+      log('✅ CDP connected');
+      cdpConnected = true;
+      cdpReconnectAttempts = 0;
+      sessionId = null; // Direct connection, no session
+
+      // Enable required CDP domains
+      await cdpSend('Page.enable');
+      await cdpSend('DOM.enable');
+      await cdpSend('Runtime.enable');
+
+      log('CDP domains enabled. Scraping initial state...');
+      await broadcastState();
+    });
+
+    cdpWs.on('message', async (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch { return; }
+
+      // Resolve pending requests
+      if (msg.id && pendingRequests[msg.id]) {
+        const { resolve, reject } = pendingRequests[msg.id];
+        delete pendingRequests[msg.id];
+        if (msg.error) reject(new Error(msg.error.message));
+        else resolve(msg);
+        return;
+      }
+
+      // Handle DOM events → re-scrape
+      if (msg.method === 'DOM.documentUpdated' || msg.method === 'Page.loadEventFired') {
+        log('DOM updated — re-scraping...');
+        await broadcastState();
+      }
+    });
+
+    cdpWs.on('close', () => {
+      log('CDP connection closed');
+      cdpConnected = false;
+      sessionId = null;
+      broadcast('status', { cdpConnected: false });
+      scheduleReconnect();
+    });
+
+    cdpWs.on('error', (err) => {
+      log('CDP error:', err.message);
+      cdpConnected = false;
+    });
+
+  } catch (err) {
+    log('CDP connect failed:', err.message);
+    scheduleReconnect();
+  }
+}
+
+function scheduleReconnect() {
+  if (cdpReconnectAttempts >= MAX_CDP_RECONNECTS) {
+    log('Max CDP reconnects reached. Giving up.');
+    return;
+  }
+  cdpReconnectAttempts++;
+  const delay = 5000;
+  log(`CDP reconnect in ${delay}ms (attempt ${cdpReconnectAttempts}/${MAX_CDP_RECONNECTS})`);
+  setTimeout(connectCDP, delay);
+}
+
+// ─── Launch AG if needed ──────────────────────────────────────────────────────
+
+async function ensureAGRunning() {
+  // Check if CDP port is already open
+  try {
+    execSync(`lsof -ti :${CDP_PORT}`, { stdio: 'pipe' });
+    log(`Port ${CDP_PORT} already open — connecting to existing AG instance`);
+    return; // Already running with debug port
+  } catch {
+    // Port not open — need to launch AG
+  }
+
+  log('Launching Antigravity with remote debugging port...');
+  exec(`open -a "Antigravity" --args --remote-debugging-port=${CDP_PORT}`, (err) => {
+    if (err) log('Launch warning:', err.message);
+  });
+
+  log('Waiting 6s for AG to start...');
+  await new Promise(r => setTimeout(r, 6000));
+}
+
+// ─── HTTP server (PWA + auth) ─────────────────────────────────────────────────
+
+const AUTH_TOKENS = new Set(); // Active session tokens
+
+function generateToken() {
+  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+}
+
+function parseBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      try { resolve(JSON.parse(body)); }
+      catch { resolve({}); }
+    });
+  });
+}
+
+function parseCookies(req) {
+  const cookies = {};
+  const header = req.headers.cookie || '';
+  header.split(';').forEach(c => {
+    const [k, ...v] = c.trim().split('=');
+    if (k) cookies[k.trim()] = decodeURIComponent(v.join('='));
+  });
+  return cookies;
+}
+
+function isAuthenticated(req) {
+  const cookies = parseCookies(req);
+  return AUTH_TOKENS.has(cookies.ag_token);
+}
+
+const httpServer = http.createServer(async (req, res) => {
+  const url = new URL(req.url, `http://localhost`);
+
+  // GET /tunnel-url — daemon calls this for /wpa command (localhost only, no auth needed)
+  if (req.method === 'GET' && url.pathname === '/tunnel-url') {
+    // If cloudflared has a URL, return it immediately
+    if (tunnelUrl) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ tunnelUrl, password: REMOTE_PASSWORD }));
+      return;
+    }
+    // Fallback: check ngrok API (port 4040) in case ngrok is running
+    try {
+      const ngrokData = await new Promise((resolve, reject) => {
+        const r = require('http').get('http://localhost:4040/api/tunnels', (resp) => {
+          let d = ''; resp.on('data', c => d += c);
+          resp.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
+        });
+        r.on('error', reject);
+        r.setTimeout(500, () => { r.destroy(); reject(new Error('timeout')); });
+      });
+      const ngrokUrl = ngrokData?.tunnels?.[0]?.public_url || null;
+      if (ngrokUrl) tunnelUrl = ngrokUrl; // cache it
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ tunnelUrl: ngrokUrl, password: REMOTE_PASSWORD }));
+    } catch {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ tunnelUrl: null, password: REMOTE_PASSWORD }));
+    }
+    return;
+  }
+
+  // POST /action-response — Telegram inline button callback routed via daemon
+  if (req.method === 'POST' && url.pathname === '/action-response') {
+    const body = await parseBody(req);
+    const { idx, decision } = body; // decision: 'allow' | 'reject'
+    if (decision === 'allow') {
+      try { await clickAction(Number(idx)); } catch(e) { log('[action-response] allow error:', e.message); }
+      res.writeHead(200); res.end(JSON.stringify({ ok: true }));
+    } else {
+      // Reject: just dismiss the action
+      actions = actions.filter(a => a.occurrenceIndex !== Number(idx));
+      broadcast('actions', { actions });
+      res.writeHead(200); res.end(JSON.stringify({ ok: true }));
+    }
+    return;
+  }
+
+  // POST /auth — password check
+
+  if (req.method === 'POST' && url.pathname === '/auth') {
+    const body = await parseBody(req);
+    if (body.password === REMOTE_PASSWORD) {
+      const token = generateToken();
+      AUTH_TOKENS.add(token);
+      res.writeHead(200, {
+        'Set-Cookie': `ag_token=${token}; Path=/; HttpOnly; SameSite=Strict`,
+        'Content-Type': 'application/json',
+      });
+      res.end(JSON.stringify({ ok: true, token }));
+    } else {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Invalid password' }));
+    }
+    return;
+  }
+
+  // GET /debug — raw CDP snapshot for state detection troubleshooting
+  if (req.method === 'GET' && url.pathname === '/debug') {
+    if (!isAuthenticated(req)) { res.writeHead(401); res.end(); return; }
+    try {
+      const snap = await cdpEvaluate(`(function(){
+        const articles = document.querySelectorAll('[role="article"]');
+        const inputEl  = document.querySelector('[contenteditable]');
+        const stopBtns = [...document.querySelectorAll('button')].filter(b =>
+          (b.getAttribute('aria-label')||'').toLowerCase().includes('stop') ||
+          (b.innerText||'').trim().toLowerCase() === 'stop'
+        );
+        const ariaBusy = document.querySelector('[aria-busy="true"]');
+        const dataLoad = document.querySelector('[data-state="loading"]');
+        return {
+          articleCount: articles.length,
+          lastArticleLen: (articles[articles.length-1]?.innerText||'').trim().length,
+          contenteditable: inputEl?.getAttribute('contenteditable'),
+          ariaDisabled:    inputEl?.getAttribute('aria-disabled'),
+          ariaBusy:        !!ariaBusy,
+          dataLoading:     !!dataLoad,
+          stopBtnCount:    stopBtns.length,
+          stopBtnLabels:   stopBtns.map(b => b.getAttribute('aria-label')||b.innerText).slice(0,3),
+          pageTitle:       document.title.slice(0,60),
+        };
+      })()`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(snap, null, 2));
+    } catch(e) {
+      res.writeHead(500); res.end(e.message);
+    }
+    return;
+  }
+
+  // POST /cmd — smart routing
+
+  // PWA open  → execute locally, return result to PWA WebSocket only
+  // PWA closed → execute locally, return result via Telegram
+  // Remote ops → always blocked, require Sovereign Console approval
+  if (req.method === 'POST' && url.pathname === '/cmd') {
+    if (!isAuthenticated(req)) { res.writeHead(401); res.end(); return; }
+    const body = await parseBody(req);
+    const cmd  = String(body.command || '').trim();
+    if (!cmd) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Missing command' }));
+      return;
+    }
+    // Respond immediately — execution is async
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, queued: true }));
+    // Execute and route result
+    executeCommand(cmd).then(result => {
+      smartNotify(result);
+    }).catch(err => {
+      smartNotify(`❌ Command error: ${err.message}`);
+    });
+    return;
+  }
+
+  // GET / — serve PWA (auth required)
+  if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
+    const htmlPath = path.join(__dirname, 'remote-ui', 'index.html');
+    if (!isAuthenticated(req)) {
+      // Serve login page inline
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(loginHtml());
+      return;
+    }
+    try {
+      const html = fs.readFileSync(htmlPath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } catch {
+      res.writeHead(404);
+      res.end('remote-ui/index.html not found');
+    }
+    return;
+  }
+
+  // GET /status — health check
+  if (url.pathname === '/status') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, cdpConnected, tunnelUrl, clients: wsClients.size }));
+    return;
+  }
+
+  res.writeHead(404);
+  res.end('Not found');
+});
+
+function loginHtml() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GeniOS Remote — Login</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f0f13; color: #e2e8f0; font-family: -apple-system, sans-serif;
+         display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .card { background: #1a1a2e; border: 1px solid #2d2d4e; border-radius: 16px;
+          padding: 32px; width: 320px; text-align: center; }
+  h1 { font-size: 20px; margin-bottom: 8px; color: #a78bfa; }
+  p  { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+  input { width: 100%; padding: 12px 16px; background: #0f0f1a; border: 1px solid #2d2d4e;
+          border-radius: 8px; color: #e2e8f0; font-size: 16px; letter-spacing: 2px; margin-bottom: 16px; }
+  input:focus { outline: none; border-color: #7c3aed; }
+  button { width: 100%; padding: 12px; background: #7c3aed; border: none; border-radius: 8px;
+           color: white; font-size: 16px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #6d28d9; }
+  .err { color: #f87171; font-size: 13px; margin-top: 12px; display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔒 GeniOS Remote</h1>
+  <p>Enter your remote access password</p>
+  <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
+  <button onclick="login()">Unlock</button>
+  <div class="err" id="err">Incorrect password</div>
+</div>
+<script>
+  document.getElementById('pw').addEventListener('keydown', e => e.key === 'Enter' && login());
+  async function login() {
+    const pw = document.getElementById('pw').value;
+    const r = await fetch('/auth', { method: 'POST', headers: {'Content-Type':'application/json'},
+                                      body: JSON.stringify({ password: pw }) });
+    if (r.ok) location.reload();
+    else { document.getElementById('err').style.display = 'block'; }
+  }
+</script>
+</body>
+</html>`;
+}
+
+// ─── WebSocket server ─────────────────────────────────────────────────────────
+
+const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+wss.on('connection', (ws, req) => {
+  // Auth check via cookie
+  const cookies = parseCookies(req);
+  if (!AUTH_TOKENS.has(cookies.ag_token)) {
+    // Check token in query param as fallback
+    const url = new URL(req.url, 'http://localhost');
+    const token = url.searchParams.get('token');
+    if (!AUTH_TOKENS.has(token)) {
+      ws.close(4001, 'Unauthorized');
+      return;
+    }
+  }
+
+  log('PWA client connected. Total:', wsClients.size + 1);
+  wsClients.add(ws);
+  lastPwaActivity = Date.now();
+  ws.send(JSON.stringify({ type: 'status', data: { cdpConnected, tunnelUrl } }));
+
+  // Send initial state + any pending actions immediately on connect
+  broadcastState().catch(() => {});
+  scrapePendingActions().then(acts => {
+    if (acts.length > 0) {
+      ws.send(JSON.stringify({ type: 'actions', data: { actions: acts } }));
+      log(`[connect] pushed ${acts.length} pending action(s) to new PWA client`);
+    }
+  }).catch(() => {});
+
+  ws.on('message', async (raw) => {
+    lastPwaActivity = Date.now(); // track activity
+    let msg;
+    try { msg = JSON.parse(raw); } catch { return; }
+
+    switch (msg.type) {
+      case 'click':
+        // Click a specific element by selector + occurrence index
+        await clickElement(msg.selector || 'button', msg.occurrenceIndex ?? 0, msg.matchText);
+        await new Promise(r => setTimeout(r, 500));
+        await broadcastState();
+        break;
+
+      case 'send_message':
+        // Type text into AG input and send
+        if (msg.text) {
+          log('send_message received:', msg.text.slice(0, 80));
+          try {
+            await typeIntoInput(msg.text);
+            await new Promise(r => setTimeout(r, 300));
+            await clickSend();
+            log('send_message: injected + Enter sent');
+            await new Promise(r => setTimeout(r, 1500));
+            await broadcastState();
+          } catch (err) {
+            log('send_message error:', err.message);
+          }
+        }
+        break;
+
+      case 'stop':
+        // Click the AG Stop button via CDP
+        log('stop requested from PWA');
+        await cdpEvaluate(`
+          (function() {
+            const btn = [...document.querySelectorAll('button')].find(b =>
+              (b.getAttribute('aria-label') || '').toLowerCase() === 'stop' ||
+              (b.innerText || b.textContent || '').trim().toLowerCase() === 'stop'
+            );
+            if (btn) { btn.click(); return true; }
+            return false;
+          })()
+        `);
+        await new Promise(r => setTimeout(r, 500));
+        await broadcastState();
+        break;
+
+      case 'refresh':
+        // Immediate state re-broadcast — used by PWA after interactions
+        await broadcastState();
+        break;
+
+      case 'evaluate':
+        // Execute JS in AG DOM, then immediately re-broadcast state so
+        // collapsible toggles and other interactions feel near-instant.
+        if (msg.expression) {
+          const val = await cdpEvaluate(msg.expression);
+          ws.send(JSON.stringify({ type: 'eval_result', data: val }));
+          await new Promise(r => setTimeout(r, 350));
+          await broadcastState();
+        }
+        break;
+    }
+  });
+
+  ws.on('close', () => {
+    wsClients.delete(ws);
+    log('PWA client disconnected. Total:', wsClients.size);
+  });
+});
+
+// ─── Poll for DOM changes + pending action alerts ────────────────────────────
+
+let lastAlertedActions = new Set(); // Avoid spamming Telegram for same action
+
+setInterval(async () => {
+  if (!cdpConnected) return;
+
+  // Always check AG state for typing indicator
+  const agStateData = await scrapeAGState();
+  if (agStateData.state !== lastAgState) {
+    lastAgState = agStateData.state;
+    broadcast('ag_state', agStateData);
+  }
+
+  // EOD auto-schedule check (once per minute is fine since interval is 2s)
+  checkEODSchedule().catch(() => {});
+
+  if (wsClients.size > 0) {
+    // PWA is open — broadcast state to it
+    broadcastState().catch(() => {});
+  } else {
+    // PWA is closed — check for pending approvals and alert via Telegram
+    try {
+      const actions = await scrapePendingActions();
+      for (const action of actions) {
+        const key = action.text.slice(0, 60);
+        if (!lastAlertedActions.has(key)) {
+          lastAlertedActions.add(key);
+          telegramNotify(
+            `⚠️ *AG needs approval*\n\n` +
+            `\`${action.text}\`\n\n` +
+            `Open PWA to approve: ${tunnelUrl || 'http://localhost:9100'}`
+          );
+        }
+      }
+      // Clear stale keys when no actions pending
+      if (actions.length === 0) lastAlertedActions.clear();
+    } catch { /* silent */ }
+  }
+}, 2000);
+
+// ─── cloudflared tunnel ───────────────────────────────────────────────────────
+
+function startCloudflared() {
+  log('Starting cloudflared tunnel...');
+  const cf = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${BRIDGE_PORT}`], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  function parseTunnelUrl(data) {
+    const str = data.toString();
+    const match = str.match(/https:\/\/[a-z0-9]+-[a-z0-9-]+\.trycloudflare\.com/);
+    if (match && !tunnelUrl) {
+      tunnelUrl = match[0];
+      log('✅ Tunnel URL:', tunnelUrl);
+      // Silent start — URL only sent on /wpa command or if no PWA ever connects
+      // After 60s, if no PWA connected, send URL as fallback
+      setTimeout(() => {
+        if (wsClients.size === 0) {
+          telegramNotifyInline(
+            `🌐 *AG Bridge online* \u2014 no PWA connected yet\n\nURL: ${tunnelUrl}\nPassword: \`${REMOTE_PASSWORD}\`\n\nType /wpa anytime to get the link again.`,
+            []
+          );
+        }
+      }, 60_000);
+      broadcast('status', { cdpConnected, tunnelUrl });
+    }
+  }
+
+  cf.stdout.on('data', parseTunnelUrl);
+  cf.stderr.on('data', parseTunnelUrl);
+
+  cf.on('close', (code) => {
+    log(`cloudflared exited (${code}). Restarting in 3s...`);
+    tunnelUrl = null;
+    const delay = 45_000 + Math.random() * 15_000; // 45-60s to avoid CF rate limits
+    log(`cloudflared exited (${code}). Restarting in ${Math.round(delay/1000)}s…`);
+    setTimeout(startCloudflared, delay);
+  });
+
+  cf.on('error', (err) => {
+    log('cloudflared error:', err.message);
+    log('Is cloudflared installed? Run: brew install cloudflared');
+  });
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+async function main() {
+  log('═══════════════════════════════════════════════');
+  log('GeniOS AG Remote Control Bridge §13.3 starting');
+  log(`HTTP/WS port: ${BRIDGE_PORT}`);
+  log(`Remote password: ${REMOTE_PASSWORD}`);
+  log('═══════════════════════════════════════════════');
+
+  // Start HTTP + WS server
+  httpServer.listen(BRIDGE_PORT, () => {
+    log(`Server listening on http://localhost:${BRIDGE_PORT}`);
+  });
+
+  // Ensure AG is running with CDP
+  await ensureAGRunning();
+
+  // Connect to CDP
+  await connectCDP();
+
+  // Start cloudflared tunnel (with ngrok fallback after 3 min)
+  startCloudflared();
+
+  // ─── ngrok URL watcher ─────────────────────────────────────────────────────
+  // Polls ngrok API every 10s. When the URL changes (e.g. after ngrok restart),
+  // auto-notifies Telegram so Marwan always has the current link.
+  let _lastNgrokUrl = null;
+  setInterval(async () => {
+    try {
+      const data = await new Promise((resolve, reject) => {
+        const r = require('http').get('http://localhost:4040/api/tunnels', (resp) => {
+          let d = ''; resp.on('data', c => d += c);
+          resp.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
+        });
+        r.on('error', reject);
+        r.setTimeout(1000, () => { r.destroy(); reject(new Error('timeout')); });
+      });
+      const url = data?.tunnels?.[0]?.public_url || null;
+      if (!url) return;
+      if (url !== _lastNgrokUrl) {
+        _lastNgrokUrl = url;
+        if (!tunnelUrl || tunnelUrl === url.replace(/\/$/, '')) {
+          tunnelUrl = url;
+        }
+        log('📡 ngrok URL changed →', url);
+        // Silent update only — /wpa is the sole Telegram trigger
+        broadcast('status', { cdpConnected, tunnelUrl: url });
+      }
+    } catch { /* ngrok not running */ }
+  }, 10_000);
+
+  // Ngrok fallback: if cloudflared has no URL after 3 min, check ngrok API
+  // (PM2 manages ngrok — never spawn a second instance)
+  setTimeout(async () => {
+    if (tunnelUrl) return; // already have a URL
+    try {
+      const data = await new Promise((resolve, reject) => {
+        const r = require('http').get('http://localhost:4040/api/tunnels', (resp) => {
+          let d = ''; resp.on('data', c => d += c);
+          resp.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
+        });
+        r.on('error', reject);
+        r.setTimeout(1000, () => { r.destroy(); reject(new Error('timeout')); });
+      });
+      const url = data?.tunnels?.[0]?.public_url || null;
+      if (url) { tunnelUrl = url; log('✅ Ngrok fallback URL (from API):', url); }
+    } catch { log('Ngrok fallback: API not reachable'); }
+  }, 3 * 60 * 1000);
+}
+
+main().catch((err) => {
+  log('Fatal error:', err);
+  process.exit(1);
+});
