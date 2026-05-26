@@ -10,10 +10,17 @@
     "logs": "pm2 logs ag-bridge",
     "status": "pm2 status"
   },
-  "keywords": ["antigravity", "ag", "remote-control", "cdp", "pwa"],
+  "keywords": [
+    "antigravity",
+    "ag",
+    "remote-control",
+    "cdp",
+    "pwa"
+  ],
   "author": "Marwan Tzenios",
   "license": "MIT",
   "dependencies": {
-    "ws": "^8.0.0"
+    "dotenv": "^17.4.2",
+    "ws": "^8.21.0"
   }
 }
