@@ -305,26 +305,20 @@ const CMD_WHITELIST = {
 - What is in progress
 - Next steps / open items
 Keep it under 15 bullets. Use plain text, no markdown headers.`;
+    _lastCurrentText = '';
     await typeIntoInput(prompt);
     await new Promise(r => setTimeout(r, 300));
     await clickSend();
     log('EOD prompt injected, waiting for AG response...');
 
-    // Poll for AG to finish responding (up to 90s)
-    const startSnapshot = (await scrapeChat()).length;
-    let summary = '';
-    for (let i = 0; i < 45; i++) {
-      await new Promise(r => setTimeout(r, 2000));
-      const state = await scrapeAGState();
-      if (state.state === 'idle') {
-        const msgs = await scrapeChat();
-        const lastMsg = msgs[msgs.length - 1];
-        if (lastMsg && lastMsg.text && msgs.length > startSnapshot) {
-          summary = lastMsg.text;
-          break;
-        }
-      }
-    }
+    const summary = await new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        _pendingAskResolvers = _pendingAskResolvers.filter(r => r !== resolve);
+        resolve('');
+      }, 90_000);
+      const wrapped = (txt) => { clearTimeout(timer); resolve(txt); };
+      _pendingAskResolvers.push(wrapped);
+    });
 
     if (!summary) return '⚠️ EOD: AG did not respond in time. Check the PWA.';
 
@@ -337,9 +331,8 @@ Keep it under 15 bullets. Use plain text, no markdown headers.`;
     if (!arg || !arg.trim()) return '❌ Usage: /ask <message to AG>';
     const text = arg.trim();
 
-    // Snapshot message count before sending
-    const chatBefore = await scrapeChat();
-    const snapLen = chatBefore.length;
+    // Reset last captured text so we pick up the fresh response
+    _lastCurrentText = '';
 
     // Send to AG
     await typeIntoInput(text);
@@ -347,27 +340,25 @@ Keep it under 15 bullets. Use plain text, no markdown headers.`;
     await clickSend();
     log('[/ask] sent to AG:', text.slice(0, 60));
 
-    // Immediately confirm to Telegram, then watch for response in background
-    setTimeout(async () => {
-      let reply = '';
-      for (let i = 0; i < 45; i++) {          // 45 × 2s = 90s max
-        await new Promise(r => setTimeout(r, 2000));
-        const state = await scrapeAGState();
-        if (state.state === 'idle') {
-          const msgs = await scrapeChat();
-          const lastMsg = msgs[msgs.length - 1];
-          if (lastMsg && lastMsg.text && msgs.length > snapLen) {
-            reply = lastMsg.text;
-            break;
-          }
-        }
-      }
-      if (reply) {
-        telegramNotifyInline(`🤖 *AG replied:*\n\n${reply.slice(0, 3800)}`, []);
-      } else {
-        telegramNotifyInline('⏱ AG is still thinking — follow up in PWA.', []);
-      }
-    }, 0);
+    // Event-driven reply: resolver fires from the state-polling interval when AG goes idle
+    const replyText = await new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        _pendingAskResolvers = _pendingAskResolvers.filter(r => r !== resolve);
+        resolve('');
+      }, 90_000);
+      const wrappedResolve = (txt) => { clearTimeout(timer); resolve(txt); };
+      _pendingAskResolvers.push(wrappedResolve);
+    });
+
+    if (replyText) {
+      telegramNotifyInline(
+        `🤖 *AG replied:*\n\n${replyText.slice(0, 3800)}` +
+        (replyText.length > 800 ? '\n\n_… (truncated — see PWA for full message)_' : ''),
+        []
+      );
+    } else {
+      telegramNotifyInline('⏱ AG is still thinking — follow up in PWA.', []);
+    }
 
     return `✅ *Sent to AG:* \`${text.slice(0, 80)}${text.length > 80 ? '…' : ''}\`\n⏳ Watching for reply…`;
   },
@@ -744,8 +735,10 @@ async function scrapeAGState() {
 
 // Fast 500ms interval just for typing indicator
 let _tickCount = 0;
-let _lastSnippetSeen = '';
-let _macCheckTick = 0; // polls macActive every 10 ticks = 5s
+let _lastSnippetSeen  = '';
+let _lastCurrentText  = '';  // last non-empty currentText from scrapeAGState — actual response
+let _pendingAskResolvers = []; // resolvers waiting for next AG idle transition
+let _macCheckTick = 0;
 setInterval(async () => {
   if (!cdpConnected) return;  // run even if no PWA, for background watch
   const hasClients = wsClients.size > 0;
@@ -756,7 +749,8 @@ setInterval(async () => {
 
   try {
     const agStateData = await scrapeAGState();
-    if (agStateData.snippet) _lastSnippetSeen = agStateData.snippet;
+    if (agStateData.snippet)      _lastSnippetSeen = agStateData.snippet;
+    if (agStateData.currentText)  _lastCurrentText  = agStateData.currentText;
     if (agStateData.state !== 'idle' || lastAgState !== 'idle') {
       log(`[state] ${lastAgState}\u2192${agStateData.state} ticks=${_growthTicks}`);
     }
@@ -765,10 +759,17 @@ setInterval(async () => {
       lastAgState = agStateData.state;
       if (hasClients) broadcast('ag_state', agStateData);
       log(`[broadcast] ag_state=${agStateData.state}`);
-      // When AG finishes (writing/thinking → idle): push full message list to PWA
+      // When AG finishes (writing/thinking → idle): push full message list + fire /ask resolvers
       if (agStateData.state === 'idle' && (prev === 'writing' || prev === 'thinking')) {
         broadcastState().catch(() => {}); // push updated chat messages
         scheduleIdleDigest(_lastSnippetSeen);
+        // Fire any pending /ask resolvers with the last captured response text
+        if (_pendingAskResolvers.length > 0) {
+          const resolvers = _pendingAskResolvers.splice(0);
+          const replyText = _lastCurrentText || _lastSnippetSeen || '';
+          for (const r of resolvers) r(replyText);
+          log(`[/ask] fired ${resolvers.length} resolver(s) — text length: ${replyText.length}`);
+        }
       }
     } else if (hasClients && agStateData.state !== 'idle') {
       // Still writing/thinking — stream currentText to ghost bubble every tick
@@ -1420,7 +1421,13 @@ setInterval(async () => {
 
 // ─── cloudflared tunnel ───────────────────────────────────────────────────────
 
+// Guard — only restart cloudflare when it's the intended provider.
+// Set false when switching to ngrok-primary mode so orphaned cloudflared
+// processes don't reset tunnelUrl and restart themselves.
+let cloudflareEnabled = false;
+
 function startCloudflared() {
+  cloudflareEnabled = true;
   log('Starting cloudflared tunnel...');
   const cf = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${BRIDGE_PORT}`], {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -1430,20 +1437,7 @@ function startCloudflared() {
     const str = data.toString();
     const match = str.match(/https:\/\/[a-z0-9]+-[a-z0-9-]+\.trycloudflare\.com/);
     if (match && !tunnelUrl) {
-      tunnelUrl = match[0];
-      log('✅ Tunnel URL:', tunnelUrl);
-      // Silent start — URL only sent on /wpa command or if no PWA ever connects
-      // After 60s, if no PWA connected, send URL as fallback
-      setTimeout(() => {
-        // Only send if: no PWA connected AND user is away from Mac (not suppressed)
-        if (wsClients.size === 0 && !isTelegramSuppressed()) {
-          telegramNotifyInline(
-            `🌐 *AG Bridge online* \u2014 no PWA connected yet\n\nURL: ${tunnelUrl}\nPassword: \`${REMOTE_PASSWORD}\`\n\nType /wpa anytime to get the link again.`,
-            []
-          );
-        }
-      }, 60_000);
-      broadcast('status', { cdpConnected, tunnelUrl });
+      setTunnel(match[0], 'cloudflare');
     }
   }
 
@@ -1451,10 +1445,14 @@ function startCloudflared() {
   cf.stderr.on('data', parseTunnelUrl);
 
   cf.on('close', (code) => {
-    log(`cloudflared exited (${code}). Restarting in 3s...`);
-    tunnelUrl = null;
-    const delay = 45_000 + Math.random() * 15_000; // 45-60s to avoid CF rate limits
-    log(`cloudflared exited (${code}). Restarting in ${Math.round(delay/1000)}s…`);
+    if (!cloudflareEnabled) {
+      log('cloudflared closed — not restarting (ngrok mode active)');
+      return;
+    }
+    // Only null out tunnelUrl if cloudflare was the active provider
+    if (activeTunnelProvider === 'cloudflare') tunnelUrl = null;
+    const delay = 45_000 + Math.random() * 15_000;
+    log(`cloudflared exited (${code}). Restarting in ${Math.round(delay / 1000)}s…`);
     setTimeout(startCloudflared, delay);
   });
 
