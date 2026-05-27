@@ -106,17 +106,20 @@ let tunnelUrl = null;
 // activeTunnelProvider — which provider is currently supplying tunnelUrl
 let macActive            = false;
 let telegramMuted        = false;
-let tunnelMode           = 'ngrok';       // persisted preference
-let activeTunnelProvider = null;          // 'ngrok' | 'cloudflare' | null
-const isTelegramSuppressed = () => macActive || telegramMuted;
+let telegramForceUnmute  = false; // /unmute overrides macActive suppression
+let tunnelMode           = 'ngrok';
+let activeTunnelProvider = null;
+// Suppressed when: manually muted, OR Mac is active and user hasn't force-unmuted
+const isTelegramSuppressed = () => telegramMuted || (macActive && !telegramForceUnmute);
 
 // Persist settings across restarts
 function saveSettings() {
-  try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ telegramMuted, tunnelMode })); } catch {}
+  try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ telegramMuted, telegramForceUnmute, tunnelMode })); } catch {}
 }
 try {
   const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-  if (typeof saved.telegramMuted === 'boolean') telegramMuted = saved.telegramMuted;
+  if (typeof saved.telegramMuted       === 'boolean') telegramMuted       = saved.telegramMuted;
+  if (typeof saved.telegramForceUnmute === 'boolean') telegramForceUnmute = saved.telegramForceUnmute;
   if (saved.tunnelMode === 'ngrok' || saved.tunnelMode === 'cloudflare') tunnelMode = saved.tunnelMode;
 } catch { /* first run — use defaults */ }
 
@@ -144,7 +147,7 @@ function telegramNotify(text) {
 // Broadcast current notification settings to all PWA clients
 function broadcastSettings() {
   saveSettings();
-  broadcast('settings', { macActive, telegramMuted, tunnelMode, activeTunnelProvider, tunnelUrl });
+  broadcast('settings', { macActive, telegramMuted, telegramForceUnmute, tunnelMode, activeTunnelProvider, tunnelUrl });
 }
 
 // ─── Smart channel router ─────────────────────────────────────────────────────
@@ -251,14 +254,15 @@ const CMD_WHITELIST = {
       try {
         const procs = JSON.parse(stdout);
         const lines = procs.map(p => `${p.name}: ${p.pm2_env.status} ↺${p.pm2_env.restart_time}`);
-        const notifState = macActive ? '🖥️ Mac active — Telegram suppressed'
-                        : telegramMuted ? '🔕 Muted manually'
-                        : '🔔 Telegram on';
+        const notifState = telegramMuted   ? '🔕 Muted manually'
+                         : telegramForceUnmute ? '🔔 Force-unmuted (Mac-active override)'
+                         : macActive          ? '🖥️ Mac active — Telegram suppressed'
+                                              : '🔔 Active';
         resolve(`📊 *PM2 Status*\n${lines.join('\n')}\n\n${notifState}`);
       } catch { resolve(stdout.slice(0, 400)); }
     });
   }),
-  '/mute':    () => { telegramMuted = true;  broadcastSettings(); return '🔕 Telegram muted. Use /unmute to re-enable.'; },
+  '/mute':    () => { telegramMuted = true; telegramForceUnmute = false; saveSettings(); broadcastSettings(); return '🔕 Telegram muted. Use /unmute to re-enable.'; },
   '/restart': (arg) => new Promise((resolve) => {
     const target = (arg || '').trim().toLowerCase() === 'bridge' ? 'ag-bridge' : 'telegram-daemon';
     resolve(`🔄 Restarting *${target}*…`);
@@ -277,7 +281,7 @@ const CMD_WHITELIST = {
       : 'No tunnel active';
     return `📡 *Tunnel Status*\nActive: ${activeInfo}\nDefault: \`${tunnelMode}\` ⭐\n\nChange default:\n/tunnel ngrok\n/tunnel cloudflare`;
   },
-  '/unmute':  () => { telegramMuted = false; broadcastSettings(); return '🔔 Telegram unmuted.'; },
+  '/unmute':  () => { telegramMuted = false; telegramForceUnmute = true; saveSettings(); broadcastSettings(); return '🔔 Telegram unmuted — Mac-active suppression overridden. Use /mute to silence again.'; },
   '/notify':  () => {
     const state = macActive ? '🖥️ Mac active (auto-suppressed)'
                 : telegramMuted ? '🔕 Manually muted'
