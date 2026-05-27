@@ -113,6 +113,7 @@ let _lastDigestAt        = 0;
 let _hadConnection            = false;
 let _restoredLastConnectionAt = 0;
 let _lastActions              = [];  // cache of last scraped pending actions — accessible to HTTP handlers
+let _clickDebounce            = new Map(); // idx → timestamp, prevents double-tap duplicate clicks
 // Suppressed when: manually muted, OR Mac is active and user hasn't force-unmuted
 const isTelegramSuppressed     = () => telegramMuted || (macActive && !telegramForceUnmute);
 const isTelegramSuppressedInfo = () => telegramMuted || macActive; // status/digest: always suppress when Mac active
@@ -1279,6 +1280,15 @@ const httpServer = http.createServer(async (req, res) => {
     _pendingActionSource = 'Telegram';
     const optIdx = typeof optionIndex !== 'undefined' ? Number(optionIndex) : (decision === 'allow' ? 0 : -1);
     if (optIdx >= 0) {
+      // Debounce: ignore duplicate taps on the same modal within 5s
+      const lastClick = _clickDebounce.get(String(idx)) || 0;
+      if (Date.now() - lastClick < 5000) {
+        log(`[action-response] debounced duplicate tap for idx=${idx}`);
+        res.writeHead(200); res.end(JSON.stringify({ ok: true, debounced: true }));
+        return;
+      }
+      _clickDebounce.set(String(idx), Date.now());
+      setTimeout(() => _clickDebounce.delete(String(idx)), 6000);
       // Find the action so we can report which option text was clicked
       const act     = _lastActions.find(a => String(a.occurrenceIndex) === String(idx));
       // Fallback: look up options stored in _alertedActionMap at notification time
