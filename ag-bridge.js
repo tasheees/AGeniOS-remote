@@ -990,13 +990,13 @@ setInterval(async () => {
       }
     }
 
-    // Detect alerted modals that disappeared without Telegram action → notify
+    // Detect alerted modals that disappeared without Telegram action → notify correct source
     if (_pendingActionSource !== 'Telegram') {
+      const resolvedIn = _pendingActionSource === 'PWA' ? 'PWA' : 'AG';
       for (const [key, info] of _alertedActionMap) {
         if (!currentKeys.has(key)) {
-          // This modal was on Telegram but just disappeared — resolved in AG
           const label = info.val ? `${info.title}\n\`${info.val}\`` : info.title;
-          telegramNotifyInline(`↩️ *Handled in AG* — ${label}`, []);
+          telegramNotifyInline(`↩️ *Handled in ${resolvedIn}* — ${label}`, []);
           _alertedActionMap.delete(key);
         }
       }
