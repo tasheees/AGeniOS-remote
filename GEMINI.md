@@ -146,6 +146,13 @@ INDEX:      [rows updated]
 - All `class` and `style` attributes stripped from DOM dump before sending to PWA
 - `data-state` preserved (open/closed state for collapsibles)
 - `<img>` elements replaced with 📄 emoji (local paths don't load over ngrok)
+- **Approval dialog DOM** (confirmed live 2026-05-27):
+  - Options are rounded `<button>` elements — numbered 1, 2, 3…
+  - Digit and text are on **separate innerText lines** (`"1"\n"Yes, allow this time"`)
+  - Skip + Submit are `button[data-tooltip-id]` in a **footer row** separate from the option buttons
+  - `_dialog_scraper.js` must walk UP past the footer row to capture the full dialog
+  - Selecting option "No (tell the agent what to do instead)" reveals a **reason textarea** in the dialog — user types context before hitting Submit
+  - PWA does not need to handle the reason textarea for now — noted for future implementation
 
 ---
 
