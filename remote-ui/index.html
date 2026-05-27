@@ -2726,20 +2726,48 @@ function permSubmit() {
   modal.classList.remove('open');
   if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
 
-  if (_selectedPermOpt === 0) {
-    // Option 1: Yes, allow — click the numbered option then Submit
-    // First select option 1 in AG (click numbered choice if present)
-    const optText = (action.options?.[0]?.text || '').slice(0, 60);
-    if (optText) {
-      ws.send(JSON.stringify({
-        type: 'evaluate',
-        expression: `(function(){
-          var opts = Array.from(document.querySelectorAll('[role="radio"],[role="option"],input[type="radio"]'));
-          if (opts.length > 0) { opts[0].click(); }
-          return true;
-        })()`
-      }));
+  const N = _selectedPermOpt;
+  const optText = (action.options?.[N]?.text || `Option ${N+1}`).replace(/^\d+[\. ]+/, '').slice(0, 40);
+
+  // Step 1 — click Nth option button in AG dialog (3-strategy fallback)
+  const clickOptExpr = `(function(N){
+    var btns=Array.from(document.querySelectorAll('button[data-tooltip-id]'));
+    var skipBtn=null,submitBtn=null;
+    for(var i=0;i<btns.length;i++){
+      var t=(btns[i].innerText||btns[i].textContent||'').trim();
+      if(!skipBtn&&/^skip$/i.test(t))skipBtn=btns[i];
+      if(!submitBtn&&/^submit/i.test(t))submitBtn=btns[i];
     }
+    if(!skipBtn||!submitBtn)return 'no-dialog';
+    var el=skipBtn.parentElement;
+    while(el&&el!==document.body){if(el.contains(submitBtn))break;el=el.parentElement;}
+    if(!el||el===document.body)return 'no-container';
+    var optBtns=Array.from(el.querySelectorAll('button'))
+      .filter(function(b){return b!==skipBtn&&b!==submitBtn;})
+      .sort(function(a,b){return a.getBoundingClientRect().top-b.getBoundingClientRect().top;});
+    if(optBtns.length>0){(optBtns[N]||optBtns[0]).click();return 'btn-'+N;}
+    var focusable=Array.from(el.querySelectorAll('[role="option"],[role="radio"],[role="button"],[tabindex]'))
+      .filter(function(e){return e!==skipBtn&&e!==submitBtn;})
+      .sort(function(a,b){return a.getBoundingClientRect().top-b.getBoundingClientRect().top;});
+    if(focusable.length>0){(focusable[N]||focusable[0]).click();return 'focusable-'+N;}
+    var key=String(N+1);
+    el.dispatchEvent(new KeyboardEvent('keydown',{key:key,bubbles:true,cancelable:true}));
+    el.dispatchEvent(new KeyboardEvent('keyup',  {key:key,bubbles:true,cancelable:true}));
+    return 'keyboard-'+key;
+  })(${N})`;
+
+  ws.send(JSON.stringify({ type: 'evaluate', expression: clickOptExpr }));
+
+  // Step 2 — click Submit 200ms later
+  setTimeout(() => {
+    ws.send(JSON.stringify({
+      type: 'evaluate',
+      expression: `(function(){var b=document.querySelector(${JSON.stringify(action.submitSelector||'button[data-tooltip-id]')});if(b){b.click();return true;}return false;})()`
+    }));
+  }, 200);
+
+  toast(`\u2705 ${optText} \u2014 submitted`);
+}
     // Then click the Submit button via its exact data-tooltip-id
     setTimeout(() => {
       ws.send(JSON.stringify({
