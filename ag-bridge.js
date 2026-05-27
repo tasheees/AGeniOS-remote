@@ -508,10 +508,30 @@ async function scrapePendingActions() {
           const codeEl  = container?.querySelector('pre, code');
           const command = (codeEl?.innerText || '').trim();
 
-          // Numbered options: lines starting with a digit
+          // Debug: log raw lines so we can see exact option format from AG
+          console.log('[dialog-lines]', JSON.stringify(lines));
+
+          // Numbered options — AG may format as:
+          //   "1 Yes, allow this time"  (number+space+text on one line)
+          //   "1"  \n  "Yes, allow..."  (number and text on separate lines)
+          //   "1. Yes, allow..."        (number+dot+space)
           const seenTexts = new Set();
-          const options = lines
-            .filter(t => /^[1-9]/.test(t) && t.length > 3 && t.length < 300)
+          const rawOpts = [];
+          for (let i = 0; i < lines.length; i++) {
+            const l = lines[i];
+            // Standalone digit (1, 2, 3 ...) — next line is the option text
+            if (/^[1-9]$/.test(l) && i + 1 < lines.length) {
+              const next = lines[i + 1];
+              if (!BUTTON_LABELS.test(next) && next.length > 3) {
+                rawOpts.push(l + ' ' + next); i++; continue;
+              }
+            }
+            // Digit-prefixed line: "1 text", "2. text", "3) text"
+            if (/^[1-9][.\) ]/.test(l) && l.length > 4 && l.length < 300) {
+              rawOpts.push(l); continue;
+            }
+          }
+          const options = rawOpts
             .filter(t => { if (seenTexts.has(t)) return false; seenTexts.add(t); return true; })
             .map((t, i) => ({ index: i, text: t, isDefault: i === 0 }));
 
@@ -750,6 +770,25 @@ setInterval(() => {
     }
   );
 }, 5000);
+
+// ─── Action Sync: clear PWA actions when resolved on Mac ─────────────────────
+// Runs every 1s when PWA clients are connected.
+// broadcastState() only fires on AG state transitions, so if a dialog is
+// approved on Mac while AG is already idle, the PWA would never know.
+// This interval catches that gap and pushes an immediate clear.
+let _lastActionSig = '';
+setInterval(async () => {
+  if (!cdpConnected || wsClients.size === 0) return;
+  try {
+    const acts = await scrapePendingActions();
+    const sig = acts.map(a => a.occurrenceIndex + ':' + (a.text || '').slice(0, 30)).join('|');
+    if (sig !== _lastActionSig) {
+      _lastActionSig = sig;
+      log(`[action-sync] changed → ${acts.length} actions`);
+      broadcastState().catch(() => {});
+    }
+  } catch { /* silent */ }
+}, 1000);
 
 // Background Watch: push new actions to Telegram when PWA is closed
 let _lastActionCount = 0;
