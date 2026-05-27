@@ -53,7 +53,7 @@
 | ID | Task | Status | Notes |
 |:---|:-----|:-------|:------|
 | P1 | Approval dialog detection | ✅ BUILT | data-tooltip-id co-presence (Skip+Submit); commit 593c12c |
-| P2 | Code syntax highlighting in PWA | 🔧 PARTIAL | Prism not re-applying after class strip |
+| P2 | Code syntax highlighting in PWA | ✅ DONE | language-* classes now preserved through bridge class strip; Prism 1.29 + autoloader; commit 3aea822 |
 
 ### ❌ MISSING — Not Started
 
@@ -61,6 +61,17 @@
 |:---|:-----|:-------|:------|
 | M4 | Approval option selection relay | 🔧 PARTIAL | permSubmit→submitSelector ✅; container walk fixed to extract all 4 options; pending live confirm |
 | M5 | cloud-api migration to AGenIOS hosting | ❌ MISSING | Blocked by domain decision; cloud-api/ has reference copies |
+
+### ✅ DONE TODAY — 2026-05-27
+
+| Commit | What |
+|:-------|:-----|
+| `7984b3b` | `/restart` command — restarts daemon or bridge from Telegram |
+| `734abf7` | `/ask` reply fixed — event-driven resolver, actually returns AG response |
+| `f27b0f9` | Bridge crash fix — `setTunnel` moved to module level (was crashing 39×) |
+| `abafb21` | `/wpa` fixed — no-tunnel vs bridge-down distinction; ngrok added to PM2 |
+| `3aea822` | Syntax highlighting — `language-*` classes preserved through bridge class strip |
+| `4e033ed` | Conversations tab — fully wired with tappable navigation to any AG conversation |
 
 ---
 
