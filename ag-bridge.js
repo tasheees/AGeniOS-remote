@@ -1354,11 +1354,12 @@ wss.on('connection', (ws, req) => {
   // Auth check via cookie
   const cookies = parseCookies(req);
   if (!AUTH_TOKENS.has(cookies.ag_token)) {
-    // Check token in query param as fallback
     const url = new URL(req.url, 'http://localhost');
     const token = url.searchParams.get('token');
     if (!AUTH_TOKENS.has(token)) {
-      ws.close(4001, 'Unauthorized');
+      // Send auth_failed message first (close codes stripped by ngrok)
+      try { ws.send(JSON.stringify({ type: 'auth_failed' })); } catch {}
+      setTimeout(() => ws.close(4001, 'Unauthorized'), 100);
       return;
     }
   }

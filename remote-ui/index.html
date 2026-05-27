@@ -1703,6 +1703,7 @@ function getWsUrl() {
 }
 
 let hasEverConnected = false;
+let _authFailed      = false;  // set on auth_failed message — stops reconnect loop
 // Show overlay on initial load until first connect
 document.getElementById('overlay').classList.add('visible');
 
@@ -1774,6 +1775,15 @@ function connect() {
       case 'settings':
         applySettings(msg.data);
         break;
+      case 'auth_failed':
+        // Bridge rejected our session token — clear cookie and show login
+        // (close codes get stripped by ngrok, so bridge sends this message instead)
+        document.cookie = 'ag_token=; Max-Age=0; Path=/';
+        document.getElementById('overlay').classList.add('visible');
+        setStatus('disconnected', 'Session expired — please log in again');
+        _authFailed = true; // suppress reconnect loop in onclose
+        ws.close();
+        break;
       case 'eval_result':
         console.log('[bridge eval]', msg.data);
         break;
@@ -1782,13 +1792,12 @@ function connect() {
 
   ws.onclose = (e) => {
     connected = false;
-    if (e.code === 4001) {
-      // Bridge rejected our token (password changed or token invalidated)
-      // Clear cookie and show login overlay — don't loop reconnect with bad token
+    if (_authFailed || e.code === 4001) {
+      _authFailed = false;
       document.cookie = 'ag_token=; Max-Age=0; Path=/';
       document.getElementById('overlay').classList.add('visible');
       setStatus('disconnected', 'Session expired — please log in again');
-      return; // do NOT scheduleReconnect — user must log in fresh
+      return; // do NOT reconnect — user must log in fresh
     }
     if (hasEverConnected) {
       showReconnectBanner(true);
