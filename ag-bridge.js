@@ -198,11 +198,13 @@ function telegramNotifyInline(text, buttons = []) {
 // ─── Background Watch: action inline buttons ──────────────────────────────────
 function sendActionToTelegram(action) {
   if (!BOT_TOKEN || !ALLOWED_CHAT_ID) return;
-  if (isTelegramSuppressed()) return;  // Mac active or manually muted
-  const label = action.label || action.text || 'Approval needed';
+  if (isTelegramSuppressed()) return;
+  const title = (action.label || action.text || 'Approval needed').slice(0, 200);
+  const cmd   = (action.command || '').trim().slice(0, 200);
   const idx   = action.occurrenceIndex ?? action.index ?? 0;
+  const body  = cmd ? `*${title}*\n\`\`\`\n${cmd}\n\`\`\`` : `*${title}*`;
   telegramNotifyInline(
-    `⚠️ *AG needs approval*\n\n\`${label.slice(0, 300)}\``,
+    `⚠️ *AG needs approval*\n\n${body}`,
     [
       { text: '✅ Allow', callback_data: `ag_allow:${idx}` },
       { text: '❌ Reject', callback_data: `ag_reject:${idx}` },
@@ -296,7 +298,10 @@ const CMD_WHITELIST = {
   '/pending': async () => {
     const actions = await scrapePendingActions();
     if (!actions.length) return '✅ No pending approvals';
-    return '⏳ *Pending approvals:*\n' + actions.map(a => `• ${a.text}`).join('\n');
+    return '⏳ *Pending approvals:*\n' + actions.map(a => {
+      const cmd = (a.command || '').trim();
+      return `• ${a.text}${cmd ? '\n  `' + cmd.slice(0, 100) + '`' : ''}`;
+    }).join('\n');
   },
   '/eod':     async () => {
     // Inject EOD summary prompt into AG, capture response, send to Telegram
