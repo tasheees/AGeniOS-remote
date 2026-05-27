@@ -226,14 +226,8 @@ function sendActionToTelegram(action) {
   // Section 2: description (the "why") + separator + value/URL/command (the "what")
   const desc = (action.description || '').trim();
   const val  = (action.value || action.command || '').trim().slice(0, 300);
-  if (desc && val) {
-    // Both present: description plain, separator, value in code block
-    body += `\n\n${desc}\n──────────\n\`${val}\``;
-  } else if (val) {
-    body += `\n\`\`\`\n${val}\n\`\`\``;
-  } else if (desc) {
-    body += `\n\n${desc}`;
-  }
+  if (desc) body += `\n\n${desc}`;
+  if (val)  body += `\n\`\`\`\n${val}\n\`\`\``;  // always in a distinct code block
 
   // Section 3: options (verbatim)
   if (opts.length) {
@@ -632,9 +626,10 @@ async function scrapePendingActions() {
 
     // ── All parsing in Node.js — no browser-side complexity ─────────────────
     const { fullText, command, skipId, submitId, debug } = raw.value;
-    const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
+    // Strip CSS lines leaking from shadow DOM <style> tags
+    const CSS_RE = /^(@keyframes|@media|from[\s{]|to[\s{]|}$|[a-z-]+\s*:\s*.+;\s*$)/i;
+    const lines = fullText.split('\n').map(l => l.trim()).filter(l => l && !CSS_RE.test(l));
     log('[dialog-lines]', JSON.stringify(lines));
-    if (debug) log('[dialog-debug]', debug);
 
     // BUTTON_RE: only matches the actual Skip/Submit/Enter button labels.
     // Do NOT include 'no', 'yes', 'allow', 'deny' — those are valid option texts.
