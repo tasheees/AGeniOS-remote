@@ -30,28 +30,34 @@
     current = parent;
   }
 
-  // Step 3: look for command text in SIBLINGS of el only
-  // (command block is a sibling of the options container, not inside it)
+  // Step 3: search for command text in siblings, walking UP to 4 ancestor levels.
+  // The command block (e.g. "git push") is a sibling somewhere above the options container.
   var cmdText = '';
-  var elParent = el.parentElement;
-  if (elParent) {
-    var siblings = Array.from(elParent.children || []);
-    for (var s = 0; s < siblings.length; s++) {
-      var sib = siblings[s];
-      if (sib === el) continue;                          // skip options container itself
-      if (sib.contains(skipBtn)) continue;               // skip footer
-      var sibText = (sib.innerText || '').trim();
-      // Command text: non-empty, not a heading/title (checked below), reasonable length
-      if (sibText && sibText.length > 0 && sibText.length < 500) {
-        cmdText = sibText;
+  var IGNORE_RE = /^(skip|submit|\u21b5|allow|reject|yes|no)$/i;
+  var searchNode = el;
+  for (var level = 0; level < 4 && !cmdText; level++) {
+    var ancestor = searchNode.parentElement;
+    if (!ancestor || ancestor === document.body) break;
+    var kids = Array.from(ancestor.children || []);
+    for (var k = 0; k < kids.length; k++) {
+      var kid = kids[k];
+      if (kid === searchNode) continue;          // skip current container
+      if (kid.contains(skipBtn)) continue;       // skip footer
+      if (kid.contains(submitBtn)) continue;     // skip footer
+      var kidText = (kid.innerText || '').trim();
+      // Candidate command: non-empty, not a single ignored word, not huge
+      if (kidText && kidText.length > 1 && kidText.length < 800 &&
+          !IGNORE_RE.test(kidText)) {
+        cmdText = kidText;
         break;
       }
     }
+    searchNode = ancestor;
   }
 
-  // Also check for <pre>/<code>/<kbd> anywhere in el or its parent
-  var codeEl = el.querySelector('pre, code, kbd') ||
-               (elParent && elParent.querySelector('pre, code, kbd'));
+  // Also prefer <pre>/<code>/<kbd> anywhere nearby if found
+  var nearEl = el.parentElement || el;
+  var codeEl = nearEl.querySelector('pre, code, kbd');
   if (codeEl) cmdText = (codeEl.innerText || '').trim();
 
   return {
