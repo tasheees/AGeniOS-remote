@@ -968,10 +968,12 @@ setInterval(async () => {
 // Background Watch: push new actions to Telegram (runs regardless of PWA state)
 let _lastActionCount = 0;
 let _alertedActionKeys = new Set(); // dedup — don't spam same action
+let _alertedActionMap  = new Map(); // key → {title, val} for AG-resolution notice
 setInterval(async () => {
   if (!cdpConnected) return;
   try {
     const acts = await scrapePendingActions();
+    const currentKeys = new Set();
     // Notify Telegram for any new actions not yet alerted
     for (const a of acts) {
       // Key must distinguish same-title dialogs with different commands/URLs
@@ -980,18 +982,39 @@ setInterval(async () => {
         (a.context || a.command || '').slice(0, 50),
         (a.options || []).map(o => o.text).join('|').slice(0, 40),
       ].join('§');
+      currentKeys.add(key);
       if (!_alertedActionKeys.has(key)) {
         _alertedActionKeys.add(key);
+        _alertedActionMap.set(key, {
+          title: (a.title || a.text || 'Action').slice(0, 60),
+          val:   (a.value || a.command || '').slice(0, 60),
+        });
         sendActionToTelegram(a);
       }
     }
+
+    // Detect alerted modals that disappeared without Telegram action → notify
+    if (_pendingActionSource !== 'Telegram') {
+      for (const [key, info] of _alertedActionMap) {
+        if (!currentKeys.has(key)) {
+          // This modal was on Telegram but just disappeared — resolved in AG
+          const label = info.val ? `${info.title}\n\`${info.val}\`` : info.title;
+          telegramNotifyInline(`↩️ *Handled in AG* — ${label}`, []);
+          _alertedActionMap.delete(key);
+        }
+      }
+    }
+
     // Track count for resolution detection (fallback for PWA-closed case)
     if (acts.length !== _lastActionCount) {
       if (acts.length === 0 && _lastActionCount > 0 && wsClients.size === 0) {
         // PWA closed — call broadcastActionResolved which now handles all sources
         broadcastActionResolved(_pendingActionSource || 'Mac');
       }
-      if (acts.length === 0) _alertedActionKeys.clear();
+      if (acts.length === 0) {
+        _alertedActionKeys.clear();
+        _alertedActionMap.clear();
+      }
       _lastActionCount = acts.length;
     }
   } catch { /* ignore */ }
