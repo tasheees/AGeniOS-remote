@@ -1,13 +1,13 @@
 # AGENIOS_INDEX.md
 > AGenIOS — Task Registry & Source of Truth
-> Last Sync: 2026-05-26T22:00+03:00 · Full extraction complete · Console a7a666a2
+> Last Sync: 2026-05-27T12:00+03:00 · Full extraction complete · Console a7a666a2
 
 ---
 
 ## Project Status
 
-**Extracted:** 2026-05-26 from GeniOS §13.3
-**GitHub:** https://github.com/tasheees/AGeniOS-remote (last commit: cfe7dd0)
+**Extracted:** 2026-05-27 from AGenIOS §13.4
+**GitHub:** https://github.com/tasheees/AGeniOS-remote (last commit: 4e033ed)
 **Home chat:** AGenIOS Studio (`23aba18b`)
 **PM2:** Both `ag-bridge` + `telegram-daemon` running from `~/projects/AGenIOS/` ✅
 
@@ -17,8 +17,8 @@
 
 | Status | Count |
 |:-------|:------|
-| ✅ BUILT | 13 |
-| 🔧 PARTIAL | 2 |
+| ✅ BUILT | 14 |
+| 🔧 PARTIAL | 1 |
 | ❌ MISSING | 1 |
 | **TOTAL** | **16** |
 
@@ -54,9 +54,6 @@
 |:---|:-----|:-------|:------|
 | P1 | Approval dialog detection | ✅ BUILT | data-tooltip-id co-presence (Skip+Submit); commit 593c12c |
 | P2 | Code syntax highlighting in PWA | ✅ DONE | language-* classes now preserved through bridge class strip; Prism 1.29 + autoloader; commit 3aea822 |
-
-### ❌ MISSING — Not Started
-
 | ID | Task | Status | Notes |
 |:---|:-----|:-------|:------|
 | M4 | Approval option selection relay | 🔧 PARTIAL | permSubmit→submitSelector ✅; container walk fixed to extract all 4 options; pending live confirm |
