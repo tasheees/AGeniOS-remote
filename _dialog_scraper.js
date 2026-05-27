@@ -8,7 +8,7 @@
   }
   if (!skipBtn || !submitBtn) return null;
 
-  // Step 1: find the lowest ancestor containing both Skip + Submit (the button row)
+  // Step 1: find lowest ancestor containing both Skip + Submit
   var el = skipBtn.parentElement;
   while (el && el !== document.body) {
     if (el.contains(submitBtn)) break;
@@ -17,7 +17,6 @@
   if (!el || el === document.body) return null;
 
   // Step 2: walk UP conservatively — stop at first container with real content
-  // (title + options), but not so far we capture unrelated page elements.
   var BUTTON_ONLY_RE = /^[\s\n]*(skip|submit|\u21b5)[\s\n]*$/i;
   var current = el;
   for (var up = 0; up < 8; up++) {
@@ -31,21 +30,33 @@
     current = parent;
   }
 
-  // Step 3: find command text — look for <pre> or <code> in el first,
-  // then search up to 4 more parent levels (command block may be a sibling container).
-  var codeEl = el.querySelector('pre, code, kbd');
-  if (!codeEl) {
-    var searchEl = el.parentElement;
-    for (var s = 0; s < 4 && searchEl && searchEl !== document.body; s++) {
-      codeEl = searchEl.querySelector('pre, code, kbd');
-      if (codeEl) break;
-      searchEl = searchEl.parentElement;
+  // Step 3: look for command text in SIBLINGS of el only
+  // (command block is a sibling of the options container, not inside it)
+  var cmdText = '';
+  var elParent = el.parentElement;
+  if (elParent) {
+    var siblings = Array.from(elParent.children || []);
+    for (var s = 0; s < siblings.length; s++) {
+      var sib = siblings[s];
+      if (sib === el) continue;                          // skip options container itself
+      if (sib.contains(skipBtn)) continue;               // skip footer
+      var sibText = (sib.innerText || '').trim();
+      // Command text: non-empty, not a heading/title (checked below), reasonable length
+      if (sibText && sibText.length > 0 && sibText.length < 500) {
+        cmdText = sibText;
+        break;
+      }
     }
   }
 
+  // Also check for <pre>/<code>/<kbd> anywhere in el or its parent
+  var codeEl = el.querySelector('pre, code, kbd') ||
+               (elParent && elParent.querySelector('pre, code, kbd'));
+  if (codeEl) cmdText = (codeEl.innerText || '').trim();
+
   return {
     fullText: el ? (el.innerText || '') : '',
-    command:  codeEl ? (codeEl.innerText || '').trim() : '',
+    command:  cmdText,
     skipId:   skipBtn.getAttribute('data-tooltip-id'),
     submitId: submitBtn.getAttribute('data-tooltip-id')
   };
