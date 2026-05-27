@@ -16,22 +16,20 @@
   }
   if (!el || el === document.body) return null;
 
-  // Step 2: keep walking UP until the element's text has meaningful content
-  // beyond just the button labels. This captures the full dialog (title + options),
-  // not just the footer row that contains Skip/Submit.
-  var BUTTON_ONLY_RE = /^[\s\n]*(skip|submit|\u21b5)[\s\n]*$/i;
+  // Step 2: walk UP to find the outermost dialog container.
+  // Keep updating bestEl as we go — stop when text gets too large (we've left the dialog)
+  // or we hit body/html. This captures the full dialog including the command block.
+  var bestEl = el;
   var current = el;
-  for (var up = 0; up < 8; up++) {
+  for (var up = 0; up < 12; up++) {
     var parent = current.parentElement;
-    if (!parent || parent === document.body) break;
+    if (!parent || parent === document.body || parent === document.documentElement) break;
     var text = (parent.innerText || '').trim();
-    // Stop walking once we have real content (more than just button labels)
-    if (text.length > 30 && !BUTTON_ONLY_RE.test(text)) {
-      el = parent;
-      break;
-    }
+    if (text.length > 2000) break; // too much content — we've left the dialog
+    if (text.length > 30)  bestEl = parent; // valid dialog container — keep going up
     current = parent;
   }
+  el = bestEl;
 
   var codeEl = el ? el.querySelector('pre, code') : null;
   return {

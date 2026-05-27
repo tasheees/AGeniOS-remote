@@ -930,7 +930,9 @@ setInterval(async () => {
       _lastActionSig = sig;
       log(`[action-sync] changed → ${acts.length} actions`);
       if (hadActions && sig === '') {
-        // Actions cleared — broadcast resolution with source
+        // Actions cleared — broadcast resolution and immediately reset dedup set
+        // so the next identical-looking modal is treated as a new notification
+        _alertedActionKeys.clear();
         broadcastActionResolved(_pendingActionSource || 'Mac');
       }
       broadcastState().catch(() => {});
