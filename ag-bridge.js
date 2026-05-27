@@ -948,17 +948,11 @@ setInterval(async () => {
         sendActionToTelegram(a); // respects isTelegramSuppressed internally
       }
     }
-    // Track count for resolution detection
+    // Track count for resolution detection (fallback for PWA-closed case)
     if (acts.length !== _lastActionCount) {
       if (acts.length === 0 && _lastActionCount > 0 && wsClients.size === 0) {
-        // Actions cleared while PWA was closed — resolution already handled by 1s interval
-        // if PWA was open; this is the fallback for PWA-closed case
-        const source = _pendingActionSource || 'Mac';
-        if (source !== 'Telegram' && !isTelegramSuppressed()) {
-          const emoji = source === 'PWA' ? '📱' : '🖥️';
-          telegramNotifyInline(`${emoji} *Action resolved from ${source}*`, []);
-        }
-        _pendingActionSource = null;
+        // PWA closed — call broadcastActionResolved which now handles all sources
+        broadcastActionResolved(_pendingActionSource || 'Mac');
       }
       if (acts.length === 0) _alertedActionKeys.clear();
       _lastActionCount = acts.length;
@@ -1226,16 +1220,29 @@ const httpServer = http.createServer(async (req, res) => {
     const body = await parseBody(req);
     const { idx, optionIndex, decision } = body;
     _pendingActionSource = 'Telegram';
-    // optionIndex: specific option to click (new multi-button flow)
-    // decision: 'allow'/'reject' (legacy 2-button flow, treat as optionIndex 0/last)
     const optIdx = typeof optionIndex !== 'undefined' ? Number(optionIndex) : (decision === 'allow' ? 0 : -1);
     if (optIdx >= 0) {
-      try { await clickAction(optIdx); } catch(e) { log('[action-response] clickAction error:', e.message); }
+      // Find the action so we can report which option text was clicked
+      const act = actions.find(a => String(a.occurrenceIndex) === String(idx));
+      const optText = act?.options?.[optIdx]?.text?.replace(/^\d+[. ]+/, '').slice(0, 60) || `option ${optIdx + 1}`;
+      try {
+        await clickAction(optIdx);
+        log(`[action-response] clicked option ${optIdx} — "${optText}"`);
+        // Send immediate Telegram confirmation — "Clicking..." while AG processes
+        if (!isTelegramSuppressed()) {
+          telegramNotifyInline(`⏳ *Clicking:* ${optText}\n_AG is processing…_`, []);
+        }
+      } catch(e) {
+        log('[action-response] clickAction error:', e.message);
+        if (!isTelegramSuppressed()) telegramNotifyInline(`❌ Click failed: ${e.message}`, []);
+      }
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));
     } else {
-      // Negative optIdx = reject / dismiss
+      // Dismiss locally
+      const act = actions.find(a => String(a.occurrenceIndex) === String(idx));
       actions = actions.filter(a => a.occurrenceIndex !== Number(idx));
       broadcast('actions', { actions });
+      if (!isTelegramSuppressed()) telegramNotifyInline(`❌ *Dismissed* — AG skips this action`, []);
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));
     }
     return;
