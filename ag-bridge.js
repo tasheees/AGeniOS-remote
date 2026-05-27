@@ -100,20 +100,25 @@ const wsClients = new Set(); // Connected PWA browsers
 let tunnelUrl = null;
 
 // ─── Notification suppression ─────────────────────────────────────────────────
-// macActive     — true when Mac HID idle time < IDLE_THRESHOLD_S (user is present)
-// telegramMuted — manual override toggle (/mute, /unmute, or PWA settings)
-let macActive     = false;
-let telegramMuted = false;
+// macActive          — true when Mac HID idle time < IDLE_THRESHOLD_S
+// telegramMuted      — manual mute toggle
+// tunnelMode         — 'ngrok' | 'cloudflare' (default: ngrok)
+// activeTunnelProvider — which provider is currently supplying tunnelUrl
+let macActive            = false;
+let telegramMuted        = false;
+let tunnelMode           = 'ngrok';       // persisted preference
+let activeTunnelProvider = null;          // 'ngrok' | 'cloudflare' | null
 const isTelegramSuppressed = () => macActive || telegramMuted;
 
-// Persist telegramMuted across restarts
+// Persist settings across restarts
 function saveSettings() {
-  try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ telegramMuted })); } catch {}
+  try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ telegramMuted, tunnelMode })); } catch {}
 }
 try {
   const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
   if (typeof saved.telegramMuted === 'boolean') telegramMuted = saved.telegramMuted;
-} catch { /* first run or corrupt file — use defaults */ }
+  if (saved.tunnelMode === 'ngrok' || saved.tunnelMode === 'cloudflare') tunnelMode = saved.tunnelMode;
+} catch { /* first run — use defaults */ }
 
 // ─── Logging ─────────────────────────────────────────────────────────────────
 
@@ -139,7 +144,7 @@ function telegramNotify(text) {
 // Broadcast current notification settings to all PWA clients
 function broadcastSettings() {
   saveSettings();
-  broadcast('settings', { macActive, telegramMuted });
+  broadcast('settings', { macActive, telegramMuted, tunnelMode, activeTunnelProvider, tunnelUrl });
 }
 
 // ─── Smart channel router ─────────────────────────────────────────────────────
@@ -252,6 +257,19 @@ const CMD_WHITELIST = {
     });
   }),
   '/mute':    () => { telegramMuted = true;  broadcastSettings(); return '🔕 Telegram muted. Use /unmute to re-enable.'; },
+  '/tunnel':  (arg) => {
+    const newMode = (arg || '').trim().toLowerCase();
+    if (newMode === 'ngrok' || newMode === 'cloudflare') {
+      tunnelMode = newMode;
+      saveSettings();
+      broadcastSettings();
+      return `📡 *Tunnel default set to* \`${tunnelMode}\`\nTakes full effect on next bridge restart.`;
+    }
+    const activeInfo = tunnelUrl
+      ? `${activeTunnelProvider || '?'}: ${tunnelUrl}`
+      : 'No tunnel active';
+    return `📡 *Tunnel Status*\nActive: ${activeInfo}\nDefault: \`${tunnelMode}\` ⭐\n\nChange default:\n/tunnel ngrok\n/tunnel cloudflare`;
+  },
   '/unmute':  () => { telegramMuted = false; broadcastSettings(); return '🔔 Telegram unmuted.'; },
   '/notify':  () => {
     const state = macActive ? '🖥️ Mac active (auto-suppressed)'
@@ -340,8 +358,11 @@ async function checkEODSchedule() {
 // Remote ops — always require Sovereign Console approval
 const CMD_REMOTE = ['/push', '/deploy', '/gcloud'];
 
+
 async function executeCommand(cmd) {
-  const key = cmd.trim().split(' ')[0].toLowerCase();
+  const parts = cmd.trim().split(/\s+/);
+  const key   = parts[0].toLowerCase();
+  const arg   = parts.slice(1).join(' ');
 
   if (CMD_REMOTE.some(r => key.startsWith(r))) {
     return `🔒 *Remote op blocked*\n\`${cmd}\` requires Sovereign Console approval.\nSend to Console chat manually.`;
@@ -349,7 +370,7 @@ async function executeCommand(cmd) {
 
   const handler = CMD_WHITELIST[key];
   if (handler) {
-    try { return await handler(); }
+    try { return await handler(arg); }
     catch (e) { return `❌ Error: ${e.message}`; }
   }
 
@@ -1282,11 +1303,19 @@ wss.on('connection', (ws, req) => {
         break;
 
       case 'set_telegram_muted':
-        // PWA settings toggle — mute/unmute Telegram notifications
         telegramMuted = !!msg.value;
         log(`[settings] telegramMuted → ${telegramMuted} (from PWA)`);
         saveSettings();
         broadcastSettings();
+        break;
+
+      case 'set_tunnel_mode':
+        if (msg.value === 'ngrok' || msg.value === 'cloudflare') {
+          tunnelMode = msg.value;
+          log(`[settings] tunnelMode → ${tunnelMode} (from PWA)`);
+          saveSettings();
+          broadcastSettings();
+        }
         break;
 
       case 'evaluate':
@@ -1417,8 +1446,61 @@ async function main() {
   // Connect to CDP
   await connectCDP();
 
-  // Start cloudflared tunnel (with ngrok fallback after 3 min)
-  startCloudflared();
+  // ── Tunnel startup: try preferred provider first ──────────────────────────
+  // ngrok = preferred default; cloudflare = fallback (and vice versa if set)
+  async function getNgrokUrlOnce() {
+    return new Promise((resolve, reject) => {
+      const r = require('http').get('http://localhost:4040/api/tunnels', (resp) => {
+        let d = ''; resp.on('data', c => d += c);
+        resp.on('end', () => { try { resolve(JSON.parse(d)?.tunnels?.[0]?.public_url || null); } catch(e) { reject(e); } });
+      });
+      r.on('error', reject);
+      r.setTimeout(2000, () => { r.destroy(); reject(new Error('timeout')); });
+    });
+  }
+
+  function setTunnel(url, provider) {
+    tunnelUrl = url;
+    activeTunnelProvider = provider;
+    log(`✅ Tunnel URL (${provider}):`, url);
+    broadcast('status', { cdpConnected, tunnelUrl });
+    broadcastSettings();
+    setTimeout(() => {
+      if (wsClients.size === 0 && !isTelegramSuppressed()) {
+        telegramNotifyInline(
+          `🌐 *AG Bridge online* \u2014 no PWA connected yet\n\nURL: ${tunnelUrl}\nPassword: \`${REMOTE_PASSWORD}\`\n\nType /wpa anytime to get the link again.`,
+          []
+        );
+      }
+    }, 60_000);
+  }
+
+  if (tunnelMode === 'cloudflare') {
+    log('[tunnel] Mode: cloudflare (primary)');
+    startCloudflared();
+  } else {
+    log('[tunnel] Mode: ngrok (primary), cloudflare (fallback)');
+    // Poll ngrok API every 5s for up to 60s
+    let ngrokPollCount = 0;
+    const ngrokPollTimer = setInterval(async () => {
+      try {
+        const url = await getNgrokUrlOnce();
+        if (url && !tunnelUrl) {
+          clearInterval(ngrokPollTimer);
+          setTunnel(url, 'ngrok');
+        }
+      } catch { /* ngrok not ready yet */ }
+      if (++ngrokPollCount >= 12) clearInterval(ngrokPollTimer); // stop after 60s
+    }, 5_000);
+    // Cloudflare fallback if ngrok not found after 60s
+    setTimeout(() => {
+      clearInterval(ngrokPollTimer);
+      if (!tunnelUrl) {
+        log('[tunnel] Ngrok not found — starting cloudflare fallback');
+        startCloudflared();
+      }
+    }, 62_000);
+  }
 
   // ─── ngrok URL watcher ─────────────────────────────────────────────────────
   // Polls ngrok API every 10s. When the URL changes (e.g. after ngrok restart),

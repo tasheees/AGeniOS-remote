@@ -1583,6 +1583,21 @@
         </div>
 
         <div class="notif-hint" id="notif-hint-text">Auto-suppressed — you're at your Mac</div>
+
+        <div class="notif-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <div class="notif-row-info">
+            <div class="notif-row-label">📡 Tunnel mode</div>
+            <div class="notif-row-sub" id="tunnel-mode-label">Loading…</div>
+          </div>
+          <label class="notif-toggle">
+            <input type="checkbox" id="tunnel-mode-toggle" onchange="setTunnelMode(this.checked)">
+            <span class="notif-slider" style=""></span>
+          </label>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px;padding:0 2px">
+          OFF = ngrok (default) &nbsp;•&nbsp; ON = cloudflare
+        </div>
+
       </div>
     </div>
 
@@ -2551,7 +2566,7 @@ function dismissAction(idx) {
 
 // ─── Notification Settings ────────────────────────────────────────────────────
 function applySettings(data) {
-  const { macActive, telegramMuted } = data;
+  const { macActive, telegramMuted, tunnelMode, activeTunnelProvider, tunnelUrl } = data;
   const badge = document.getElementById('mac-active-badge');
   const label = document.getElementById('mac-active-label');
   if (badge && label) {
@@ -2579,12 +2594,28 @@ function applySettings(data) {
       hint.classList.remove('visible');
     }
   }
+  // Tunnel mode row
+  const tunnelToggle = document.getElementById('tunnel-mode-toggle');
+  const tunnelLabel  = document.getElementById('tunnel-mode-label');
+  if (tunnelToggle && tunnelMode) {
+    tunnelToggle.checked = tunnelMode === 'cloudflare';
+    const providerIcon = activeTunnelProvider === 'ngrok' ? '🔗' : activeTunnelProvider === 'cloudflare' ? '☁️' : '⏳';
+    const urlShort = tunnelUrl ? tunnelUrl.replace('https://', '').slice(0, 32) + '…' : 'none';
+    if (tunnelLabel) tunnelLabel.textContent = `${providerIcon} ${activeTunnelProvider || 'waiting'} • ${urlShort}`;
+  }
 }
 
 function setTelegramMuted(muted) {
   if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
   ws.send(JSON.stringify({ type: 'set_telegram_muted', value: muted }));
   toast(muted ? '🔕 Telegram muted' : '🔔 Telegram unmuted');
+}
+
+function setTunnelMode(useCloudflare) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
+  const mode = useCloudflare ? 'cloudflare' : 'ngrok';
+  ws.send(JSON.stringify({ type: 'set_tunnel_mode', value: mode }));
+  toast(`📡 Tunnel default → ${mode} (restarts to take effect)`);
 }
 
 // ─── Permission Modal ─────────────────────────────────────────────────────────
