@@ -1419,11 +1419,37 @@ setInterval(async () => {
   }
 }, 2000);
 
+// ─── Tunnel helpers ──────────────────────────────────────────────────────────
+
+function setTunnel(url, provider) {
+  tunnelUrl = url;
+  activeTunnelProvider = provider;
+  log(`✅ Tunnel URL (${provider}):`, url);
+  broadcast('status', { cdpConnected, tunnelUrl });
+  broadcastSettings();
+  setTimeout(() => {
+    if (wsClients.size === 0 && !isTelegramSuppressed()) {
+      telegramNotifyInline(
+        `🌐 *AG Bridge online* — no PWA connected yet\n\nURL: ${tunnelUrl}\nPassword: \`${REMOTE_PASSWORD}\`\n\nType /wpa anytime to get the link again.`,
+        []
+      );
+    }
+  }, 60_000);
+}
+
+function getNgrokUrlOnce() {
+  return new Promise((resolve, reject) => {
+    const r = require('http').get('http://localhost:4040/api/tunnels', (resp) => {
+      let d = ''; resp.on('data', c => d += c);
+      resp.on('end', () => { try { resolve(JSON.parse(d)?.tunnels?.[0]?.public_url || null); } catch(e) { reject(e); } });
+    });
+    r.on('error', reject);
+    r.setTimeout(2000, () => { r.destroy(); reject(new Error('timeout')); });
+  });
+}
+
 // ─── cloudflared tunnel ───────────────────────────────────────────────────────
 
-// Guard — only restart cloudflare when it's the intended provider.
-// Set false when switching to ngrok-primary mode so orphaned cloudflared
-// processes don't reset tunnelUrl and restart themselves.
 let cloudflareEnabled = false;
 
 function startCloudflared() {
@@ -1449,7 +1475,6 @@ function startCloudflared() {
       log('cloudflared closed — not restarting (ngrok mode active)');
       return;
     }
-    // Only null out tunnelUrl if cloudflare was the active provider
     if (activeTunnelProvider === 'cloudflare') tunnelUrl = null;
     const delay = 45_000 + Math.random() * 15_000;
     log(`cloudflared exited (${code}). Restarting in ${Math.round(delay / 1000)}s…`);
@@ -1471,45 +1496,12 @@ async function main() {
   log(`Remote password: ${REMOTE_PASSWORD}`);
   log('═══════════════════════════════════════════════');
 
-  // Start HTTP + WS server
   httpServer.listen(BRIDGE_PORT, () => {
     log(`Server listening on http://localhost:${BRIDGE_PORT}`);
   });
 
-  // Ensure AG is running with CDP
   await ensureAGRunning();
-
-  // Connect to CDP
   await connectCDP();
-
-  // ── Tunnel startup: try preferred provider first ──────────────────────────
-  // ngrok = preferred default; cloudflare = fallback (and vice versa if set)
-  async function getNgrokUrlOnce() {
-    return new Promise((resolve, reject) => {
-      const r = require('http').get('http://localhost:4040/api/tunnels', (resp) => {
-        let d = ''; resp.on('data', c => d += c);
-        resp.on('end', () => { try { resolve(JSON.parse(d)?.tunnels?.[0]?.public_url || null); } catch(e) { reject(e); } });
-      });
-      r.on('error', reject);
-      r.setTimeout(2000, () => { r.destroy(); reject(new Error('timeout')); });
-    });
-  }
-
-  function setTunnel(url, provider) {
-    tunnelUrl = url;
-    activeTunnelProvider = provider;
-    log(`✅ Tunnel URL (${provider}):`, url);
-    broadcast('status', { cdpConnected, tunnelUrl });
-    broadcastSettings();
-    setTimeout(() => {
-      if (wsClients.size === 0 && !isTelegramSuppressed()) {
-        telegramNotifyInline(
-          `🌐 *AG Bridge online* \u2014 no PWA connected yet\n\nURL: ${tunnelUrl}\nPassword: \`${REMOTE_PASSWORD}\`\n\nType /wpa anytime to get the link again.`,
-          []
-        );
-      }
-    }, 60_000);
-  }
 
   if (tunnelMode === 'cloudflare') {
     log('[tunnel] Mode: cloudflare (primary)');
