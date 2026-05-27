@@ -88,29 +88,11 @@ const submitBtn = tooltipBtns.find(b => /^submit/i.test(b.innerText.trim()));
 
 ---
 
-## 🐛 Known Bug — Options Extraction Overshoot (2026-05-26)
+## ✅ RESOLVED: Options Extraction Overshoot (2026-05-27)
 
-**Symptom:** PWA perm-modal shows wrong options — timestamps like `22:17`, `22:18`
-and chat text fragments instead of the real dialog options (Yes allow / No).
-
-**Root cause:** Container walk condition (`>150 chars + newline + not starting with Skip`)
-overshoots the dialog root and climbs into a DOM ancestor that includes chat content.
-Lines like `22:17` pass the `/^[1-9]/` digit filter and appear as fake numbered options.
-
-**Evidence:** Screenshot shows:
-- Command: `ngrok tunnel / PM2 ngrok-tunnel`
-- Option 1: `file changed`
-- Options 2–5: `22:17`, `22:18`, `22:21`, `22:23` (timestamps from conversation)
-- Option 7–8: governance note lines from chat history
-
-**Fix needed:** Container walk needs a ceiling — stop at the first ancestor that
-contains a known dialog keyword (`Allow`, `running this command`, `permission`) OR
-cap the walk at the first ancestor whose `offsetParent` is a fixed/absolute overlay.
-Alternative: query the dialog by searching for an ancestor of `skipBtn` that also
-DIRECTLY contains the `submitBtn` (i.e. `ancestor.contains(submitBtn)`) — guarantees
-we stop at the narrowest common ancestor of both buttons, not higher.
-
-**Priority:** P1-blocker for M4. Fix tomorrow before re-testing.
+**Fix:** Replace threshold walk with `ancestor.contains(submitBtn)` — first common
+ancestor of Skip + Submit IS the dialog root. Applied to both `scrapePendingActions()`
+and `scrapeChat()`. Commit: see morning session 2026-05-27.
 
 ---
 
@@ -151,4 +133,4 @@ Task: M5 above.
 
 ---
 
-*Last updated: 2026-05-26T22:38+03:00 by AGenIOS Studio 23aba18b — options container walk fixed*
+*Last updated: 2026-05-27T10:10+03:00 by AGenIOS Studio 23aba18b — overshoot bug fixed*

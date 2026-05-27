@@ -350,10 +350,10 @@ async function scrapeChat() {
         var skipEl   = tipBtns.find(function(b){ return /^skip$/i.test((b.innerText||'').trim()); });
         var submitEl = tipBtns.find(function(b){ return /^submit/i.test((b.innerText||'').trim()); });
         if (skipEl && submitEl) {
+          // Walk up from Skip to the first ancestor that also contains Submit = dialog root
           var dlgNode = skipEl.parentElement;
-          for (var ki = 0; ki < 20 && dlgNode && dlgNode !== clone; ki++) {
-            var dtxt = (dlgNode.innerText || '').trim();
-            if (dtxt.length > 150 && dtxt.includes('\n') && !/^skip/i.test(dtxt)) break;
+          while (dlgNode && dlgNode !== clone) {
+            if (dlgNode.contains(submitEl)) break;
             dlgNode = dlgNode.parentElement;
           }
           if (dlgNode && dlgNode !== clone) dlgNode.remove();
@@ -435,12 +435,11 @@ async function scrapePendingActions() {
           // Both must be present simultaneously — this is the approval dialog signature
           if (!skipBtn || !submitBtn) return [];
 
-          // Walk up from Skip to find the dialog root — must contain title + options + buttons
-          // Threshold: >150 chars + newline + not starting with "Skip" (avoids stopping at button row)
+          // Walk up from Skip until we find the first ancestor that also contains Submit.
+          // That ancestor IS the dialog root — narrowest common ancestor, can never overshoot.
           let container = skipBtn.parentElement;
-          for (let i = 0; i < 20 && container && container !== document.body; i++) {
-            const txt = (container.innerText || '').trim();
-            if (txt.length > 150 && txt.includes('\\n') && !/^skip/i.test(txt)) break;
+          while (container && container !== document.body) {
+            if (container.contains(submitBtn)) break;
             container = container.parentElement;
           }
 
