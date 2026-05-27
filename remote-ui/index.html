@@ -738,6 +738,77 @@
 
     /* ─── Pending Actions Panel ──────────────────────────────── */
     #actions-panel {
+      padding-bottom: 12px;
+    }
+
+    /* ─── Notification Settings ───────────────────────────────────────────────── */
+    #notif-settings {
+      margin: 16px 12px 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .notif-settings-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .notif-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .notif-row-info { flex: 1; min-width: 0; }
+    .notif-row-label { font-size: 13px; font-weight: 500; color: var(--text-main); }
+    .notif-row-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+    .notif-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px;
+      white-space: nowrap;
+      background: rgba(255,255,255,0.08);
+      color: var(--text-muted);
+    }
+    .notif-badge.active  { background: rgba(52,211,153,0.15); color: #34d399; }
+    .notif-badge.away    { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    /* Toggle switch */
+    .notif-toggle { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+    .notif-toggle input { opacity: 0; width: 0; height: 0; }
+    .notif-slider {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0.1);
+      border-radius: 26px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .notif-slider::before {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .notif-toggle input:checked + .notif-slider { background: #f87171; }
+    .notif-toggle input:checked + .notif-slider::before { transform: translateX(18px); }
+    .notif-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 4px 0 2px;
+      display: none;
+    }
+    .notif-hint.visible { display: block; }
+
       padding: 12px;
       gap: 10px;
     }
@@ -1489,6 +1560,32 @@
         <div class="icon">✅</div>
         <p>No pending actions</p>
       </div>
+
+      <!-- Notification Settings -->
+      <div id="notif-settings">
+        <div class="notif-settings-title">🔔 Notification Settings</div>
+
+        <div class="notif-row">
+          <div class="notif-row-info">
+            <div class="notif-row-label">Mac presence</div>
+            <div class="notif-row-sub" id="mac-active-label">Detecting…</div>
+          </div>
+          <div id="mac-active-badge" class="notif-badge">–</div>
+        </div>
+
+        <div class="notif-row">
+          <div class="notif-row-info">
+            <div class="notif-row-label">Telegram notifications</div>
+            <div class="notif-row-sub">Off when you're at your Mac · /mute from Telegram</div>
+          </div>
+          <label class="notif-toggle">
+            <input type="checkbox" id="telegram-muted-toggle" onchange="setTelegramMuted(this.checked)">
+            <span class="notif-slider"></span>
+          </label>
+        </div>
+
+        <div class="notif-hint" id="notif-hint-text">Auto-suppressed — you're at your Mac</div>
+      </div>
     </div>
 
     <!-- Chats Panel -->
@@ -1648,6 +1745,9 @@ function connect() {
         break;
       case 'notification':
         showSystemMessage(msg.data.text || '');
+        break;
+      case 'settings':
+        applySettings(msg.data);
         break;
       case 'eval_result':
         console.log('[bridge eval]', msg.data);
@@ -2438,6 +2538,44 @@ function approveActionDirect(submitSelector) {
 function dismissAction(idx) {
   actions = actions.filter(a => a.occurrenceIndex !== idx);
   renderActions();
+}
+
+// ─── Notification Settings ────────────────────────────────────────────────────
+function applySettings(data) {
+  const { macActive, telegramMuted } = data;
+  const badge = document.getElementById('mac-active-badge');
+  const label = document.getElementById('mac-active-label');
+  if (badge && label) {
+    if (macActive) {
+      badge.textContent = 'At Mac';
+      badge.className   = 'notif-badge active';
+      label.textContent = 'Present — Telegram suppressed automatically';
+    } else {
+      badge.textContent = 'Away';
+      badge.className   = 'notif-badge away';
+      label.textContent = 'Away — Telegram notifications enabled';
+    }
+  }
+  const toggle = document.getElementById('telegram-muted-toggle');
+  if (toggle) toggle.checked = !!telegramMuted;
+  const hint = document.getElementById('notif-hint-text');
+  if (hint) {
+    if (macActive && !telegramMuted) {
+      hint.textContent = '🖥️ Auto-suppressed — you\'re at your Mac (idle < 90s)';
+      hint.classList.add('visible');
+    } else if (telegramMuted) {
+      hint.textContent = '🔕 Manually muted — use /unmute in Telegram to re-enable';
+      hint.classList.add('visible');
+    } else {
+      hint.classList.remove('visible');
+    }
+  }
+}
+
+function setTelegramMuted(muted) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
+  ws.send(JSON.stringify({ type: 'set_telegram_muted', value: muted }));
+  toast(muted ? '🔕 Telegram muted' : '🔔 Telegram unmuted');
 }
 
 // ─── Permission Modal ─────────────────────────────────────────────────────────

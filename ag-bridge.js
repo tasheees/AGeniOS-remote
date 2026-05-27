@@ -61,6 +61,10 @@ const BRIDGE_PORT     = parseInt(process.env.BRIDGE_PORT || '9100', 10);
 const CDP_HOST        = 'localhost';
 const CDP_PORT        = 9222;
 const EOD_TIME        = process.env.EOD_TIME || '';  // e.g. "18:00" — auto EOD summary
+// Seconds of Mac keyboard/mouse inactivity before treating user as "away"
+// Below threshold → macActive=true → Telegram suppressed.
+// Tune via IDLE_THRESHOLD env var. Default 90s (1.5 min).
+const IDLE_THRESHOLD_S = parseInt(process.env.IDLE_THRESHOLD || '90', 10);
 
 // CDP selectors — CONFIRMED via live CDP probe of AG 2.0.6 / Electron 41 / Chrome 146
 // Probed: 2026-05-26 — [role="article"] = 14 messages, div[aria-label="Message input"] = contenteditable
@@ -91,6 +95,13 @@ const wsClients = new Set(); // Connected PWA browsers
 
 let tunnelUrl = null;
 
+// ─── Notification suppression ─────────────────────────────────────────────────
+// macActive     — true when Mac HID idle time < IDLE_THRESHOLD_S (user is present)
+// telegramMuted — manual override toggle (/mute, /unmute, or PWA settings)
+let macActive     = false;
+let telegramMuted = false;
+function isTelegramSuppressed() { return macActive || telegramMuted; }
+
 // ─── Logging ─────────────────────────────────────────────────────────────────
 
 const log = (...args) => console.log(`[ag-bridge] ${new Date().toISOString()}`, ...args);
@@ -112,13 +123,32 @@ function telegramNotify(text) {
   req.end();
 }
 
+// Broadcast current notification settings to all PWA clients
+function broadcastSettings() {
+  broadcast('settings', { macActive, telegramMuted });
+}
+
 // ─── Smart channel router ─────────────────────────────────────────────────────
-// PWA open  → result goes to WebSocket only (no Telegram noise)
-// PWA closed → result goes to Telegram (maintenance/fallback channel)
+// Priority order (first match wins):
+//   1. alwaysTelegram=true  → always send (startup URL, EOD summary)
+//   2. macActive=true       → suppress (you’re at your Mac)
+//   3. telegramMuted=true   → suppress (manual toggle)
+//   4. PWA open             → WS broadcast only
+//   5. fallback             → Telegram
 
 function smartNotify(text, { alwaysTelegram = false } = {}) {
   const pwaOpen = wsClients.size > 0;
-  if (pwaOpen && !alwaysTelegram) {
+  if (alwaysTelegram) {
+    telegramNotify(text);
+    return;
+  }
+  if (isTelegramSuppressed()) {
+    // Mac is active or manually muted — WS only (or silent if no PWA)
+    if (pwaOpen) broadcast('notification', { text });
+    log(`[smartNotify] suppressed (macActive=${macActive} muted=${telegramMuted}): ${text.slice(0, 60)}`);
+    return;
+  }
+  if (pwaOpen) {
     broadcast('notification', { text });
   } else {
     telegramNotify(text);
@@ -199,10 +229,21 @@ const CMD_WHITELIST = {
       try {
         const procs = JSON.parse(stdout);
         const lines = procs.map(p => `${p.name}: ${p.pm2_env.status} ↺${p.pm2_env.restart_time}`);
-        resolve('📊 *PM2 Status*\n' + lines.join('\n'));
+        const notifState = macActive ? '🖥️ Mac active — Telegram suppressed'
+                        : telegramMuted ? '🔕 Muted manually'
+                        : '🔔 Telegram on';
+        resolve(`📊 *PM2 Status*\n${lines.join('\n')}\n\n${notifState}`);
       } catch { resolve(stdout.slice(0, 400)); }
     });
   }),
+  '/mute':    () => { telegramMuted = true;  broadcastSettings(); return '🔕 Telegram muted. Use /unmute to re-enable.'; },
+  '/unmute':  () => { telegramMuted = false; broadcastSettings(); return '🔔 Telegram unmuted.'; },
+  '/notify':  () => {
+    const state = macActive ? '🖥️ Mac active (auto-suppressed)'
+                : telegramMuted ? '🔕 Manually muted'
+                : '🔔 Telegram notifications ON';
+    return `*Notification status*\n${state}\n\nCommands: /mute • /unmute`;
+  },
   '/tsc':     () => new Promise((resolve) => {
     exec('cd /Users/marwantzenios/projects/genios && npx tsc --noEmit 2>&1', { timeout: 60000 }, (err, stdout, stderr) => {
       const out = (stdout + stderr).trim().slice(0, 800);
@@ -642,12 +683,33 @@ async function scrapeAGState() {
 // Fast 500ms interval just for typing indicator
 let _tickCount = 0;
 let _lastSnippetSeen = '';
+let _macCheckTick = 0; // polls macActive every 10 ticks = 5s
 setInterval(async () => {
   if (!cdpConnected) return;  // run even if no PWA, for background watch
   const hasClients = wsClients.size > 0;
   if (!hasClients && lastAgState === 'idle') return; // nothing to track
   _tickCount++;
   if (_tickCount % 10 === 1) log(`[tick] #${_tickCount} clients=${wsClients.size} lastState=${lastAgState}`);
+
+  // ─ Mac idle detection: user present if HID idle < threshold ────────────
+  // document.hasFocus() is wrong — AG stays focused even when user walks away.
+  // HIDIdleTime = seconds since last keyboard/mouse event on the entire Mac.
+  if (_tickCount % 10 === 0) {
+    exec("ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print $NF/1000000000; exit}'",
+      { timeout: 2000 },
+      (err, stdout) => {
+        if (err) return;
+        const idleSec = parseFloat(stdout.trim());
+        if (isNaN(idleSec)) return;
+        const prev = macActive;
+        macActive = idleSec < IDLE_THRESHOLD_S;
+        if (macActive !== prev) {
+          log(`[macActive] ${prev} → ${macActive} (idle=${idleSec.toFixed(1)}s, threshold=${IDLE_THRESHOLD_S}s)`);
+          broadcastSettings();
+        }
+      }
+    );
+  }
   try {
     const agStateData = await scrapeAGState();
     if (agStateData.snippet) _lastSnippetSeen = agStateData.snippet;
@@ -674,7 +736,8 @@ setInterval(async () => {
 // Background Watch: push new actions to Telegram when PWA is closed
 let _lastActionCount = 0;
 setInterval(async () => {
-  if (!cdpConnected || wsClients.size > 0) { return; } // PWA open — it handles actions
+  // Skip if PWA open OR Mac is active OR manually muted
+  if (!cdpConnected || wsClients.size > 0 || isTelegramSuppressed()) { return; }
   try {
     const acts = await scrapePendingActions();
     if (acts.length > _lastActionCount) {
@@ -1127,7 +1190,8 @@ wss.on('connection', (ws, req) => {
   log('PWA client connected. Total:', wsClients.size + 1);
   wsClients.add(ws);
   lastPwaActivity = Date.now();
-  ws.send(JSON.stringify({ type: 'status', data: { cdpConnected, tunnelUrl } }));
+  ws.send(JSON.stringify({ type: 'status',   data: { cdpConnected, tunnelUrl } }));
+  ws.send(JSON.stringify({ type: 'settings', data: { macActive, telegramMuted } }));
 
   // Send initial state + any pending actions immediately on connect
   broadcastState().catch(() => {});
@@ -1188,6 +1252,13 @@ wss.on('connection', (ws, req) => {
       case 'refresh':
         // Immediate state re-broadcast — used by PWA after interactions
         await broadcastState();
+        break;
+
+      case 'set_telegram_muted':
+        // PWA settings toggle — mute/unmute Telegram notifications
+        telegramMuted = !!msg.value;
+        log(`[settings] telegramMuted → ${telegramMuted} (from PWA)`);
+        broadcastSettings();
         break;
 
       case 'evaluate':
