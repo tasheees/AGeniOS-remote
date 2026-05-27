@@ -552,7 +552,9 @@ async function scrapePendingActions() {
     const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
     log('[dialog-lines]', JSON.stringify(lines));
 
-    const BUTTON_RE = /^(skip|submit|allow|deny|yes|no|\u21b5)$/i;
+    // BUTTON_RE: only matches the actual Skip/Submit/Enter button labels.
+    // Do NOT include 'no', 'yes', 'allow', 'deny' — those are valid option texts.
+    const BUTTON_RE = /^(skip|submit|cancel|close|\u21b5)$/i;
     const dialogTitle = lines.find(l => !BUTTON_RE.test(l) && l.length > 4) || 'Approval required';
 
     // Extract numbered options — "1 text", "1. text", or digit alone then text on next line
