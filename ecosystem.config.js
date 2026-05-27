@@ -22,5 +22,14 @@ module.exports = {
       out_file: './logs/telegram-daemon-out.log',
       error_file: './logs/telegram-daemon-err.log',
     },
+    {
+      name: 'ngrok',
+      script: '/usr/local/bin/ngrok',
+      args: 'http 9100',
+      cwd: '/Users/marwantzenios/projects/AGenIOS',
+      restart_delay: 5000,
+      max_restarts: 10,
+      autorestart: true,
+    },
   ],
 };

@@ -265,8 +265,9 @@ async function processUpdate(update) {
   if (cmd === '/wpa') {
     if (wpaLock) { await sendMessage(chatId, '⏳ Already checking… wait a moment.'); return; }
     wpaLock = true;
-    async function fetchTunnel() {
-      return new Promise((resolve, reject) => {
+    try {
+      // Try to reach the bridge
+      const result = await new Promise((resolve, reject) => {
         const req = require('http').get('http://localhost:9100/tunnel-url', (res) => {
           let data = '';
           res.on('data', c => data += c);
@@ -275,28 +276,25 @@ async function processUpdate(update) {
         req.on('error', reject);
         req.setTimeout(3000, () => { req.destroy(); reject(new Error('timeout')); });
       });
-    }
-    let sent = false;
-    for (let attempt = 0; attempt < 4; attempt++) {
-      try {
-        const result = await fetchTunnel();
-        if (result.tunnelUrl) {
-          await sendMessage(chatId,
-            `🌐 *PWA Link*\n\nURL: ${result.tunnelUrl}\nPassword: \`${result.password}\``,
-            { parse_mode: 'Markdown' }
-          );
-          sent = true;
-          break;
-        }
-        // No URL yet — wait and retry
-        if (attempt === 0) await sendMessage(chatId, '⏳ Bridge starting, checking in 8s…');
-        await new Promise(r => setTimeout(r, 8000));
-      } catch {
-        if (attempt === 0) await sendMessage(chatId, '⏳ Bridge starting, checking in 8s…');
-        await new Promise(r => setTimeout(r, 8000));
+
+      if (result.tunnelUrl) {
+        await sendMessage(chatId,
+          `🌐 *PWA Link*\n\nURL: ${result.tunnelUrl}\nPassword: \`${result.password}\``,
+          { parse_mode: 'Markdown' }
+        );
+      } else {
+        // Bridge is up but no tunnel URL yet
+        await sendMessage(chatId,
+          `⚠️ *Bridge is up but no tunnel is active*\n\n` +
+          `Cloudflare may be rate-limited — try starting ngrok:\n` +
+          `\`pm2 start ngrok\`\n\n` +
+          `The bridge will pick up the URL within 10s.`,
+          { parse_mode: 'Markdown' }
+        );
       }
+    } catch {
+      await sendMessage(chatId, '❌ *Bridge not reachable* — check with `/status`', { parse_mode: 'Markdown' });
     }
-    if (!sent) await sendMessage(chatId, '❌ Bridge not reachable. Try: `/status`', { parse_mode: 'Markdown' });
     wpaLock = false;
     return;
   }
