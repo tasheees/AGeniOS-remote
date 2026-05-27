@@ -986,8 +986,9 @@ setInterval(async () => {
       if (!_alertedActionKeys.has(key)) {
         _alertedActionKeys.add(key);
         _alertedActionMap.set(key, {
-          title: (a.title || a.text || 'Action').slice(0, 60),
-          val:   (a.value || a.command || '').slice(0, 60),
+          title:   (a.title || a.text || 'Action').slice(0, 60),
+          val:     (a.value || a.command || '').slice(0, 60),
+          options: a.options || [],
         });
         sendActionToTelegram(a);
       }
@@ -1283,8 +1284,12 @@ const httpServer = http.createServer(async (req, res) => {
     const optIdx = typeof optionIndex !== 'undefined' ? Number(optionIndex) : (decision === 'allow' ? 0 : -1);
     if (optIdx >= 0) {
       // Find the action so we can report which option text was clicked
-      const act = _lastActions.find(a => String(a.occurrenceIndex) === String(idx));
-      const optText = act?.options?.[optIdx]?.text?.replace(/^\d+[. ]+/, '').slice(0, 60) || `option ${optIdx + 1}`;
+      const act     = _lastActions.find(a => String(a.occurrenceIndex) === String(idx));
+      // Fallback: look up options stored in _alertedActionMap at notification time
+      const mapEntry = Array.from(_alertedActionMap.values()).find(m => m.options?.[optIdx]);
+      const optText  = act?.options?.[optIdx]?.text?.replace(/^\d+[. ]+/, '').slice(0, 60)
+                    || mapEntry?.options?.[optIdx]?.text?.replace(/^\d+[. ]+/, '').slice(0, 60)
+                    || `option ${optIdx + 1}`;
       try {
         await clickAction(optIdx);
         log(`[action-response] clicked option ${optIdx} — "${optText}"`);
