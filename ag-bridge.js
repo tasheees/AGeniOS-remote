@@ -1150,14 +1150,16 @@ const httpServer = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ ok: false, error: 'Missing command' }));
       return;
     }
-    // Respond immediately — execution is async
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, queued: true }));
-    // Execute and route result
     executeCommand(cmd).then(result => {
-      smartNotify(result);
+      // Telegram-originated commands (from daemon on localhost) always reply via Telegram.
+      // PWA-originated commands use smartNotify (routes to PWA or Telegram based on state).
+      if (isLocal) telegramNotifyInline(result, []);
+      else smartNotify(result);
     }).catch(err => {
-      smartNotify(`❌ Command error: ${err.message}`);
+      if (isLocal) telegramNotifyInline(`❌ Command error: ${err.message}`, []);
+      else smartNotify(`❌ Command error: ${err.message}`);
     });
     return;
   }

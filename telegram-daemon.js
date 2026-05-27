@@ -66,12 +66,11 @@ try {
 
 // ─── Command whitelist ────────────────────────────────────────────────────────
 
+// Only commands the daemon handles via shell — everything else forwarded to ag-bridge
 const WHITELIST = {
   '/deploy': `cd ${PROJECT_DIR} && firebase deploy --only hosting`,
   '/push':   `cd ${PROJECT_DIR} && git push origin main`,
   '/tsc':    `cd ${PROJECT_DIR} && npx tsc --noEmit 2>&1 | tail -30`,
-  '/status': `cd ${PROJECT_DIR} && git status && git log --oneline -5`,
-  '/logs':   `gcloud logging read "resource.type=run_revision" --limit=20 --format="table(timestamp,textPayload)" --project=contact-verification-v2 2>&1 | head -40`,
 };
 
 // ─── Telegram API ─────────────────────────────────────────────────────────────
@@ -303,8 +302,8 @@ async function processUpdate(update) {
     return;
   }
 
-  // /pending
-  if (cmd === '/pending') { await handlePending(chatId); return; }
+  // /pending — forward to bridge (bridge scrapes AG live, Firestore path retired)
+  // falls through to bridge forward below
 
   // /approve <id>
   if (cmd === '/approve') {
