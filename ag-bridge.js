@@ -109,6 +109,8 @@ let telegramMuted        = false;
 let telegramForceUnmute  = false; // /unmute overrides macActive suppression
 let tunnelMode           = 'ngrok';
 let activeTunnelProvider = null;
+let _lastDigestAt        = 0;
+let _hadConnection = false;  // true once any PWA has connected this process lifetime
 // Suppressed when: manually muted, OR Mac is active and user hasn't force-unmuted
 const isTelegramSuppressed = () => telegramMuted || (macActive && !telegramForceUnmute);
 
@@ -116,6 +118,7 @@ const isTelegramSuppressed = () => telegramMuted || (macActive && !telegramForce
 function saveSettings() {
   try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify({
     telegramMuted, telegramForceUnmute, tunnelMode,
+    lastDigestAt: _lastDigestAt,
     authTokens: [...AUTH_TOKENS],   // persist sessions so restarts don't kick users
   })); } catch {}
 }
@@ -247,7 +250,7 @@ function sendActionToTelegram(action) {
 
 // ─── Background Watch: idle digest ───────────────────────────────────────────
 let _digestPending = false;
-let _lastDigestAt = 0; // epoch ms — prevents digest spam
+// _lastDigestAt declared at module scope (line 112)
 function scheduleIdleDigest(lastSnippet) {
   if (_digestPending) return;
   const now = Date.now();
@@ -255,8 +258,9 @@ function scheduleIdleDigest(lastSnippet) {
   _digestPending = true;
   setTimeout(async () => {
     _digestPending = false;
-    if (wsClients.size > 0) return; // PWA open — skip
-    if (isTelegramSuppressed()) return; // Mac active or muted
+    if (wsClients.size > 0) return;      // PWA open — skip
+    if (isTelegramSuppressed()) return;  // Mac active or muted
+    if (actions.length > 0 || _lastActionCount > 0) return; // dialog pending — don't interrupt
     try {
       const { exec } = require('child_process');
       exec(
@@ -264,6 +268,7 @@ function scheduleIdleDigest(lastSnippet) {
         { timeout: 5000 },
         (err, stdout) => {
           _lastDigestAt = Date.now();
+          saveSettings(); // persist cooldown so restarts don't reset the 5-min window
           const gitInfo = (stdout || '').trim().slice(0, 300);
           const snippet = (lastSnippet || '').slice(0, 200);
           const msg =
@@ -1228,13 +1233,11 @@ const httpServer = http.createServer(async (req, res) => {
       try {
         await clickAction(optIdx);
         log(`[action-response] clicked option ${optIdx} — "${optText}"`);
-        // Send immediate Telegram confirmation — "Clicking..." while AG processes
-        if (!isTelegramSuppressed()) {
-          telegramNotifyInline(`⏳ *Clicking:* ${optText}\n_AG is processing…_`, []);
-        }
+        // Always send feedback — user explicitly chose this, skip suppression check
+        telegramNotifyInline(`⏳ *Clicking:* ${optText}\n_AG is processing…_`, []);
       } catch(e) {
         log('[action-response] clickAction error:', e.message);
-        if (!isTelegramSuppressed()) telegramNotifyInline(`❌ Click failed: ${e.message}`, []);
+        telegramNotifyInline(`❌ Click failed: ${e.message}`, []);
       }
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));
     } else {
@@ -1437,6 +1440,7 @@ wss.on('connection', (ws, req) => {
   }
 
   log('PWA client connected. Total:', wsClients.size + 1);
+  _hadConnection = true; // suppress startup notification from now on
   wsClients.add(ws);
   lastPwaActivity = Date.now();
   ws.send(JSON.stringify({ type: 'status',   data: { cdpConnected, tunnelUrl } }));
@@ -1597,7 +1601,7 @@ function setTunnel(url, provider) {
   broadcast('status', { cdpConnected, tunnelUrl });
   broadcastSettings();
   setTimeout(() => {
-    if (wsClients.size === 0 && !isTelegramSuppressed()) {
+    if (wsClients.size === 0 && !_hadConnection && !isTelegramSuppressed()) {
       telegramNotifyInline(
         `🌐 *AG Bridge online*\n\nURL: ${tunnelUrl}\n\nType /wpa anytime to get the link again.`,
         []
