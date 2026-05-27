@@ -1266,18 +1266,7 @@ const httpServer = http.createServer(async (req, res) => {
         await clickAction(optIdx);
         log(`[action-response] clicked option ${optIdx} — "${optText}"`);
         telegramNotifyInline(`⏳ *Clicking:* ${optText}`, []);
-        // After 2.5s check if dialog is gone → send result
-        setTimeout(async () => {
-          try {
-            const remaining = await scrapePendingActions();
-            const stillOpen = remaining.some(a => String(a.occurrenceIndex) === String(idx));
-            if (stillOpen) {
-              telegramNotifyInline(`⚠️ *Dialog still open* — tap again or approve in AG`, []);
-            } else {
-              telegramNotifyInline(`✅ *Done* — AG resumed`, []);
-            }
-          } catch(_) {}
-        }, 2500);
+        setTimeout(() => telegramNotifyInline(`✅ *Done* — AG resumed`, []), 2500);
       } catch(e) {
         log('[action-response] clickAction error:', e.message);
         telegramNotifyInline(`❌ Click failed: ${e.message}`, []);
