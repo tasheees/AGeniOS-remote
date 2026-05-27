@@ -559,7 +559,15 @@ async function scrapePendingActions() {
     // BUTTON_RE: only matches the actual Skip/Submit/Enter button labels.
     // Do NOT include 'no', 'yes', 'allow', 'deny' — those are valid option texts.
     const BUTTON_RE = /^(skip|submit|cancel|close|\u21b5)$/i;
-    const dialogTitle = lines.find(l => !BUTTON_RE.test(l) && l.length > 4) || 'Approval required';
+    // Title: first substantive line that is not a button label, not a bare digit, and not an option text.
+    // We do a two-pass: first collect options to know what to exclude, but we need title first…
+    // Safe heuristic: skip lines that are bare single digits or start with digit+space (option prefixes)
+    const dialogTitle = lines.find(l =>
+      !BUTTON_RE.test(l) &&
+      !/^[1-9][\. ]/.test(l) &&   // not "1 Yes…" or "1. Yes…"
+      !/^[1-9]$/.test(l) &&       // not bare "1"
+      l.length > 4
+    ) || 'Approval required';
 
     // Extract numbered options — "1 text", "1. text", or digit alone then text on next line
     const seen = new Set();
@@ -577,9 +585,18 @@ async function scrapePendingActions() {
       .map((t, i) => ({ index: i, text: t, isDefault: i === 0 }));
 
     // Context: non-title, non-button, non-option descriptive lines
-    const optSet = new Set(rawOpts);
+    // optSet: full "1 Yes, allow this time" strings
+    // optTextSet: bare text parts "Yes, allow this time" — also excluded so they
+    //   don't bleed into context when digit+text were on separate lines
+    const optSet     = new Set(rawOpts);
+    const optTextSet = new Set(rawOpts.map(t => t.replace(/^\d+[\. ]+/, '').trim()));
     const contextLines = lines.filter(l =>
-      l !== dialogTitle && !BUTTON_RE.test(l) && !optSet.has(l) && l.length > 5 && l.length < 300
+      l !== dialogTitle &&
+      !BUTTON_RE.test(l) &&
+      !optSet.has(l) &&
+      !optTextSet.has(l) &&
+      !/^[1-9]$/.test(l) &&        // skip bare digit lines
+      l.length > 5 && l.length < 300
     ).slice(0, 3);
     const context = command.trim() || contextLines.join('\n');
 
