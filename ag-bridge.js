@@ -213,7 +213,7 @@ function sendActionToTelegram(action) {
   if (!BOT_TOKEN || !ALLOWED_CHAT_ID) return;
   if (isTelegramSuppressed()) return;
   const title = (action.title || action.text || 'Approval needed').slice(0, 200);
-  const cmd   = (action.command || '').trim().slice(0, 200);
+  const cmd   = (action.command || action.context || '').trim().slice(0, 200);
   const idx   = action.occurrenceIndex ?? action.index ?? 0;
   const opts  = action.options || [];
 
