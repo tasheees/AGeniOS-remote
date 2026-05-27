@@ -953,6 +953,8 @@
       flex-direction: column;
       gap: 4px;
       flex-shrink: 0;
+      overflow-y: auto;
+      max-height: 50vh;
     }
 
     .perm-opt {
@@ -2589,8 +2591,12 @@ let _selectedPermOpt = 0;
 function showPermModal(action) {
   const modal = document.getElementById('perm-modal');
   document.getElementById('perm-title').textContent = action.title || 'Allow this action?';
-  document.getElementById('perm-command').textContent = action.command || '';
-  document.getElementById('perm-command').style.display = action.command ? 'block' : 'none';
+
+  // Show command block if available, otherwise show descriptive context
+  const cmdEl = document.getElementById('perm-command');
+  const context = action.command || action.context || '';
+  cmdEl.textContent = context;
+  cmdEl.style.display = context ? 'block' : 'none';
 
   const optsEl = document.getElementById('perm-options');
   optsEl.innerHTML = '';

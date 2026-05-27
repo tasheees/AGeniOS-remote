@@ -517,23 +517,33 @@ async function scrapePendingActions() {
           //   "1. Yes, allow..."        (number+dot+space)
           const seenTexts = new Set();
           const rawOpts = [];
-          for (let i = 0; i < lines.length; i++) {
-            const l = lines[i];
-            // Standalone digit (1, 2, 3 ...) — next line is the option text
-            if (/^[1-9]$/.test(l) && i + 1 < lines.length) {
-              const next = lines[i + 1];
-              if (!BUTTON_LABELS.test(next) && next.length > 3) {
-                rawOpts.push(l + ' ' + next); i++; continue;
+          for (var oi = 0; oi < lines.length; oi++) {
+            var ol = lines[oi];
+            // Standalone digit — next line is the option text
+            if (/^[1-9]$/.test(ol) && oi + 1 < lines.length) {
+              var onext = lines[oi + 1];
+              if (!BUTTON_LABELS.test(onext) && onext.length > 3) {
+                rawOpts.push(ol + ' ' + onext); oi++; continue;
               }
             }
-            // Digit-prefixed line: "1 text", "2. text", "3) text"
-            if (/^[1-9][.\) ]/.test(l) && l.length > 4 && l.length < 300) {
-              rawOpts.push(l); continue;
+            // "1 text", "2. text", "3. text" — digit then space or dot
+            var firstTwo = ol.slice(0, 2);
+            if (/^[1-9]/.test(ol) && (firstTwo[1] === ' ' || firstTwo[1] === '.') && ol.length > 4 && ol.length < 300) {
+              rawOpts.push(ol); continue;
             }
           }
           const options = rawOpts
             .filter(t => { if (seenTexts.has(t)) return false; seenTexts.add(t); return true; })
             .map((t, i) => ({ index: i, text: t, isDefault: i === 0 }));
+
+          // Context: descriptive lines that aren't the title, button labels, or options
+          var optTexts = new Set(rawOpts);
+          var context = command || lines
+            .filter(function(l) {
+              return l !== dialogTitle && !BUTTON_LABELS.test(l) && !optTexts.has(l) && l.length > 5 && l.length < 300;
+            })
+            .slice(0, 3)
+            .join('\n');
 
           const skipId   = skipBtn.getAttribute('data-tooltip-id');
           const submitId = submitBtn.getAttribute('data-tooltip-id');
@@ -543,6 +553,7 @@ async function scrapePendingActions() {
             occurrenceIndex: 0,
             title:           dialogTitle,
             command,
+            context,
             options,
             hasSubmit:       true,
             hasSkip:         true,
@@ -1398,7 +1409,8 @@ function startCloudflared() {
       // Silent start — URL only sent on /wpa command or if no PWA ever connects
       // After 60s, if no PWA connected, send URL as fallback
       setTimeout(() => {
-        if (wsClients.size === 0) {
+        // Only send if: no PWA connected AND user is away from Mac (not suppressed)
+        if (wsClients.size === 0 && !isTelegramSuppressed()) {
           telegramNotifyInline(
             `🌐 *AG Bridge online* \u2014 no PWA connected yet\n\nURL: ${tunnelUrl}\nPassword: \`${REMOTE_PASSWORD}\`\n\nType /wpa anytime to get the link again.`,
             []
