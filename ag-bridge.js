@@ -671,10 +671,10 @@ async function scrapePendingActions() {
       l.length > 2 && l.length < 400
     ).slice(0, 5);
 
-    // Value: short URL/command-like line (≤ 120 chars, single token or path-like)
-    // Description: the rest (longer, sentence-like)
+    // Value: short URL/command-like line — no spaces, matches URL/path/domain pattern
+    // Intentionally strict: avoids matching sentences that happen to contain "/" (e.g. "test 2/3")
     const VALUE_RE = /^[\w./:@-]{1,120}$/;  // URL, domain, command — no spaces
-    const valueLines = contextLines.filter(l => l.length <= 120 && (VALUE_RE.test(l) || l.includes('/') || l.includes(' ') && l.length < 60 && !/[,.?!]$/.test(l)));
+    const valueLines = contextLines.filter(l => l.length <= 80 && VALUE_RE.test(l) && !l.includes(' '));
     const descLines  = contextLines.filter(l => !valueLines.includes(l));
 
     // command field from scraper takes priority for value
@@ -929,6 +929,15 @@ let _pendingActionSource = null; // 'PWA' | 'Telegram' | null (null = Mac)
 function broadcastActionResolved(source) {
   log(`[action-resolved] source=${source}`);
   broadcast('action_resolved', { source });
+  // Notify Telegram about modals that were alerted there but resolved elsewhere
+  if (source !== 'Telegram' && _alertedActionMap.size > 0) {
+    const resolvedIn = source === 'PWA' ? 'PWA' : 'AG';
+    for (const [key, info] of _alertedActionMap) {
+      const label = info.val ? `${info.title}\n\`${info.val}\`` : info.title;
+      telegramNotifyInline(`↩️ *Handled in ${resolvedIn}* — ${label}`, []);
+    }
+    _alertedActionMap.clear();
+  }
   if (!isTelegramSuppressedInfo()) {
     let msg;
     if (source === 'Telegram') msg = '✅ *Confirmed — AG dialog resolved*';
