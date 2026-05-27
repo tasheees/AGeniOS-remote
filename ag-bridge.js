@@ -65,6 +65,7 @@ const EOD_TIME        = process.env.EOD_TIME || '';  // e.g. "18:00" — auto EO
 // Below threshold → macActive=true → Telegram suppressed.
 // Tune via IDLE_THRESHOLD env var. Default 90s (1.5 min).
 const IDLE_THRESHOLD_S = parseInt(process.env.IDLE_THRESHOLD || '90', 10);
+const SETTINGS_FILE    = path.join(process.env.HOME || '/tmp', '.agenios-settings.json');
 
 // CDP selectors — CONFIRMED via live CDP probe of AG 2.0.6 / Electron 41 / Chrome 146
 // Probed: 2026-05-26 — [role="article"] = 14 messages, div[aria-label="Message input"] = contenteditable
@@ -102,6 +103,15 @@ let macActive     = false;
 let telegramMuted = false;
 const isTelegramSuppressed = () => macActive || telegramMuted;
 
+// Persist telegramMuted across restarts
+function saveSettings() {
+  try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ telegramMuted })); } catch {}
+}
+try {
+  const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+  if (typeof saved.telegramMuted === 'boolean') telegramMuted = saved.telegramMuted;
+} catch { /* first run or corrupt file — use defaults */ }
+
 // ─── Logging ─────────────────────────────────────────────────────────────────
 
 const log = (...args) => console.log(`[ag-bridge] ${new Date().toISOString()}`, ...args);
@@ -125,6 +135,7 @@ function telegramNotify(text) {
 
 // Broadcast current notification settings to all PWA clients
 function broadcastSettings() {
+  saveSettings();
   broadcast('settings', { macActive, telegramMuted });
 }
 
@@ -1265,6 +1276,7 @@ wss.on('connection', (ws, req) => {
         // PWA settings toggle — mute/unmute Telegram notifications
         telegramMuted = !!msg.value;
         log(`[settings] telegramMuted → ${telegramMuted} (from PWA)`);
+        saveSettings();
         broadcastSettings();
         break;
 
