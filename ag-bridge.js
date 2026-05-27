@@ -100,7 +100,7 @@ let tunnelUrl = null;
 // telegramMuted — manual override toggle (/mute, /unmute, or PWA settings)
 let macActive     = false;
 let telegramMuted = false;
-function isTelegramSuppressed() { return macActive || telegramMuted; }
+const isTelegramSuppressed = () => macActive || telegramMuted;
 
 // ─── Logging ─────────────────────────────────────────────────────────────────
 
@@ -179,6 +179,7 @@ function telegramNotifyInline(text, buttons = []) {
 // ─── Background Watch: action inline buttons ──────────────────────────────────
 function sendActionToTelegram(action) {
   if (!BOT_TOKEN || !ALLOWED_CHAT_ID) return;
+  if (isTelegramSuppressed()) return;  // Mac active or manually muted
   const label = action.label || action.text || 'Approval needed';
   const idx   = action.occurrenceIndex ?? action.index ?? 0;
   telegramNotifyInline(
@@ -195,10 +196,10 @@ let _digestPending = false;
 function scheduleIdleDigest(lastSnippet) {
   if (_digestPending) return;
   _digestPending = true;
-  // Short delay to let AG fully settle
   setTimeout(async () => {
     _digestPending = false;
-    if (wsClients.size > 0) return; // PWA open - skip Telegram digest
+    if (wsClients.size > 0) return; // PWA open — skip Telegram digest
+    if (isTelegramSuppressed()) return; // Mac active or muted — silent
     try {
       const { exec } = require('child_process');
       exec(
@@ -691,25 +692,7 @@ setInterval(async () => {
   _tickCount++;
   if (_tickCount % 10 === 1) log(`[tick] #${_tickCount} clients=${wsClients.size} lastState=${lastAgState}`);
 
-  // ─ Mac idle detection: user present if HID idle < threshold ────────────
-  // document.hasFocus() is wrong — AG stays focused even when user walks away.
-  // HIDIdleTime = seconds since last keyboard/mouse event on the entire Mac.
-  if (_tickCount % 10 === 0) {
-    exec("ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print $NF/1000000000; exit}'",
-      { timeout: 2000 },
-      (err, stdout) => {
-        if (err) return;
-        const idleSec = parseFloat(stdout.trim());
-        if (isNaN(idleSec)) return;
-        const prev = macActive;
-        macActive = idleSec < IDLE_THRESHOLD_S;
-        if (macActive !== prev) {
-          log(`[macActive] ${prev} → ${macActive} (idle=${idleSec.toFixed(1)}s, threshold=${IDLE_THRESHOLD_S}s)`);
-          broadcastSettings();
-        }
-      }
-    );
-  }
+
   try {
     const agStateData = await scrapeAGState();
     if (agStateData.snippet) _lastSnippetSeen = agStateData.snippet;
@@ -732,6 +715,26 @@ setInterval(async () => {
     }
   } catch(e) { log('[interval-err]', e.message); }
 }, 500);
+
+// ─── Mac Presence Detection ──────────────────────────────────────────────────
+// Independent 5s interval — runs regardless of AG state or PWA connection.
+// HIDIdleTime = seconds since last keyboard/mouse input on the Mac.
+setInterval(() => {
+  exec("ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print $NF/1000000000; exit}'",
+    { timeout: 2000 },
+    (err, stdout) => {
+      if (err) return;
+      const idleSec = parseFloat(stdout.trim());
+      if (isNaN(idleSec)) return;
+      const prev = macActive;
+      macActive = idleSec < IDLE_THRESHOLD_S;
+      if (macActive !== prev) {
+        log(`[macActive] ${prev} → ${macActive} (idle=${idleSec.toFixed(1)}s, threshold=${IDLE_THRESHOLD_S}s)`);
+        broadcastSettings();
+      }
+    }
+  );
+}, 5000);
 
 // Background Watch: push new actions to Telegram when PWA is closed
 let _lastActionCount = 0;
@@ -1308,11 +1311,13 @@ setInterval(async () => {
         const key = action.text.slice(0, 60);
         if (!lastAlertedActions.has(key)) {
           lastAlertedActions.add(key);
-          telegramNotify(
-            `⚠️ *AG needs approval*\n\n` +
-            `\`${action.text}\`\n\n` +
-            `Open PWA to approve: ${tunnelUrl || 'http://localhost:9100'}`
-          );
+          if (!isTelegramSuppressed()) {   // skip if Mac active or muted
+            telegramNotify(
+              `⚠️ *AG needs approval*\n\n` +
+              `\`${action.text}\`\n\n` +
+              `Open PWA to approve: ${tunnelUrl || 'http://localhost:9100'}`
+            );
+          }
         }
       }
       // Clear stale keys when no actions pending
