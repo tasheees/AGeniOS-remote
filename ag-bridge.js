@@ -947,10 +947,15 @@ setInterval(async () => {
     const acts = await scrapePendingActions();
     // Notify Telegram for any new actions not yet alerted
     for (const a of acts) {
-      const key = (a.text || '').slice(0, 60);
+      // Key must distinguish same-title dialogs with different commands/URLs
+      const key = [
+        (a.text    || '').slice(0, 50),
+        (a.context || a.command || '').slice(0, 50),
+        (a.options || []).map(o => o.text).join('|').slice(0, 40),
+      ].join('§');
       if (!_alertedActionKeys.has(key)) {
         _alertedActionKeys.add(key);
-        sendActionToTelegram(a); // respects isTelegramSuppressed internally
+        sendActionToTelegram(a);
       }
     }
     // Track count for resolution detection (fallback for PWA-closed case)
