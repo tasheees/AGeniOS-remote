@@ -188,7 +188,11 @@ function telegramNotifyInline(text, buttons = []) {
     text,
     parse_mode: 'Markdown',
   };
-  if (buttons.length > 0) body.reply_markup = { inline_keyboard: [buttons] };
+  if (buttons.length > 0) {
+    // Accept flat Button[] (one row) or Button[][] (multi-row) already structured
+    const keyboard = Array.isArray(buttons[0]) ? buttons : [buttons];
+    body.reply_markup = { inline_keyboard: keyboard };
+  }
   const bodyStr = JSON.stringify(body);
   const req = require('https').request({
     hostname: 'api.telegram.org',
@@ -208,21 +212,37 @@ function sendActionToTelegram(action) {
   const title = (action.title || action.text || 'Approval needed').slice(0, 200);
   const cmd   = (action.command || '').trim().slice(0, 200);
   const idx   = action.occurrenceIndex ?? action.index ?? 0;
+  const opts  = action.options || [];
 
-  // Build rich body: title + optional command block + numbered options
+  // Build rich body: title + optional command block + numbered options list
   let body = `*${title}*`;
   if (cmd)  body += `\n\`\`\`\n${cmd}\n\`\`\``;
-  if (action.options?.length) {
-    body += '\n\n' + action.options.map(o => `${o.index + 1}\. ${o.text.replace(/^\d+[\. ]+/, '')}`).join('\n');
+  if (opts.length) {
+    body += '\n\n' + opts.map(o => `${o.index + 1}\. ${o.text.replace(/^\d+[\. ]+/, '')}`).join('\n');
   }
 
-  telegramNotifyInline(
-    `⚠️ *AG needs approval*\n\n${body}`,
-    [
-      { text: '✅ Allow', callback_data: `ag_allow:${idx}` },
-      { text: '❌ Reject', callback_data: `ag_reject:${idx}` },
-    ]
-  );
+  // Build inline keyboard:
+  // 2 options  → one row: ✅ Allow | ❌ Reject
+  // 3+ options → rows of 2, each button = option text (truncated)
+  let keyboard;
+  if (opts.length <= 2) {
+    keyboard = [[
+      { text: '✅ Allow',  callback_data: `ag_opt:${idx}:0` },
+      { text: '❌ Reject', callback_data: `ag_opt:${idx}:${Math.max(opts.length - 1, 1)}` },
+    ]];
+  } else {
+    const allBtns = opts.map(o => ({
+      text: `${o.index + 1}. ${o.text.replace(/^\d+[\. ]+/, '').slice(0, 28)}`,
+      callback_data: `ag_opt:${idx}:${o.index}`,
+    }));
+    // Group into rows of 2
+    keyboard = [];
+    for (let i = 0; i < allBtns.length; i += 2) {
+      keyboard.push(allBtns.slice(i, i + 2));
+    }
+  }
+
+  telegramNotifyInline(`⚠️ *AG needs approval*\n\n${body}`, keyboard);
 }
 
 // ─── Background Watch: idle digest ───────────────────────────────────────────
@@ -1202,12 +1222,16 @@ const httpServer = http.createServer(async (req, res) => {
   // POST /action-response — Telegram inline button callback routed via daemon
   if (req.method === 'POST' && url.pathname === '/action-response') {
     const body = await parseBody(req);
-    const { idx, decision } = body;
-    _pendingActionSource = 'Telegram'; // mark before action so resolution detector sees it
-    if (decision === 'allow') {
-      try { await clickAction(Number(idx)); } catch(e) { log('[action-response] allow error:', e.message); }
+    const { idx, optionIndex, decision } = body;
+    _pendingActionSource = 'Telegram';
+    // optionIndex: specific option to click (new multi-button flow)
+    // decision: 'allow'/'reject' (legacy 2-button flow, treat as optionIndex 0/last)
+    const optIdx = typeof optionIndex !== 'undefined' ? Number(optionIndex) : (decision === 'allow' ? 0 : -1);
+    if (optIdx >= 0) {
+      try { await clickAction(optIdx); } catch(e) { log('[action-response] clickAction error:', e.message); }
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));
     } else {
+      // Negative optIdx = reject / dismiss
       actions = actions.filter(a => a.occurrenceIndex !== Number(idx));
       broadcast('actions', { actions });
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));

@@ -188,22 +188,32 @@ async function processUpdate(update) {
     const action = cq.data.slice(0, colonIdx);
     const docId  = cq.data.slice(colonIdx + 1);
 
-    // AG bridge action approval (ag_allow / ag_reject)
-    if (action === 'ag_allow' || action === 'ag_reject') {
+    // AG bridge action approval — ag_opt:idx:optionIndex (all cases)
+    // Legacy ag_allow / ag_reject also handled here for safety
+    const isOpt    = action === 'ag_opt';
+    const isLegacy = action === 'ag_allow' || action === 'ag_reject';
+    if (isOpt || isLegacy) {
       try {
-        const https = require('https');
-        const body  = JSON.stringify({ idx: docId, decision: action === 'ag_allow' ? 'allow' : 'reject' });
+        let idx, optionIndex;
+        if (isOpt) {
+          // docId is "idx:optionIndex"
+          const parts = docId.split(':');
+          idx         = parts[0];
+          optionIndex = Number(parts[1]);
+        } else {
+          idx         = docId;
+          optionIndex = action === 'ag_allow' ? 0 : -1; // -1 = reject/dismiss
+        }
+        const body  = JSON.stringify({ idx, optionIndex });
         const rReq  = require('http').request({
           hostname: 'localhost', port: 9100, path: '/action-response',
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
         }, () => {});
         rReq.on('error', () => {});
         rReq.write(body); rReq.end();
-        await telegramRequest('answerCallbackQuery', {
-          callback_query_id: cq.id,
-          text: action === 'ag_allow' ? '✅ Allowed' : '❌ Rejected',
-        });
-        await sendMessage(chatId, action === 'ag_allow' ? '✅ Action allowed — AG continues.' : '❌ Action rejected.');
+        const label = optionIndex >= 0 ? `✅ Option ${optionIndex + 1} sent` : '❌ Dismissed';
+        await telegramRequest('answerCallbackQuery', { callback_query_id: cq.id, text: label });
+        await sendMessage(chatId, label);
       } catch(e) {
         await sendMessage(chatId, '❌ Bridge error: ' + e.message);
       }
