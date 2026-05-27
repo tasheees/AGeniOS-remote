@@ -902,10 +902,12 @@ let _pendingActionSource = null; // 'PWA' | 'Telegram' | null (null = Mac)
 function broadcastActionResolved(source) {
   log(`[action-resolved] source=${source}`);
   broadcast('action_resolved', { source });
-  // Mac always notifies Telegram; PWA notifies Telegram; Telegram does NOT self-notify
-  if (source !== 'Telegram' && !isTelegramSuppressed()) {
-    const emoji = source === 'PWA' ? '📱' : '🖥️';
-    telegramNotifyInline(`${emoji} *Action resolved from ${source}*`, []);
+  if (!isTelegramSuppressed()) {
+    let msg;
+    if (source === 'Telegram') msg = '✅ *Confirmed — AG dialog resolved*';
+    else if (source === 'PWA')  msg = '📱 *Action resolved from PWA*';
+    else                        msg = '🖥️ *Action resolved from Mac*';
+    telegramNotifyInline(msg, []);
   }
   _pendingActionSource = null;
   _lastActionCount = 0;   // prevent 3s interval from also firing a duplicate resolution
