@@ -1265,8 +1265,19 @@ const httpServer = http.createServer(async (req, res) => {
       try {
         await clickAction(optIdx);
         log(`[action-response] clicked option ${optIdx} — "${optText}"`);
-        // Always send feedback — user explicitly chose this, skip suppression check
-        telegramNotifyInline(`⏳ *Clicking:* ${optText}\n_AG is processing…_`, []);
+        telegramNotifyInline(`⏳ *Clicking:* ${optText}`, []);
+        // After 2.5s check if dialog is gone → send result
+        setTimeout(async () => {
+          try {
+            const remaining = await scrapePendingActions();
+            const stillOpen = remaining.some(a => String(a.occurrenceIndex) === String(idx));
+            if (stillOpen) {
+              telegramNotifyInline(`⚠️ *Dialog still open* — tap again or approve in AG`, []);
+            } else {
+              telegramNotifyInline(`✅ *Done* — AG resumed`, []);
+            }
+          } catch(_) {}
+        }, 2500);
       } catch(e) {
         log('[action-response] clickAction error:', e.message);
         telegramNotifyInline(`❌ Click failed: ${e.message}`, []);
@@ -1274,8 +1285,7 @@ const httpServer = http.createServer(async (req, res) => {
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));
     } else {
       // Dismiss locally
-      const act = actions.find(a => String(a.occurrenceIndex) === String(idx));
-      actions = actions.filter(a => a.occurrenceIndex !== Number(idx));
+      _lastActions = _lastActions.filter(a => a.occurrenceIndex !== Number(idx));
       broadcast('actions', { actions });
       if (!isTelegramSuppressed()) telegramNotifyInline(`❌ *Dismissed* — AG skips this action`, []);
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));
