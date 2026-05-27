@@ -1780,13 +1780,9 @@ function connect() {
         applySettings(msg.data);
         break;
       case 'auth_failed':
-        // Bridge rejected our session token — clear cookie and show login
-        // (close codes get stripped by ngrok, so bridge sends this message instead)
+        // Bridge rejected our token — go back to login page
         document.cookie = 'ag_token=; Max-Age=0; Path=/';
-        document.getElementById('overlay').classList.add('visible');
-        setStatus('disconnected', 'Session expired — please log in again');
-        _authFailed = true; // suppress reconnect loop in onclose
-        ws.close();
+        location.href = '/';
         break;
       case 'eval_result':
         console.log('[bridge eval]', msg.data);

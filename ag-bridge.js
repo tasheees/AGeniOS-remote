@@ -227,25 +227,29 @@ function sendActionToTelegram(action) {
 
 // ─── Background Watch: idle digest ───────────────────────────────────────────
 let _digestPending = false;
+let _lastDigestAt = 0; // epoch ms — prevents digest spam
 function scheduleIdleDigest(lastSnippet) {
   if (_digestPending) return;
+  const now = Date.now();
+  if (now - _lastDigestAt < 5 * 60 * 1000) return; // max one digest per 5 min
   _digestPending = true;
   setTimeout(async () => {
     _digestPending = false;
-    if (wsClients.size > 0) return; // PWA open — skip Telegram digest
-    if (isTelegramSuppressed()) return; // Mac active or muted — silent
+    if (wsClients.size > 0) return; // PWA open — skip
+    if (isTelegramSuppressed()) return; // Mac active or muted
     try {
       const { exec } = require('child_process');
       exec(
-        'cd /Users/marwantzenios/projects/genios && git log --oneline -3 && echo "---" && git diff --stat HEAD 2>/dev/null | tail -3',
+        'cd /Users/marwantzenios/projects/AGenIOS && git log --oneline -3',
         { timeout: 5000 },
         (err, stdout) => {
-          const gitInfo = (stdout || '').trim().slice(0, 400);
+          _lastDigestAt = Date.now();
+          const gitInfo = (stdout || '').trim().slice(0, 300);
           const snippet = (lastSnippet || '').slice(0, 200);
           const msg =
-            `📋 *AG stopped*\n\n` +
+            `📋 *AG finished*\n\n` +
             (snippet ? `_Last: ${snippet}_\n\n` : '') +
-            (gitInfo  ? `\`\`\`\n${gitInfo}\n\`\`\`` : '_No git changes_');
+            (gitInfo  ? `\`\`\`\n${gitInfo}\n\`\`\`` : '');
           telegramNotifyInline(msg, []);
         }
       );
@@ -1297,14 +1301,22 @@ const httpServer = http.createServer(async (req, res) => {
   if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
     const htmlPath = path.join(__dirname, 'remote-ui', 'index.html');
     if (!isAuthenticated(req)) {
-      // Serve login page inline
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(loginHtml());
+      return;
+    }
+    // If no token in URL, redirect with the cookie token embedded
+    // — fixes iOS WebKit not sending HttpOnly cookies on WS upgrade requests
+    if (!url.searchParams.get('token')) {
+      const cookies = parseCookies(req);
+      const token = cookies.ag_token;
+      res.writeHead(302, { 'Location': `/?token=${encodeURIComponent(token)}`, 'Cache-Control': 'no-store' });
+      res.end();
       return;
     }
     try {
       const html = fs.readFileSync(htmlPath, 'utf-8');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(html);
     } catch {
       res.writeHead(404);
