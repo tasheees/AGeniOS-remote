@@ -1566,7 +1566,7 @@ function setTunnel(url, provider) {
   setTimeout(() => {
     if (wsClients.size === 0 && !isTelegramSuppressed()) {
       telegramNotifyInline(
-        `🌐 *AG Bridge online* — no PWA connected yet\n\nURL: ${tunnelUrl}\nPassword: \`${REMOTE_PASSWORD}\`\n\nType /wpa anytime to get the link again.`,
+        `🌐 *AG Bridge online*\n\nURL: ${tunnelUrl}\n\nType /wpa anytime to get the link again.`,
         []
       );
     }
