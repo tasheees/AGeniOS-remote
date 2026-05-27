@@ -546,6 +546,30 @@ async function scrapeTheme() {
   } catch { return {}; }
 }
 
+// Click the Nth option button in AG's approval dialog, then click Submit
+async function clickAction(optionIndex) {
+  const expr = `(function(N) {
+    // Find all numbered option buttons (not Skip/Submit)
+    var allBtns = Array.from(document.querySelectorAll('button'));
+    var optBtns = allBtns.filter(function(b) {
+      var t = (b.innerText || '').trim();
+      return /^[1-9]/.test(t) && !b.dataset.tooltipId;
+    });
+    var btn = optBtns[N];
+    if (btn) btn.click();
+    // Click Submit after a short delay
+    setTimeout(function() {
+      var submit = document.querySelector('button[data-tooltip-id]');
+      // find the Submit (not Skip) by checking innerText
+      var submitBtns = Array.from(document.querySelectorAll('button[data-tooltip-id]'));
+      var s = submitBtns.find(function(b){ return /submit/i.test(b.innerText) || /↵/.test(b.innerText); });
+      if (s) s.click();
+    }, 200);
+    return !!btn;
+  })(${optionIndex})`;
+  await cdpEvaluate(expr);
+}
+
 async function scrapePendingActions() {
   try {
     // DIALOG_SCRAPER_EXPR loaded from _dialog_scraper.js at startup — pure JS file,

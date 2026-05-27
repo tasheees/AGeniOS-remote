@@ -1699,7 +1699,11 @@ let conversations = [];
 // ─── WebSocket ───────────────────────────────────────────────────────────────
 function getWsUrl() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${location.host}/ws`;
+  // iOS WebKit blocks SameSite cookies on WS upgrade — pass token in URL instead
+  const params = new URLSearchParams(location.search);
+  const token  = params.get('token') || '';
+  const qs     = token ? '?token=' + encodeURIComponent(token) : '';
+  return `${proto}//${location.host}/ws${qs}`;
 }
 
 let hasEverConnected = false;
