@@ -146,3 +146,38 @@ INDEX:      [rows updated]
 - All `class` and `style` attributes stripped from DOM dump before sending to PWA
 - `data-state` preserved (open/closed state for collapsibles)
 - `<img>` elements replaced with 📄 emoji (local paths don't load over ngrok)
+
+---
+
+## 7. Command Sync Rule (mandatory)
+
+Any time a Telegram command is **added, removed, or renamed**, the following
+three places **must be updated in the same commit**:
+
+| File | What to update |
+|:-----|:---------------|
+| `ag-bridge.js` → `CMD_WHITELIST` | Add/remove/rename the handler |
+| `telegram-daemon.js` → `/help` handler | Add/remove/rename the help line |
+| `remote-ui/index.html` → `#quick-actions` | Add/remove/rename the quick button |
+
+**Also update BotFather** (`/setcommands`) with the canonical list in this section.
+
+### Current Command List (BotFather `/setcommands` format)
+
+```
+wpa - Get the current PWA link
+status - Bridge status + AG connection
+pending - List pending AG approvals
+notify - Show notification status
+mute - Mute Telegram notifications
+unmute - Re-enable Telegram notifications
+tunnel - Show tunnel status and active URL
+eod - End-of-day session summary
+logs - Recent bridge logs
+tsc - TypeScript syntax check
+push - Git push (requires Sovereign authorization)
+deploy - Firebase deploy (requires Sovereign authorization)
+help - Show all available commands
+```
+
+> ⚠️ Failing to sync all three locations + BotFather is a governance violation.

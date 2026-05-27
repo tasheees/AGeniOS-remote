@@ -242,14 +242,17 @@ async function processUpdate(update) {
       '`/wpa` — get the current PWA link',
       '`/status` — bridge status + AG connection',
       '`/pending` — list pending AG approvals',
-      '`/mute` — mute all Telegram notifications',
-      '`/unmute` — re-enable notifications',
       '`/notify` — show notification status',
+      '`/mute` — mute Telegram notifications',
+      '`/unmute` — re-enable Telegram notifications',
+      '`/tunnel` — show tunnel status + active URL',
+      '`/tunnel ngrok` — set default tunnel to ngrok',
+      '`/tunnel cloudflare` — set default tunnel to cloudflare',
       '`/eod` — end-of-day session summary',
       '`/logs` — recent bridge logs',
       '`/tsc` — TypeScript syntax check',
-      '`/push` — git push (requires authorization)',
-      '`/deploy` — deploy (requires authorization)',
+      '`/push` — git push (requires Sovereign authorization)',
+      '`/deploy` — firebase deploy (requires Sovereign authorization)',
     ];
     await sendMessage(chatId, lines.join('\n'), { parse_mode: 'Markdown' });
     return;

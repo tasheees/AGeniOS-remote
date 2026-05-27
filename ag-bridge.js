@@ -293,11 +293,6 @@ const CMD_WHITELIST = {
     if (!actions.length) return '✅ No pending approvals';
     return '⏳ *Pending approvals:*\n' + actions.map(a => `• ${a.text}`).join('\n');
   },
-  '/git':     () => new Promise((resolve) => {
-    exec('cd /Users/marwantzenios/projects/genios && git status --short && git log --oneline -3 2>&1', (err, stdout) => {
-      resolve('🔀 *Git status*\n```\n' + stdout.slice(0, 500) + '\n```');
-    });
-  }),
   '/eod':     async () => {
     // Inject EOD summary prompt into AG, capture response, send to Telegram
     const prompt = `Please give me a concise end-of-day summary for today's session:
