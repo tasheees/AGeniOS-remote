@@ -2479,20 +2479,29 @@ function renderActions() {
     banner.remove();
   }
 
-  // Show permission modal for dialog-type actions
+  // Show OR auto-close permission modal based on pending dialog actions
   const dialogAction = actions.find(a => a.type === 'dialog');
-  if (dialogAction && !document.getElementById('perm-modal')?.classList.contains('open')) {
+  const modal = document.getElementById('perm-modal');
+  if (dialogAction && !modal?.classList.contains('open')) {
     showPermModal(dialogAction);
+  } else if (!dialogAction && modal?.classList.contains('open')) {
+    // Action resolved on Mac — auto-close modal + notify user
+    modal.classList.remove('open');
+    toast('✅ Action resolved on Mac');
   }
 
   if (actions.length === 0) {
     empty.style.display = 'flex';
-    Array.from(panel.children).forEach(c => { if (c !== empty) c.remove(); });
+    Array.from(panel.children).forEach(c => {
+      if (c !== empty && c.id !== 'notif-settings') c.remove();
+    });
     return;
   }
 
   empty.style.display = 'none';
-  Array.from(panel.children).forEach(c => { if (c !== empty) c.remove(); });
+  Array.from(panel.children).forEach(c => {
+    if (c !== empty && c.id !== 'notif-settings') c.remove();
+  });
 
   for (const action of actions) {
     const card = document.createElement('div');
