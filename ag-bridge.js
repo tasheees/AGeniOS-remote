@@ -1365,6 +1365,23 @@ wss.on('connection', (ws, req) => {
         }
         break;
 
+      case 'navigate_conversation': {
+        const convId = (msg.id || '').replace(/[^a-f0-9-]/g, '').slice(0, 36);
+        if (!convId) break;
+        log(`[navigate] switching to conversation ${convId}`);
+        await cdpEvaluate(`
+          (function() {
+            var link = document.querySelector('a[href*="/c/${convId}"]');
+            if (link) { link.click(); return 'clicked'; }
+            return 'not found';
+          })()
+        `);
+        // Wait for AG to load the conversation, then push updated state
+        await new Promise(r => setTimeout(r, 1800));
+        await broadcastState();
+        break;
+      }
+
       case 'evaluate':
         // Execute JS in AG DOM, then immediately re-broadcast state so
         // collapsible toggles and other interactions feel near-instant.

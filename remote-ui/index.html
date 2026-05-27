@@ -1743,6 +1743,7 @@ function connect() {
         actions       = msg.data.actions       || [];
         conversations = msg.data.conversations || [];
         renderActions();
+        renderConversations();
         if (msg.data.chatName) {
           const el = document.getElementById('active-chat-name');
           if (el) el.textContent = msg.data.chatName.replace(/"/g, '');
@@ -2434,7 +2435,10 @@ function renderConversations() {
   if (!conversations.length) { empty.style.display = 'flex'; return; }
   empty.style.display = 'none';
 
-  // Clear old rows (keep empty)
+  // Preserve scroll position
+  const scrollTop = panel.scrollTop;
+
+  // Clear old rows (keep empty placeholder)
   Array.from(panel.children).forEach(c => { if (c !== empty) c.remove(); });
 
   // Group by project
@@ -2455,6 +2459,7 @@ function renderConversations() {
       const row = document.createElement('div');
       row.className = 'conv-row' + (conv.isActive ? ' active' : '');
       row.title = conv.text;
+      row.dataset.convId = conv.id;
 
       const indicator = document.createElement('div');
       indicator.className = conv.hasSpinner ? 'conv-spinner' : 'conv-dot';
@@ -2470,10 +2475,32 @@ function renderConversations() {
       row.appendChild(indicator);
       row.appendChild(name);
       row.appendChild(time);
+
+      // Click → navigate AG to this conversation
+      if (!conv.isActive) {
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => navigateToConv(conv.id, row));
+      }
+
       panel.appendChild(row);
     }
   }
+
+  panel.scrollTop = scrollTop;
 }
+
+function navigateToConv(convId, rowEl) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
+  // Visual feedback — dim row and show switching state
+  rowEl.style.opacity = '0.5';
+  rowEl.style.pointerEvents = 'none';
+  const nameEl = rowEl.querySelector('.conv-name');
+  if (nameEl) nameEl.textContent = '⟳ Switching…';
+  ws.send(JSON.stringify({ type: 'navigate_conversation', id: convId }));
+  // Switch to chat tab so user sees the incoming chat
+  setTimeout(() => switchTab('chat'), 400);
+}
+
 
 // ─── Render Actions ─────────────────────────────────────────────────────────────────
 function renderActions() {
