@@ -1757,6 +1757,17 @@ function connect() {
       case 'ag_state':
         updateTypingIndicator(msg.data.state, msg.data.label, msg.data.snippet, msg.data.currentText);
         break;
+      case 'action_resolved': {
+        const src = msg.data?.source || 'Mac';
+        actions = [];
+        renderActions();
+        // Only toast if action was taken elsewhere (Mac or Telegram) — not by the user themselves
+        if (src !== 'PWA') {
+          const label = src === 'Telegram' ? '💬 Telegram' : '🖥️ Mac';
+          showSystemMessage(`✅ Action resolved from ${label}`);
+        }
+        break;
+      }
       case 'notification':
         showSystemMessage(msg.data.text || '');
         break;
@@ -2711,6 +2722,7 @@ function permSkip() {
   const action = modal._action;
   modal.classList.remove('open');
   if (action?.skipSelector && ws?.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'action_source', source: 'PWA' }));
     ws.send(JSON.stringify({
       type: 'evaluate',
       expression: `(function(){ var b = document.querySelector(${JSON.stringify(action.skipSelector)}); if(b){b.click();return true;} return false; })()`
@@ -2728,6 +2740,9 @@ function permSubmit() {
 
   const N = _selectedPermOpt;
   const optText = (action.options?.[N]?.text || `Option ${N+1}`).replace(/^\d+[\. ]+/, '').slice(0, 40);
+
+  // Signal to bridge that PWA is taking action (source attribution)
+  ws.send(JSON.stringify({ type: 'action_source', source: 'PWA' }));
 
   // Step 1 — click Nth option button in AG dialog (3-strategy fallback)
   const clickOptExpr = `(function(N){

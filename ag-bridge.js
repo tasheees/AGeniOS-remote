@@ -817,7 +817,21 @@ setInterval(() => {
 // Runs every 1s when PWA clients are connected.
 // broadcastState() only fires on AG state transitions, so if a dialog is
 // approved on Mac while AG is already idle, the PWA would never know.
-// This interval catches that gap and pushes an immediate clear.
+// ─── Action resolution tracking ────────────────────────────────────────────
+let _pendingActionSource = null; // 'PWA' | 'Telegram' | null (null = Mac)
+
+function broadcastActionResolved(source) {
+  log(`[action-resolved] source=${source}`);
+  broadcast('action_resolved', { source });
+  // Mac always notifies Telegram; PWA notifies Telegram; Telegram does NOT self-notify
+  if (source !== 'Telegram' && !isTelegramSuppressed()) {
+    const emoji = source === 'PWA' ? '📱' : '🖥️';
+    telegramNotifyInline(`${emoji} *Action resolved from ${source}*`, []);
+  }
+  _pendingActionSource = null;
+}
+
+// ─── Sync actions to PWA while open ────────────────────────────────────────
 let _lastActionSig = '';
 setInterval(async () => {
   if (!cdpConnected || wsClients.size === 0) return;
@@ -825,8 +839,13 @@ setInterval(async () => {
     const acts = await scrapePendingActions();
     const sig = acts.map(a => a.occurrenceIndex + ':' + (a.text || '').slice(0, 30)).join('|');
     if (sig !== _lastActionSig) {
+      const hadActions = _lastActionSig !== '';
       _lastActionSig = sig;
       log(`[action-sync] changed → ${acts.length} actions`);
+      if (hadActions && sig === '') {
+        // Actions cleared — broadcast resolution with source
+        broadcastActionResolved(_pendingActionSource || 'Mac');
+      }
       broadcastState().catch(() => {});
     }
   } catch { /* silent */ }
@@ -835,16 +854,24 @@ setInterval(async () => {
 // Background Watch: push new actions to Telegram when PWA is closed
 let _lastActionCount = 0;
 setInterval(async () => {
-  // Skip if PWA open OR Mac is active OR manually muted
-  if (!cdpConnected || wsClients.size > 0 || isTelegramSuppressed()) { return; }
+  if (!cdpConnected || wsClients.size > 0) { return; } // detection runs even if suppressed
   try {
     const acts = await scrapePendingActions();
     if (acts.length > _lastActionCount) {
       const newActs = acts.slice(_lastActionCount);
-      newActs.forEach(sendActionToTelegram);
+      if (!isTelegramSuppressed()) newActs.forEach(sendActionToTelegram);
       _lastActionCount = acts.length;
+    } else if (acts.length === 0 && _lastActionCount > 0) {
+      // Actions cleared while PWA was closed
+      const source = _pendingActionSource || 'Mac';
+      if (source !== 'Telegram' && !isTelegramSuppressed()) {
+        const emoji = source === 'PWA' ? '📱' : '🖥️';
+        telegramNotifyInline(`${emoji} *Action resolved from ${source}*`, []);
+      }
+      _pendingActionSource = null;
+      _lastActionCount = 0;
     } else if (acts.length < _lastActionCount) {
-      _lastActionCount = acts.length; // actions were dismissed
+      _lastActionCount = acts.length;
     }
   } catch { /* ignore */ }
 }, 3000);
@@ -1101,12 +1128,12 @@ const httpServer = http.createServer(async (req, res) => {
   // POST /action-response — Telegram inline button callback routed via daemon
   if (req.method === 'POST' && url.pathname === '/action-response') {
     const body = await parseBody(req);
-    const { idx, decision } = body; // decision: 'allow' | 'reject'
+    const { idx, decision } = body;
+    _pendingActionSource = 'Telegram'; // mark before action so resolution detector sees it
     if (decision === 'allow') {
       try { await clickAction(Number(idx)); } catch(e) { log('[action-response] allow error:', e.message); }
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));
     } else {
-      // Reject: just dismiss the action
       actions = actions.filter(a => a.occurrenceIndex !== Number(idx));
       broadcast('actions', { actions });
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));
@@ -1388,6 +1415,11 @@ wss.on('connection', (ws, req) => {
         await broadcastState();
         break;
       }
+
+      case 'action_source':
+        // PWA signals it is about to take action — set source so resolution detector knows
+        if (msg.source === 'PWA') _pendingActionSource = 'PWA';
+        break;
 
       case 'evaluate':
         // Execute JS in AG DOM, then immediately re-broadcast state so
