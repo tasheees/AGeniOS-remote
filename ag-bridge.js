@@ -202,10 +202,17 @@ function telegramNotifyInline(text, buttons = []) {
 function sendActionToTelegram(action) {
   if (!BOT_TOKEN || !ALLOWED_CHAT_ID) return;
   if (isTelegramSuppressed()) return;
-  const title = (action.label || action.text || 'Approval needed').slice(0, 200);
+  const title = (action.title || action.text || 'Approval needed').slice(0, 200);
   const cmd   = (action.command || '').trim().slice(0, 200);
   const idx   = action.occurrenceIndex ?? action.index ?? 0;
-  const body  = cmd ? `*${title}*\n\`\`\`\n${cmd}\n\`\`\`` : `*${title}*`;
+
+  // Build rich body: title + optional command block + numbered options
+  let body = `*${title}*`;
+  if (cmd)  body += `\n\`\`\`\n${cmd}\n\`\`\``;
+  if (action.options?.length) {
+    body += '\n\n' + action.options.map(o => `${o.index + 1}\. ${o.text.replace(/^\d+[\. ]+/, '')}`).join('\n');
+  }
+
   telegramNotifyInline(
     `⚠️ *AG needs approval*\n\n${body}`,
     [
@@ -873,26 +880,34 @@ setInterval(async () => {
   } catch { /* silent */ }
 }, 1000);
 
-// Background Watch: push new actions to Telegram when PWA is closed
+// Background Watch: push new actions to Telegram (runs regardless of PWA state)
 let _lastActionCount = 0;
+let _alertedActionKeys = new Set(); // dedup — don't spam same action
 setInterval(async () => {
-  if (!cdpConnected || wsClients.size > 0) { return; } // detection runs even if suppressed
+  if (!cdpConnected) return;
   try {
     const acts = await scrapePendingActions();
-    if (acts.length > _lastActionCount) {
-      const newActs = acts.slice(_lastActionCount);
-      if (!isTelegramSuppressed()) newActs.forEach(sendActionToTelegram);
-      _lastActionCount = acts.length;
-    } else if (acts.length === 0 && _lastActionCount > 0) {
-      // Actions cleared while PWA was closed
-      const source = _pendingActionSource || 'Mac';
-      if (source !== 'Telegram' && !isTelegramSuppressed()) {
-        const emoji = source === 'PWA' ? '📱' : '🖥️';
-        telegramNotifyInline(`${emoji} *Action resolved from ${source}*`, []);
+    // Notify Telegram for any new actions not yet alerted
+    for (const a of acts) {
+      const key = (a.text || '').slice(0, 60);
+      if (!_alertedActionKeys.has(key)) {
+        _alertedActionKeys.add(key);
+        sendActionToTelegram(a); // respects isTelegramSuppressed internally
       }
-      _pendingActionSource = null;
-      _lastActionCount = 0;
-    } else if (acts.length < _lastActionCount) {
+    }
+    // Track count for resolution detection
+    if (acts.length !== _lastActionCount) {
+      if (acts.length === 0 && _lastActionCount > 0 && wsClients.size === 0) {
+        // Actions cleared while PWA was closed — resolution already handled by 1s interval
+        // if PWA was open; this is the fallback for PWA-closed case
+        const source = _pendingActionSource || 'Mac';
+        if (source !== 'Telegram' && !isTelegramSuppressed()) {
+          const emoji = source === 'PWA' ? '📱' : '🖥️';
+          telegramNotifyInline(`${emoji} *Action resolved from ${source}*`, []);
+        }
+        _pendingActionSource = null;
+      }
+      if (acts.length === 0) _alertedActionKeys.clear();
       _lastActionCount = acts.length;
     }
   } catch { /* ignore */ }
@@ -1480,27 +1495,12 @@ setInterval(async () => {
   checkEODSchedule().catch(() => {});
 
   if (wsClients.size > 0) {
-    // PWA is open — broadcast state to it
     broadcastState().catch(() => {});
   } else {
-    // PWA is closed — check for pending approvals and alert via Telegram
+    // PWA closed — scrape actions for resolution detection only (Telegram handled by 3s interval)
     try {
-      const actions = await scrapePendingActions();
-      for (const action of actions) {
-        const key = action.text.slice(0, 60);
-        if (!lastAlertedActions.has(key)) {
-          lastAlertedActions.add(key);
-          if (!isTelegramSuppressed()) {   // skip if Mac active or muted
-            telegramNotify(
-              `⚠️ *AG needs approval*\n\n` +
-              `\`${action.text}\`\n\n` +
-              `Open PWA to approve: ${tunnelUrl || 'http://localhost:9100'}`
-            );
-          }
-        }
-      }
-      // Clear stale keys when no actions pending
-      if (actions.length === 0) lastAlertedActions.clear();
+      const acts = await scrapePendingActions();
+      if (acts.length === 0) lastAlertedActions.clear();
     } catch { /* silent */ }
   }
 }, 2000);
