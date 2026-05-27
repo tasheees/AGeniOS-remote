@@ -257,6 +257,11 @@ const CMD_WHITELIST = {
     });
   }),
   '/mute':    () => { telegramMuted = true;  broadcastSettings(); return '🔕 Telegram muted. Use /unmute to re-enable.'; },
+  '/restart': (arg) => new Promise((resolve) => {
+    const target = (arg || '').trim().toLowerCase() === 'bridge' ? 'ag-bridge' : 'telegram-daemon';
+    resolve(`🔄 Restarting *${target}*…`);
+    setTimeout(() => { exec(`pm2 restart ${target}`, () => {}); }, 300);
+  }),
   '/tunnel':  (arg) => {
     const newMode = (arg || '').trim().toLowerCase();
     if (newMode === 'ngrok' || newMode === 'cloudflare') {

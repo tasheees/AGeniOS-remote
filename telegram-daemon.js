@@ -248,6 +248,8 @@ async function processUpdate(update) {
       '`/tunnel` — show tunnel status + active URL',
       '`/tunnel ngrok` — set default tunnel to ngrok',
       '`/tunnel cloudflare` — set default tunnel to cloudflare',
+      '`/restart` — restart the Telegram daemon',
+      '`/restart bridge` — restart the AG bridge',
       '`/eod` — end-of-day session summary',
       '`/logs` — recent bridge logs',
       '`/tsc` — TypeScript syntax check',
