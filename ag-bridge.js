@@ -111,7 +111,8 @@ let tunnelMode           = 'ngrok';
 let activeTunnelProvider = null;
 let _lastDigestAt        = 0;
 let _hadConnection            = false;
-let _restoredLastConnectionAt = 0; // restored from disk — ms since epoch
+let _restoredLastConnectionAt = 0;
+let _lastActions              = [];  // cache of last scraped pending actions — accessible to HTTP handlers
 // Suppressed when: manually muted, OR Mac is active and user hasn't force-unmuted
 const isTelegramSuppressed     = () => telegramMuted || (macActive && !telegramForceUnmute);
 const isTelegramSuppressedInfo = () => telegramMuted || macActive; // status/digest: always suppress when Mac active
@@ -770,6 +771,7 @@ async function broadcastState() {
   const [chatDump, actions, chatList, cssVars] = await Promise.all([
     scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(),
   ]);
+  _lastActions = actions;  // cache for use in HTTP handlers
   if (actions.length > 0) {
     log('⚠️  actions detected:', JSON.stringify(actions.map(a => ({type:a.type, text:(a.text||'').slice(0,50), opts:a.options?.length}))));
   }
@@ -1258,7 +1260,7 @@ const httpServer = http.createServer(async (req, res) => {
     const optIdx = typeof optionIndex !== 'undefined' ? Number(optionIndex) : (decision === 'allow' ? 0 : -1);
     if (optIdx >= 0) {
       // Find the action so we can report which option text was clicked
-      const act = actions.find(a => String(a.occurrenceIndex) === String(idx));
+      const act = _lastActions.find(a => String(a.occurrenceIndex) === String(idx));
       const optText = act?.options?.[optIdx]?.text?.replace(/^\d+[. ]+/, '').slice(0, 60) || `option ${optIdx + 1}`;
       try {
         await clickAction(optIdx);
