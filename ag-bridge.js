@@ -1196,10 +1196,10 @@ const httpServer = http.createServer(async (req, res) => {
       AUTH_TOKENS.add(token);
       saveSettings(); // persist so bridge restart doesn't invalidate this session
       res.writeHead(200, {
-        'Set-Cookie': `ag_token=${token}; Path=/; HttpOnly; SameSite=Strict`,
+        'Set-Cookie': `ag_token=${token}; Path=/; HttpOnly; SameSite=Lax`,
         'Content-Type': 'application/json',
       });
-      res.end(JSON.stringify({ ok: true, token }));
+      res.end(JSON.stringify({ ok: true, token })); // token returned so PWA can embed in WS URL
     } else {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'Invalid password' }));
@@ -1338,8 +1338,11 @@ function loginHtml() {
     const pw = document.getElementById('pw').value;
     const r = await fetch('/auth', { method: 'POST', headers: {'Content-Type':'application/json'},
                                       body: JSON.stringify({ password: pw }) });
-    if (r.ok) location.reload();
-    else { document.getElementById('err').style.display = 'block'; }
+    if (r.ok) {
+      const data = await r.json();
+      // Redirect with token in URL — bypasses iOS WebKit SameSite cookie issues on WS
+      location.href = '/?token=' + encodeURIComponent(data.token || '');
+    } else { document.getElementById('err').style.display = 'block'; }
   }
 </script>
 </body>
