@@ -557,7 +557,7 @@ async function scrapePendingActions() {
       const l = lines[i];
       if (/^[1-9]$/.test(l) && i + 1 < lines.length) {
         const next = lines[i + 1];
-        if (!BUTTON_RE.test(next) && next.length > 3) { rawOpts.push(l + ' ' + next); i++; continue; }
+        if (!BUTTON_RE.test(next) && next.length > 1) { rawOpts.push(l + ' ' + next); i++; continue; }
       }
       if (/^[1-9][ .]/.test(l) && l.length > 4 && l.length < 300) rawOpts.push(l);
     }
