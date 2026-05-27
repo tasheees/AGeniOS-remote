@@ -543,7 +543,7 @@ async function scrapePendingActions() {
               return l !== dialogTitle && !BUTTON_LABELS.test(l) && !optTexts.has(l) && l.length > 5 && l.length < 300;
             })
             .slice(0, 3)
-            .join('\n');
+            .join('\\n');
 
           const skipId   = skipBtn.getAttribute('data-tooltip-id');
           const submitId = submitBtn.getAttribute('data-tooltip-id');
@@ -1141,7 +1141,8 @@ const httpServer = http.createServer(async (req, res) => {
   // PWA closed → execute locally, return result via Telegram
   // Remote ops → always blocked, require Sovereign Console approval
   if (req.method === 'POST' && url.pathname === '/cmd') {
-    if (!isAuthenticated(req)) { res.writeHead(401); res.end(); return; }
+    const isLocal = req.socket.remoteAddress === '127.0.0.1' || req.socket.remoteAddress === '::1';
+    if (!isLocal && !isAuthenticated(req)) { res.writeHead(401); res.end(); return; }
     const body = await parseBody(req);
     const cmd  = String(body.command || '').trim();
     if (!cmd) {

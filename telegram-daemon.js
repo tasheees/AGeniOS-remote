@@ -238,18 +238,19 @@ async function processUpdate(update) {
   // /help
   if (cmd === '/help' || cmd === '/start') {
     const lines = [
-      '🤖 *GeniOS Telegram Daemon — §13.2*',
+      '🤖 *AGenIOS — Commands*',
       '',
       '`/wpa` — get the current PWA link',
-      '`/deploy` — firebase deploy --only hosting',
-      '`/push` — git push origin main',
-      '`/tsc` — TypeScript type-check',
-      '`/status` — git status + log',
-      '`/logs` — Cloud Run logs (last 20)',
-      '`/pending` — list pending approvals',
-      '`/approve <id>` — approve a pending item',
-      '`/reject <id>` — reject a pending item',
-      ALLOW_ARBITRARY ? '`/run <cmd>` — arbitrary shell (enabled)' : '`/run` — disabled (ALLOW_ARBITRARY_RUN=false)',
+      '`/status` — bridge status + AG connection',
+      '`/pending` — list pending AG approvals',
+      '`/mute` — mute all Telegram notifications',
+      '`/unmute` — re-enable notifications',
+      '`/notify` — show notification status',
+      '`/eod` — end-of-day session summary',
+      '`/logs` — recent bridge logs',
+      '`/tsc` — TypeScript syntax check',
+      '`/push` — git push (requires authorization)',
+      '`/deploy` — deploy (requires authorization)',
     ];
     await sendMessage(chatId, lines.join('\n'), { parse_mode: 'Markdown' });
     return;
@@ -330,7 +331,26 @@ async function processUpdate(update) {
     return;
   }
 
-  await sendMessage(chatId, `❓ Unknown command: \`${cmd}\`\nType /help for available commands.`, { parse_mode: 'Markdown' });
+  // Forward all other commands to ag-bridge /cmd endpoint
+  // This covers /mute, /unmute, /notify, /eod, and any future bridge commands
+  try {
+    const http = require('http');
+    const body = JSON.stringify({ command: text });
+    await new Promise((resolve, reject) => {
+      const req = http.request({
+        hostname: 'localhost', port: 9100, path: '/cmd',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body),
+                   'Authorization': 'Bearer ' + (process.env.REMOTE_PASSWORD || '') },
+      }, (res) => { res.resume(); resolve(); });
+      req.on('error', reject);
+      req.setTimeout(5000, () => { req.destroy(); reject(new Error('timeout')); });
+      req.write(body); req.end();
+    });
+    // Bridge will send the reply back via Telegram itself — no need to reply here
+  } catch (e) {
+    await sendMessage(chatId, `❓ Unknown command: \`${cmd}\`\nType /help for available commands.`, { parse_mode: 'Markdown' });
+  }
 }
 
 // ─── Long-polling loop ────────────────────────────────────────────────────────
