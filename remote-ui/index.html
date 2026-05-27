@@ -1614,13 +1614,15 @@
   <div id="bottom-bar">
     <div id="quick-actions">
       <button class="quick-btn" onclick="sendCommand('/status')">📊 /status</button>
-      <button class="quick-btn" onclick="sendCommand('/tsc')">🔍 /tsc</button>
+      <button class="quick-btn" onclick="sendCommand('/pending')">⏳ /pending</button>
+      <button class="quick-btn" onclick="sendCommand('/notify')">🔔 /notify</button>
+      <button class="quick-btn" onclick="sendCommand('/mute')">🔕 /mute</button>
+      <button class="quick-btn" onclick="sendCommand('/unmute')">🔔 /unmute</button>
       <button class="quick-btn" onclick="sendCommand('/eod')">📋 /eod</button>
+      <button class="quick-btn" onclick="sendCommand('/logs')">📄 /logs</button>
+      <button class="quick-btn" onclick="sendCommand('/tsc')">🔍 /tsc</button>
       <button class="quick-btn" onclick="sendCommand('/push')">🚀 /push</button>
       <button class="quick-btn" onclick="sendCommand('/deploy')">☁️ /deploy</button>
-      <button class="quick-btn" onclick="sendCommand('/logs')">📄 /logs</button>
-      <button class="quick-btn" onclick="sendCommand('/pending')">⏳ /pending</button>
-      <button class="quick-btn" onclick="sendCommand('/git')">🔀 /git</button>
     </div>
     <div id="input-row">
       <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleFileSelect(event)">

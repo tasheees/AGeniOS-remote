@@ -52,6 +52,9 @@ const path      = require('path');
 const { exec, execSync, spawn } = require('child_process');
 const { WebSocketServer, WebSocket } = require('ws');
 
+// CDP evaluate expression for dialog detection — raw JS file, zero escape confusion
+const DIALOG_SCRAPER_EXPR = fs.readFileSync(path.join(__dirname, '_dialog_scraper.js'), 'utf8');
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const BOT_TOKEN       = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -468,118 +471,71 @@ async function scrapeTheme() {
 
 async function scrapePendingActions() {
   try {
+    // DIALOG_SCRAPER_EXPR loaded from _dialog_scraper.js at startup — pure JS file,
+    // no Node.js escape processing, Chrome receives it exactly as written.
     const result = await cdpSend('Runtime.evaluate', {
-      expression: `
-        (function() {
-          // P1 FIX — 2026-05-26
-          // Live CDP button delta probe confirmed:
-          //   - AG approval dialog has NO role="dialog", no aria-label, no data-testid
-          //   - Detection key: co-presence of a Skip button AND a Submit button,
-          //     both carrying data-tooltip-id attribute (unique to this dialog)
-          //   - Submit innerText is "Submit\\n↵" (child <span> for the ↵ glyph)
-          //   - No other button pair in the ~164 baseline buttons has this signature
-
-          const tooltipBtns = Array.from(document.querySelectorAll('button[data-tooltip-id]'));
-          if (tooltipBtns.length === 0) return [];
-
-          const skipBtn   = tooltipBtns.find(b => /^skip$/i.test((b.innerText || b.textContent || '').trim()));
-          const submitBtn = tooltipBtns.find(b => /^submit/i.test((b.innerText || b.textContent || '').trim()));
-
-          // Both must be present simultaneously — this is the approval dialog signature
-          if (!skipBtn || !submitBtn) return [];
-
-          // Walk up from Skip until we find the first ancestor that also contains Submit.
-          // That ancestor IS the dialog root — narrowest common ancestor, can never overshoot.
-          let container = skipBtn.parentElement;
-          while (container && container !== document.body) {
-            if (container.contains(submitBtn)) break;
-            container = container.parentElement;
-          }
-
-          const fullText = (container?.innerText || '').trim();
-          const lines    = fullText.split('\\n').map(l => l.trim()).filter(Boolean);
-          // Skip button labels (Skip / Submit / ↵) — they appear first when
-          // contains(submitBtn) stops at the button-row parent.
-          const BUTTON_LABELS = /^(skip|submit|↵|allow|deny|yes|no)$/i;
-          const dialogTitle = lines.find(l => !BUTTON_LABELS.test(l) && l.length > 4)
-                              || 'Approval required';
-
-          // Command: first <code> or <pre> near the dialog
-          const codeEl  = container?.querySelector('pre, code');
-          const command = (codeEl?.innerText || '').trim();
-
-          // Debug: log raw lines so we can see exact option format from AG
-          console.log('[dialog-lines]', JSON.stringify(lines));
-
-          // Numbered options — AG may format as:
-          //   "1 Yes, allow this time"  (number+space+text on one line)
-          //   "1"  \n  "Yes, allow..."  (number and text on separate lines)
-          //   "1. Yes, allow..."        (number+dot+space)
-          const seenTexts = new Set();
-          const rawOpts = [];
-          for (var oi = 0; oi < lines.length; oi++) {
-            var ol = lines[oi];
-            // Standalone digit — next line is the option text
-            if (/^[1-9]$/.test(ol) && oi + 1 < lines.length) {
-              var onext = lines[oi + 1];
-              if (!BUTTON_LABELS.test(onext) && onext.length > 3) {
-                rawOpts.push(ol + ' ' + onext); oi++; continue;
-              }
-            }
-            // "1 text", "2. text", "3. text" — digit then space or dot
-            var firstTwo = ol.slice(0, 2);
-            if (/^[1-9]/.test(ol) && (firstTwo[1] === ' ' || firstTwo[1] === '.') && ol.length > 4 && ol.length < 300) {
-              rawOpts.push(ol); continue;
-            }
-          }
-          const options = rawOpts
-            .filter(t => { if (seenTexts.has(t)) return false; seenTexts.add(t); return true; })
-            .map((t, i) => ({ index: i, text: t, isDefault: i === 0 }));
-
-          // Context: descriptive lines that aren't the title, button labels, or options
-          var optTexts = new Set(rawOpts);
-          var context = command || lines
-            .filter(function(l) {
-              return l !== dialogTitle && !BUTTON_LABELS.test(l) && !optTexts.has(l) && l.length > 5 && l.length < 300;
-            })
-            .slice(0, 3)
-            .join('\\n');
-
-          const skipId   = skipBtn.getAttribute('data-tooltip-id');
-          const submitId = submitBtn.getAttribute('data-tooltip-id');
-
-          return [{
-            type:            'dialog',
-            occurrenceIndex: 0,
-            title:           dialogTitle,
-            command,
-            context,
-            options,
-            hasSubmit:       true,
-            hasSkip:         true,
-            submitSelector:  'button[data-tooltip-id="' + submitId + '"]',
-            skipSelector:    'button[data-tooltip-id="' + skipId   + '"]',
-            selector:        'button',
-            matchText:       options[0]?.text || 'Yes, allow this time',
-            text:            dialogTitle,
-          }];
-        })()
-      `,
+      expression:    DIALOG_SCRAPER_EXPR,
       returnByValue: true,
-      awaitPromise: false,
+      awaitPromise:  false,
     }, sessionId);
+
     const raw = result?.result?.result;
     const exc = result?.result?.exceptionDetails;
-    if (exc) log('scrapePendingActions EXCEPTION:', exc.exception?.description?.slice(0,200));
-    else log('scrapePendingActions raw type:', raw?.type, 'value:', JSON.stringify(raw?.value)?.slice(0,200));
-    return raw?.value || [];
+    if (exc) { log('scrapePendingActions EXCEPTION:', exc.exception?.description?.slice(0, 200)); return []; }
+    if (!raw?.value) return [];
+
+    // ── All parsing in Node.js — no browser-side complexity ─────────────────
+    const { fullText, command, skipId, submitId } = raw.value;
+    const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
+    log('[dialog-lines]', JSON.stringify(lines));
+
+    const BUTTON_RE = /^(skip|submit|allow|deny|yes|no|\u21b5)$/i;
+    const dialogTitle = lines.find(l => !BUTTON_RE.test(l) && l.length > 4) || 'Approval required';
+
+    // Extract numbered options — "1 text", "1. text", or digit alone then text on next line
+    const seen = new Set();
+    const rawOpts = [];
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if (/^[1-9]$/.test(l) && i + 1 < lines.length) {
+        const next = lines[i + 1];
+        if (!BUTTON_RE.test(next) && next.length > 3) { rawOpts.push(l + ' ' + next); i++; continue; }
+      }
+      if (/^[1-9][ .]/.test(l) && l.length > 4 && l.length < 300) rawOpts.push(l);
+    }
+    const options = rawOpts
+      .filter(t => { if (seen.has(t)) return false; seen.add(t); return true; })
+      .map((t, i) => ({ index: i, text: t, isDefault: i === 0 }));
+
+    // Context: non-title, non-button, non-option descriptive lines
+    const optSet = new Set(rawOpts);
+    const contextLines = lines.filter(l =>
+      l !== dialogTitle && !BUTTON_RE.test(l) && !optSet.has(l) && l.length > 5 && l.length < 300
+    ).slice(0, 3);
+    const context = command.trim() || contextLines.join('\n');
+
+    log('dialog — title:', dialogTitle, '| opts:', options.length, '| ctx:', context.slice(0, 60));
+
+    return [{
+      type:            'dialog',
+      occurrenceIndex: 0,
+      title:           dialogTitle,
+      command:         command.trim(),
+      context:         context.trim(),
+      options,
+      hasSubmit:       true,
+      hasSkip:         true,
+      submitSelector:  'button[data-tooltip-id="' + submitId + '"]',
+      skipSelector:    'button[data-tooltip-id="' + skipId   + '"]',
+      selector:        'button',
+      matchText:       options[0]?.text || 'Yes, allow this time',
+      text:            dialogTitle,
+    }];
   } catch (err) {
     log('scrapePendingActions CATCH:', err.message);
     return [];
   }
 }
-
-
 
 
 // ─── Broadcast to PWA clients ─────────────────────────────────────────────────
