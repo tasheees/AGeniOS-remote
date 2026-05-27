@@ -1,4 +1,27 @@
 (function() {
+  // Shadow-DOM-aware text extraction — skips style/script elements
+  function extractText(root) {
+    var parts = [];
+    var SKIP_TAGS = /^(style|script|noscript|svg)$/i;
+    function walk(node) {
+      if (!node) return;
+      if (node.shadowRoot) walk(node.shadowRoot);
+      for (var i = 0; i < node.childNodes.length; i++) {
+        var c = node.childNodes[i];
+        if (c.nodeType === 3) {                           // text node
+          var t = c.textContent.trim();
+          if (t) parts.push(t);
+        } else if (c.nodeType === 1) {                    // element node
+          if (SKIP_TAGS.test(c.tagName || '')) continue; // skip style/script
+          if (c.shadowRoot) walk(c.shadowRoot);
+          walk(c);
+        }
+      }
+    }
+    walk(root);
+    return parts.join('\n');
+  }
+
   var btns = Array.from(document.querySelectorAll('button[data-tooltip-id]'));
   var skipBtn = null, submitBtn = null;
   for (var i = 0; i < btns.length; i++) {
@@ -8,7 +31,7 @@
   }
   if (!skipBtn || !submitBtn) return null;
 
-  // Step 1: find lowest ancestor containing both Skip + Submit
+  // Find lowest ancestor containing both Skip + Submit
   var el = skipBtn.parentElement;
   while (el && el !== document.body) {
     if (el.contains(submitBtn)) break;
@@ -16,7 +39,7 @@
   }
   if (!el || el === document.body) return null;
 
-  // Step 2: walk UP conservatively — stop at first container with real content
+  // Walk UP conservatively to the full dialog container
   var BUTTON_ONLY_RE = /^[\s\n]*(skip|submit|\u21b5)[\s\n]*$/i;
   var current = el;
   for (var up = 0; up < 8; up++) {
@@ -30,39 +53,11 @@
     current = parent;
   }
 
-  // Step 3: search for command text in siblings, walking UP to 4 ancestor levels.
-  // The command block (e.g. "git push") is a sibling somewhere above the options container.
-  var cmdText = '';
-  var IGNORE_RE = /^(skip|submit|\u21b5|allow|reject|yes|no)$/i;
-  var searchNode = el;
-  for (var level = 0; level < 4 && !cmdText; level++) {
-    var ancestor = searchNode.parentElement;
-    if (!ancestor || ancestor === document.body) break;
-    var kids = Array.from(ancestor.children || []);
-    for (var k = 0; k < kids.length; k++) {
-      var kid = kids[k];
-      if (kid === searchNode) continue;          // skip current container
-      if (kid.contains(skipBtn)) continue;       // skip footer
-      if (kid.contains(submitBtn)) continue;     // skip footer
-      var kidText = (kid.innerText || '').trim();
-      // Candidate command: non-empty, not a single ignored word, not huge
-      if (kidText && kidText.length > 1 && kidText.length < 800 &&
-          !IGNORE_RE.test(kidText)) {
-        cmdText = kidText;
-        break;
-      }
-    }
-    searchNode = ancestor;
-  }
-
-  // Also prefer <pre>/<code>/<kbd> anywhere nearby if found
-  var nearEl = el.parentElement || el;
-  var codeEl = nearEl.querySelector('pre, code, kbd');
-  if (codeEl) cmdText = (codeEl.innerText || '').trim();
+  var fullText = extractText(el);
 
   return {
-    fullText: el ? (el.innerText || '') : '',
-    command:  cmdText,
+    fullText: fullText,
+    command:  '',   // bridge-side contextLines handles value extraction
     skipId:   skipBtn.getAttribute('data-tooltip-id'),
     submitId: submitBtn.getAttribute('data-tooltip-id')
   };

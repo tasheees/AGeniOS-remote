@@ -219,11 +219,24 @@ function sendActionToTelegram(action) {
   const idx   = action.occurrenceIndex ?? action.index ?? 0;
   const opts  = action.options || [];
 
-  // Build message: title bold, command verbatim in code block, options verbatim
+  // ── Message layout (mirrors AG dialog) ──────────────────────────────────
+  // Section 1: bold title
   let body = `*${title}*`;
-  if (cmd) body += `\n\`\`\`\n${cmd}\n\`\`\``;
+
+  // Section 2: description (the "why") + separator + value/URL/command (the "what")
+  const desc = (action.description || '').trim();
+  const val  = (action.value || action.command || '').trim().slice(0, 300);
+  if (desc && val) {
+    // Both present: description plain, separator, value in code block
+    body += `\n\n${desc}\n──────────\n\`${val}\``;
+  } else if (val) {
+    body += `\n\`\`\`\n${val}\n\`\`\``;
+  } else if (desc) {
+    body += `\n\n${desc}`;
+  }
+
+  // Section 3: options (verbatim)
   if (opts.length) {
-    // Use exact option text from the scraper — no reformatting, no digit-stripping
     body += '\n\n' + opts.map(o => o.text).join('\n');
   }
 
@@ -618,9 +631,10 @@ async function scrapePendingActions() {
     if (!raw?.value) return [];
 
     // ── All parsing in Node.js — no browser-side complexity ─────────────────
-    const { fullText, command, skipId, submitId } = raw.value;
+    const { fullText, command, skipId, submitId, debug } = raw.value;
     const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
     log('[dialog-lines]', JSON.stringify(lines));
+    if (debug) log('[dialog-debug]', debug);
 
     // BUTTON_RE: only matches the actual Skip/Submit/Enter button labels.
     // Do NOT include 'no', 'yes', 'allow', 'deny' — those are valid option texts.
@@ -650,10 +664,9 @@ async function scrapePendingActions() {
       .filter(t => { if (seen.has(t)) return false; seen.add(t); return true; })
       .map((t, i) => ({ index: i, text: t, isDefault: i === 0 }));
 
-    // Context: non-title, non-button, non-option descriptive lines
-    // optSet: full "1 Yes, allow this time" strings
-    // optTextSet: bare text parts "Yes, allow this time" — also excluded so they
-    //   don't bleed into context when digit+text were on separate lines
+    // Split context into two distinct parts:
+    // description = longer sentence/reason line (e.g. "DOM debug test — approve from AG directly.")
+    // value       = shorter URL/command line  (e.g. "crates.io" or "git push")
     const optSet     = new Set(rawOpts);
     const optTextSet = new Set(rawOpts.map(t => t.replace(/^\d+[\. ]+/, '').trim()));
     const contextLines = lines.filter(l =>
@@ -661,18 +674,30 @@ async function scrapePendingActions() {
       !BUTTON_RE.test(l) &&
       !optSet.has(l) &&
       !optTextSet.has(l) &&
-      !/^[1-9]$/.test(l) &&        // skip bare digit lines
-      l.length > 5 && l.length < 300
-    ).slice(0, 3);
-    const context = command.trim() || contextLines.join('\n');
+      !/^[1-9]$/.test(l) &&
+      l.length > 2 && l.length < 400
+    ).slice(0, 5);
 
-    log('dialog — title:', dialogTitle, '| opts:', options.length, '| ctx:', context.slice(0, 60));
+    // Value: short URL/command-like line (≤ 120 chars, single token or path-like)
+    // Description: the rest (longer, sentence-like)
+    const VALUE_RE = /^[\w./:@-]{1,120}$/;  // URL, domain, command — no spaces
+    const valueLines = contextLines.filter(l => l.length <= 120 && (VALUE_RE.test(l) || l.includes('/') || l.includes(' ') && l.length < 60 && !/[,.?!]$/.test(l)));
+    const descLines  = contextLines.filter(l => !valueLines.includes(l));
+
+    // command field from scraper takes priority for value
+    const value       = command.trim() || valueLines[0] || '';
+    const description = descLines.join('\n').trim();
+    const context     = [description, value].filter(Boolean).join('\n') || contextLines.join('\n');
+
+    log('dialog — title:', dialogTitle, '| opts:', options.length, '| ctx:', context.slice(0, 80));
 
     return [{
       type:            'dialog',
       occurrenceIndex: 0,
       title:           dialogTitle,
       command:         command.trim(),
+      value,            // the URL / command being approved
+      description,      // the reason / description text
       context:         context.trim(),
       options,
       hasSubmit:       true,
