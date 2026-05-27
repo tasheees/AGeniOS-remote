@@ -850,6 +850,7 @@ function broadcastActionResolved(source) {
     telegramNotifyInline(`${emoji} *Action resolved from ${source}*`, []);
   }
   _pendingActionSource = null;
+  _lastActionCount = 0;   // prevent 3s interval from also firing a duplicate resolution
 }
 
 // ─── Sync actions to PWA while open ────────────────────────────────────────
