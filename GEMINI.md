@@ -171,6 +171,7 @@ pending - List pending AG approvals
 notify - Show notification status
 mute - Mute Telegram notifications
 unmute - Re-enable Telegram notifications
+ask - Send a message to AG and get the reply in Telegram
 tunnel - Show tunnel status and active URL
 eod - End-of-day session summary
 logs - Recent bridge logs

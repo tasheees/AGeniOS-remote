@@ -245,6 +245,7 @@ async function processUpdate(update) {
       '`/notify` — show notification status',
       '`/mute` — mute Telegram notifications',
       '`/unmute` — re-enable Telegram notifications',
+      '`/ask <msg>` — send a message to AG, get the reply in Telegram',
       '`/tunnel` — show tunnel status + active URL',
       '`/tunnel ngrok` — set default tunnel to ngrok',
       '`/tunnel cloudflare` — set default tunnel to cloudflare',

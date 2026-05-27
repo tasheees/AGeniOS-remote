@@ -333,6 +333,44 @@ Keep it under 15 bullets. Use plain text, no markdown headers.`;
     telegramNotify(msg);  // Always send to Telegram regardless of PWA state
     return '✅ EOD summary sent to Telegram';
   },
+  '/ask': async (arg) => {
+    if (!arg || !arg.trim()) return '❌ Usage: /ask <message to AG>';
+    const text = arg.trim();
+
+    // Snapshot message count before sending
+    const chatBefore = await scrapeChat();
+    const snapLen = chatBefore.length;
+
+    // Send to AG
+    await typeIntoInput(text);
+    await new Promise(r => setTimeout(r, 300));
+    await clickSend();
+    log('[/ask] sent to AG:', text.slice(0, 60));
+
+    // Immediately confirm to Telegram, then watch for response in background
+    setTimeout(async () => {
+      let reply = '';
+      for (let i = 0; i < 45; i++) {          // 45 × 2s = 90s max
+        await new Promise(r => setTimeout(r, 2000));
+        const state = await scrapeAGState();
+        if (state.state === 'idle') {
+          const msgs = await scrapeChat();
+          const lastMsg = msgs[msgs.length - 1];
+          if (lastMsg && lastMsg.text && msgs.length > snapLen) {
+            reply = lastMsg.text;
+            break;
+          }
+        }
+      }
+      if (reply) {
+        telegramNotifyInline(`🤖 *AG replied:*\n\n${reply.slice(0, 3800)}`, []);
+      } else {
+        telegramNotifyInline('⏱ AG is still thinking — follow up in PWA.', []);
+      }
+    }, 0);
+
+    return `✅ *Sent to AG:* \`${text.slice(0, 80)}${text.length > 80 ? '…' : ''}\`\n⏳ Watching for reply…`;
+  },
 };
 
 // EOD auto-schedule: fires once per day at EOD_TIME ("HH:MM" local Beirut time)

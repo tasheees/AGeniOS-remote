@@ -1628,6 +1628,7 @@
   <!-- Bottom Bar -->
   <div id="bottom-bar">
     <div id="quick-actions">
+      <button class="quick-btn" onclick="promptAndSend('/ask')">🤖 /ask</button>
       <button class="quick-btn" onclick="sendCommand('/status')">📊 /status</button>
       <button class="quick-btn" onclick="sendCommand('/pending')">⏳ /pending</button>
       <button class="quick-btn" onclick="sendCommand('/notify')">🔔 /notify</button>
@@ -2617,6 +2618,15 @@ function setTunnelMode(useCloudflare) {
   const mode = useCloudflare ? 'cloudflare' : 'ngrok';
   ws.send(JSON.stringify({ type: 'set_tunnel_mode', value: mode }));
   toast(`📡 Tunnel default → ${mode} (restarts to take effect)`);
+}
+
+function promptAndSend(cmd) {
+  if (cmd === '/ask') {
+    const msg = window.prompt('Message to AG:');
+    if (!msg || !msg.trim()) return;
+    sendCommand('/ask ' + msg.trim());
+    toast('🤖 Sent to AG — reply incoming…');
+  }
 }
 
 // ─── Permission Modal ─────────────────────────────────────────────────────────
