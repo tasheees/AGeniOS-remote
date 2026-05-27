@@ -487,7 +487,11 @@ async function scrapePendingActions() {
 
           const fullText = (container?.innerText || '').trim();
           const lines    = fullText.split('\\n').map(l => l.trim()).filter(Boolean);
-          const dialogTitle = lines[0] || 'Approval required';
+          // Skip button labels (Skip / Submit / ↵) — they appear first when
+          // contains(submitBtn) stops at the button-row parent.
+          const BUTTON_LABELS = /^(skip|submit|↵|allow|deny|yes|no)$/i;
+          const dialogTitle = lines.find(l => !BUTTON_LABELS.test(l) && l.length > 4)
+                              || 'Approval required';
 
           // Command: first <code> or <pre> near the dialog
           const codeEl  = container?.querySelector('pre, code');
