@@ -245,15 +245,11 @@ function sendActionToTelegram(action) {
       { text: '❌ Reject', callback_data: `ag_opt:${idx}:${Math.max(opts.length - 1, 1)}` },
     ]];
   } else {
-    const allBtns = opts.map(o => ({
-      text: o.text.slice(0, 28),
+    // Each option gets its own full-width row — maximises visible text before Telegram truncates
+    keyboard = opts.map(o => ([{
+      text: o.text.slice(0, 40),
       callback_data: `ag_opt:${idx}:${o.index}`,
-    }));
-    // Group into rows of 2
-    keyboard = [];
-    for (let i = 0; i < allBtns.length; i += 2) {
-      keyboard.push(allBtns.slice(i, i + 2));
-    }
+    }]));
   }
 
   telegramNotifyInline(`⚠️ *AG needs approval*\n\n${body}`, keyboard);
