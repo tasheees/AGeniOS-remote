@@ -110,21 +110,23 @@ let telegramForceUnmute  = false; // /unmute overrides macActive suppression
 let tunnelMode           = 'ngrok';
 let activeTunnelProvider = null;
 let _lastDigestAt        = 0;
-let _hadConnection = false;  // true once any PWA has connected this process lifetime
+let _hadConnection            = false;
+let _restoredLastConnectionAt = 0; // restored from disk — ms since epoch
 // Suppressed when: manually muted, OR Mac is active and user hasn't force-unmuted
-const isTelegramSuppressed = () => telegramMuted || (macActive && !telegramForceUnmute);
+const isTelegramSuppressed     = () => telegramMuted || (macActive && !telegramForceUnmute);
+const isTelegramSuppressedInfo = () => telegramMuted || macActive; // status/digest: always suppress when Mac active
 
 // Persist settings across restarts
 function saveSettings() {
   try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify({
     telegramMuted, telegramForceUnmute, tunnelMode,
-    lastDigestAt: _lastDigestAt,
-    authTokens: [...AUTH_TOKENS],   // persist sessions so restarts don't kick users
+    lastDigestAt:     _lastDigestAt,
+    lastConnectionAt: _hadConnection ? Date.now() : (_restoredLastConnectionAt || 0),
+    authTokens:       [...AUTH_TOKENS],
   })); } catch {}
 }
 try {
   const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-  if (typeof saved.telegramMuted       === 'boolean') telegramMuted       = saved.telegramMuted;
   if (typeof saved.telegramForceUnmute === 'boolean') telegramForceUnmute = saved.telegramForceUnmute;
   if (saved.tunnelMode === 'ngrok' || saved.tunnelMode === 'cloudflare') tunnelMode = saved.tunnelMode;
 } catch { /* first run — use defaults */ }
@@ -259,7 +261,7 @@ function scheduleIdleDigest(lastSnippet) {
   setTimeout(async () => {
     _digestPending = false;
     if (wsClients.size > 0) return;      // PWA open — skip
-    if (isTelegramSuppressed()) return;  // Mac active or muted
+    if (isTelegramSuppressedInfo()) return;  // Mac active or muted — no digest needed
     if (actions.length > 0 || _lastActionCount > 0) return; // dialog pending — don't interrupt
     try {
       const { exec } = require('child_process');
@@ -907,7 +909,7 @@ let _pendingActionSource = null; // 'PWA' | 'Telegram' | null (null = Mac)
 function broadcastActionResolved(source) {
   log(`[action-resolved] source=${source}`);
   broadcast('action_resolved', { source });
-  if (!isTelegramSuppressed()) {
+  if (!isTelegramSuppressedInfo()) {
     let msg;
     if (source === 'Telegram') msg = '✅ *Confirmed — AG dialog resolved*';
     else if (source === 'PWA')  msg = '📱 *Action resolved from PWA*';
@@ -1608,7 +1610,9 @@ function setTunnel(url, provider) {
   broadcast('status', { cdpConnected, tunnelUrl });
   broadcastSettings();
   setTimeout(() => {
-    if (wsClients.size === 0 && !_hadConnection && !isTelegramSuppressed()) {
+    const recentActivity = _hadConnection ||
+      (Date.now() - _restoredLastConnectionAt < 30 * 60 * 1000); // active in last 30 min
+    if (wsClients.size === 0 && !recentActivity && !isTelegramSuppressedInfo()) {
       telegramNotifyInline(
         `🌐 *AG Bridge online*\n\nURL: ${tunnelUrl}\n\nType /wpa anytime to get the link again.`,
         []
