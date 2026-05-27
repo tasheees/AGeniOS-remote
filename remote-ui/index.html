@@ -1780,14 +1780,20 @@ function connect() {
     }
   };
 
-  ws.onclose = () => {
+  ws.onclose = (e) => {
     connected = false;
+    if (e.code === 4001) {
+      // Bridge rejected our token (password changed or token invalidated)
+      // Clear cookie and show login overlay — don't loop reconnect with bad token
+      document.cookie = 'ag_token=; Max-Age=0; Path=/';
+      document.getElementById('overlay').classList.add('visible');
+      setStatus('disconnected', 'Session expired — please log in again');
+      return; // do NOT scheduleReconnect — user must log in fresh
+    }
     if (hasEverConnected) {
-      // Already had a session — show slim banner, keep chat visible
       showReconnectBanner(true);
       setStatus('connecting', 'Reconnecting...');
     } else {
-      // First-ever connect — show full overlay
       document.getElementById('overlay').classList.add('visible');
       setStatus('disconnected', 'Disconnected');
     }

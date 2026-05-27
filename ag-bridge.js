@@ -114,7 +114,10 @@ const isTelegramSuppressed = () => telegramMuted || (macActive && !telegramForce
 
 // Persist settings across restarts
 function saveSettings() {
-  try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ telegramMuted, telegramForceUnmute, tunnelMode })); } catch {}
+  try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify({
+    telegramMuted, telegramForceUnmute, tunnelMode,
+    authTokens: [...AUTH_TOKENS],   // persist sessions so restarts don't kick users
+  })); } catch {}
 }
 try {
   const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
@@ -1099,6 +1102,12 @@ async function ensureAGRunning() {
 // ─── HTTP server (PWA + auth) ─────────────────────────────────────────────────
 
 const AUTH_TOKENS = new Set(); // Active session tokens
+// Restore saved sessions (survives bridge restarts — ngrok URL stays same)
+try {
+  const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+  if (Array.isArray(saved.authTokens)) saved.authTokens.forEach(t => AUTH_TOKENS.add(t));
+  log(`[auth] restored ${AUTH_TOKENS.size} session token(s) from disk`);
+} catch { /* no saved tokens yet */ }
 
 function generateToken() {
   return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
@@ -1185,6 +1194,7 @@ const httpServer = http.createServer(async (req, res) => {
     if (body.password === REMOTE_PASSWORD) {
       const token = generateToken();
       AUTH_TOKENS.add(token);
+      saveSettings(); // persist so bridge restart doesn't invalidate this session
       res.writeHead(200, {
         'Set-Cookie': `ag_token=${token}; Path=/; HttpOnly; SameSite=Strict`,
         'Content-Type': 'application/json',
