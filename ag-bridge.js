@@ -215,20 +215,21 @@ function sendActionToTelegram(action) {
   if (!BOT_TOKEN || !ALLOWED_CHAT_ID) return;
   if (isTelegramSuppressed()) return;
   const title = (action.title || action.text || 'Approval needed').slice(0, 200);
-  const cmd   = (action.command || action.context || '').trim().slice(0, 200);
+  const cmd   = (action.command || action.context || '').trim().slice(0, 300);
   const idx   = action.occurrenceIndex ?? action.index ?? 0;
   const opts  = action.options || [];
 
-  // Build rich body: title + optional command block + numbered options list
+  // Build message: title bold, command verbatim in code block, options verbatim
   let body = `*${title}*`;
-  if (cmd)  body += `\n\`\`\`\n${cmd}\n\`\`\``;
+  if (cmd) body += `\n\`\`\`\n${cmd}\n\`\`\``;
   if (opts.length) {
-    body += '\n\n' + opts.map(o => `${o.index + 1}\. ${o.text.replace(/^\d+[\. ]+/, '')}`).join('\n');
+    // Use exact option text from the scraper — no reformatting, no digit-stripping
+    body += '\n\n' + opts.map(o => o.text).join('\n');
   }
 
   // Build inline keyboard:
   // 2 options  → one row: ✅ Allow | ❌ Reject
-  // 3+ options → rows of 2, each button = option text (truncated)
+  // 3+ options → rows of 2, each button = verbatim option text (truncated to 28 chars)
   let keyboard;
   if (opts.length <= 2) {
     keyboard = [[
@@ -237,7 +238,7 @@ function sendActionToTelegram(action) {
     ]];
   } else {
     const allBtns = opts.map(o => ({
-      text: `${o.index + 1}. ${o.text.replace(/^\d+[\. ]+/, '').slice(0, 28)}`,
+      text: o.text.slice(0, 28),
       callback_data: `ag_opt:${idx}:${o.index}`,
     }));
     // Group into rows of 2

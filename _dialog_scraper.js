@@ -16,25 +16,36 @@
   }
   if (!el || el === document.body) return null;
 
-  // Step 2: walk UP to find the outermost dialog container.
-  // Keep updating bestEl as we go — stop when text gets too large (we've left the dialog)
-  // or we hit body/html. This captures the full dialog including the command block.
-  var bestEl = el;
+  // Step 2: walk UP conservatively — stop at first container with real content
+  // (title + options), but not so far we capture unrelated page elements.
+  var BUTTON_ONLY_RE = /^[\s\n]*(skip|submit|\u21b5)[\s\n]*$/i;
   var current = el;
-  for (var up = 0; up < 12; up++) {
+  for (var up = 0; up < 8; up++) {
     var parent = current.parentElement;
-    if (!parent || parent === document.body || parent === document.documentElement) break;
+    if (!parent || parent === document.body) break;
     var text = (parent.innerText || '').trim();
-    if (text.length > 2000) break; // too much content — we've left the dialog
-    if (text.length > 30)  bestEl = parent; // valid dialog container — keep going up
+    if (text.length > 30 && !BUTTON_ONLY_RE.test(text)) {
+      el = parent;
+      break;
+    }
     current = parent;
   }
-  el = bestEl;
 
-  var codeEl = el ? el.querySelector('pre, code') : null;
+  // Step 3: find command text — look for <pre> or <code> in el first,
+  // then search up to 4 more parent levels (command block may be a sibling container).
+  var codeEl = el.querySelector('pre, code, kbd');
+  if (!codeEl) {
+    var searchEl = el.parentElement;
+    for (var s = 0; s < 4 && searchEl && searchEl !== document.body; s++) {
+      codeEl = searchEl.querySelector('pre, code, kbd');
+      if (codeEl) break;
+      searchEl = searchEl.parentElement;
+    }
+  }
+
   return {
     fullText: el ? (el.innerText || '') : '',
-    command:  codeEl ? (codeEl.innerText || '') : '',
+    command:  codeEl ? (codeEl.innerText || '').trim() : '',
     skipId:   skipBtn.getAttribute('data-tooltip-id'),
     submitId: submitBtn.getAttribute('data-tooltip-id')
   };
