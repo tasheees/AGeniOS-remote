@@ -1496,10 +1496,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-  <!-- Prism.js syntax highlighting -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -2036,11 +2032,20 @@ function appendMessageEl(msg) {
     // Add copy buttons to all code blocks in this message
     row.querySelectorAll('pre').forEach(pre => addCopyBtn(pre));
 
-    // Syntax highlight with Prism if available
+    // Syntax highlight with Prism — run after innerHTML is set
     if (window.Prism) {
-      row.querySelectorAll('pre code[class*="language-"]').forEach(el => Prism.highlightElement(el));
-      row.querySelectorAll('code:not([class])').forEach(el => {
+      // 1. highlight blocks that already have a language-* class (from bridge)
+      row.querySelectorAll('pre code[class*="language-"]').forEach(el => {
+        try { Prism.highlightElement(el); } catch(e) {}
+      });
+      // 2. add language-text fallback to bare code blocks (no class)
+      row.querySelectorAll('pre code:not([class*="language-"])').forEach(el => {
         el.classList.add('language-text');
+        try { Prism.highlightElement(el); } catch(e) {}
+      });
+      // 3. inline code — style but don't highlight
+      row.querySelectorAll('code:not(pre code)').forEach(el => {
+        if (!el.className) el.classList.add('inline-code');
       });
     }
 
@@ -2362,10 +2367,13 @@ function postProcessDump(panel) {
     pre.style.position = 'relative';
     pre.appendChild(btn);
   });
-  // Prism highlighting on unprocessed code blocks
+  // Prism highlighting on all code blocks in panel
   if (window.Prism) {
-    panel.querySelectorAll('pre code:not(.language-none)').forEach(el => {
-      if (!el.className) el.classList.add('language-text');
+    panel.querySelectorAll('pre code[class*="language-"]').forEach(el => {
+      try { Prism.highlightElement(el); } catch(e) {}
+    });
+    panel.querySelectorAll('pre code:not([class*="language-"])').forEach(el => {
+      el.classList.add('language-text');
       try { Prism.highlightElement(el); } catch(e) {}
     });
   }
