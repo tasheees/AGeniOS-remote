@@ -735,8 +735,31 @@ async function scrapeChatList() {
             var id = testid.replace('convo-pill-', '');
             var text = (el.textContent || '').trim().replace(/\\n+/g, ' ').slice(0, 70);
             var isActive = id === currentId;
+            // Find the row container
+            var row = el.closest('[role="button"]');
+            // Time indicator: small text like "2h", "6d", "3m"
+            var time = '';
+            if (row) {
+              var spans = row.querySelectorAll('span, div');
+              for (var t = 0; t < spans.length; t++) {
+                var st = spans[t].textContent.trim();
+                if (st && st.length <= 4 && /^[0-9]+[smhdw]$/.test(st)) { time = st; break; }
+              }
+            }
+            // Spinner: any SVG with animate/animateTransform inside row
+            var hasSpinner = false;
+            if (row) {
+              var svgs = row.querySelectorAll('svg');
+              for (var s = 0; s < svgs.length; s++) {
+                if (svgs[s].querySelector('animate, animateTransform') || (svgs[s].className.baseVal||'').indexOf('spin') >= 0) {
+                  hasSpinner = true; break;
+                }
+              }
+            }
+            // Unread dot: pulsing badge
+            var hasUnread = !!(row && row.querySelector('[class*="animate-unread"], [class*="bg-primary"][class*="rounded-full"]'));
             if (id && text) {
-              convLinks.push({ id: id.slice(0, 36), text: text, isActive: isActive, hasSpinner: false, time: '', project: '' });
+              convLinks.push({ id: id.slice(0, 36), text: text, isActive: isActive, hasSpinner: hasSpinner, time: time, project: '', hasUnread: hasUnread });
             }
           }
           return { activeName: activeName, currentId: currentId.slice(0, 8), convLinks: convLinks };
@@ -1602,8 +1625,12 @@ wss.on('connection', (ws, req) => {
         log(`[navigate] switching to conversation ${convId}`);
         await cdpEvaluate(`
           (function() {
-            var link = document.querySelector('a[href*="/c/${convId}"]');
-            if (link) { link.click(); return 'clicked'; }
+            var pill = document.querySelector('[data-testid="convo-pill-${convId}"]');
+            if (pill) {
+              var row = pill.closest('[role="button"]');
+              if (row) { row.click(); return 'clicked'; }
+              pill.click(); return 'clicked-pill';
+            }
             return 'not found';
           })()
         `);
