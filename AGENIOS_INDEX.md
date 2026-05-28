@@ -1,6 +1,6 @@
 # AGENIOS_INDEX.md
 > AGenIOS — Task Registry & Source of Truth
-> Last Sync: 2026-05-28T10:00+03:00 · Studio 23aba18b
+> Last Sync: 2026-05-28T14:38+03:00 · Studio 23aba18b
 
 ---
 
@@ -75,6 +75,8 @@
 | Commit | What |
 |:-------|:-----|
 | `2a86ede` | Telegram poll: exponential backoff on ECONNRESET (2s→30s max) — fixes bulk-delayed replies |
+| `pending` | **Bug fix:** `↩️ Handled in AG` notification now respects mute/notify state — was bypassing suppression entirely. Force-sends only when action originated from Telegram. |
+| `pending` | SDK Deep Research complete — `google-antigravity==0.1.0` fully mapped. `sdk_research.md` + `Antigravity SDK Deep Dive.pdf` added to repo. Architecture validated for S2. |
 
 ---
 
@@ -82,6 +84,12 @@
 
 > Design direction locked 2026-05-28. Mobile-first. AG 2.0 spirit × Codex/Linear/Warp polish.
 > Design system: violet `#7c3aed`, near-black `#0d0d0f`, Geist font, frosted glass drawer.
+>
+> **✅ APPROVED BY MARWAN 2026-05-28** — Execution order: S2 first (engine), then W1-W4 (UI).
+> Rationale: S2 replaces fragile CDP/DOM layer with native AG SDK hooks — stable foundation
+> before UI rebuild. W1-W4 is frontend-only and decoupled; can run in parallel if needed.
+> Both tracks may run concurrently via AG Implementor. No implementation begins without
+> INDEX row status `[ ] NEXT` and a clean git tree.
 
 ### W1 — Structure + Navigation
 | ID | Task | Status |
@@ -131,17 +139,60 @@
 > Rationale: Web Push on iOS requires 16.4+ and home screen install. A Capacitor wrapper
 > unlocks true native push, background delivery, and App Store distribution.
 
-### S2 — Antigravity SDK Integration (Major Refactor)
+### S2 — Antigravity SDK Bridge Migration (ag-bridge.py)
+
+> **Research complete 2026-05-28. SDK confirmed.** See `sdk_research.md` in repo root.
+> `google-antigravity==0.1.0` installed. Architecture fully validated.
+
+**Core findings:**
+- SDK attaches to LIVE AG 2.0 session via `conversation_id` (same SQLite DB, same harness)
+- `OnInteractionHook` = native `STATE_WAITING_FOR_USER` → replaces our DOM approval hack
+- `PreToolCallDecideHook` = approve/deny tool calls before execution, with full typed args
+- `PostTurnHook` + streaming → replaces 2s DOM polling for conversation content
+- `MODEL_PLACEHOLDER_M35` = Claude Sonnet 4.6 (1M ctx), `M26` = Claude Opus 4.6
+- Cloud `RemoteAgentConfig` coming → `Local` → `Remote` swap, zero code changes
+
 | ID | Task | Status |
 |:---|:-----|:-------|
-| S2.1 | Research: Does AG expose an official SDK, API, or plugin interface? | [ ] RESEARCH |
-| S2.2 | Research: AG extension/plugin model — can we hook natively? | [ ] RESEARCH |
-| S2.3 | If SDK exists: replace CDP scraping with native SDK calls | [ ] FUTURE |
-| S2.4 | If no SDK: propose to AG team / contribute to AG core | [ ] FUTURE |
+| S2.1 | Research AG SDK existence and capabilities | [x] DONE |
+| S2.2 | Install `google-antigravity` and inspect source | [x] DONE 2026-05-28 |
+| S2.3 | Write `ag-bridge.py` (FastAPI + WebSocket, Python) | [ ] NEXT |
+| S2.4 | Implement `OnInteractionHook` → PWA approval relay | [ ] NEXT |
+| S2.5 | Implement `PostTurnHook` + token streaming → PWA | [ ] NEXT |
+| S2.6 | Implement `PreToolCallDecideHook` → policy gate | [ ] NEXT |
+| S2.7 | Emit same WS event schema as current `ag-bridge.js` | [ ] NEXT |
+| S2.8 | Update `ecosystem.config.js` → run `ag-bridge.py` via PM2 | [ ] NEXT |
+| S2.9 | Deprecate `ag-bridge.js` + `_dialog_scraper.js` | [ ] NEXT |
+| S2.10 | Update Telegram daemon to consume new Python bridge events | [ ] NEXT |
+| S2.11 | Add `Triggers` support: scheduled check-ins via `every()` | [ ] FUTURE |
+| S2.12 | Add `PreToolCallDecideHook` → Telegram approval for headless approvals | [ ] FUTURE |
+| S2.13 | Swap `LocalAgentConfig` → `RemoteAgentConfig` when GA (zero code change) | [ ] FUTURE |
 
-> Rationale: CDP bridge is a clever workaround. An official AG SDK would give us stable APIs
-> (not DOM-dependent), native event streams for approvals/artifacts/status, and proper auth.
-> Potential massive leap — research before any implementation.
+**New architecture (after S2):**
+```
+AG 2.0 Desktop ──── same SQLite DB ──── ag-bridge.py (Python SDK)
+                   ~/.gemini/antigravity/    ├── OnInteractionHook  → PWA approval WS
+                   conversations/<id>.db     ├── PostTurnHook       → content streaming
+                                             ├── PreToolCallDecide  → policy gate
+                                             ├── PostToolCallHook   → tool log
+                                             ├── FastAPI HTTP :9100 → serves PWA
+                                             ├── WebSocket /ws      → real-time events
+                                             └── ngrok tunnel       → mobile
+```
+
+### S3 — Standalone Cloud Mode (No AG 2.0 Required)
+> **FUTURE — no budget/resource allocated now. Keep open.**
+> SDK supports `LocalAgentConfig(api_key=USER_KEY)` → fully isolated headless agent.
+> Multi-tenant: each user gets their own sandboxed SQLite + WebSocket loop.
+> When `RemoteAgentConfig` lands → scale to cloud with zero code changes.
+
+| ID | Task | Status |
+|:---|:-----|:-------|
+| S3.1 | Research standalone SDK mode (no AG 2.0) | [x] DONE 2026-05-28 |
+| S3.2 | Design multi-tenant architecture | [ ] FUTURE |
+| S3.3 | Implement user-specific `api_key` + isolated agent instances | [ ] FUTURE |
+| S3.4 | Swap `LocalAgentConfig` → `RemoteAgentConfig` (cloud harness) | [ ] FUTURE |
+| S3.5 | Native app (Capacitor.js) for push notifications | [ ] FUTURE |
 
 ---
 
@@ -214,4 +265,6 @@ Task: M5 above.
 
 ---
 
-*Last updated: 2026-05-27T10:10+03:00 by AGenIOS Studio 23aba18b — overshoot bug fixed*
+*Last updated: 2026-05-28T14:38+03:00 by AGenIOS Studio 23aba18b*
+
+*Changes this session: SDK Deep Research complete (S2.1-S2.2 done), W1-W4 + S2 approved for execution, mute-bypass bug fixed in `broadcastActionResolved` + background watcher.*

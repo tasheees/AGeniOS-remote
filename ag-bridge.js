@@ -930,11 +930,14 @@ function broadcastActionResolved(source) {
   log(`[action-resolved] source=${source}`);
   broadcast('action_resolved', { source });
   // Notify Telegram about modals that were alerted there but resolved elsewhere
+  // Only send if: (a) action came from Telegram originally, OR (b) notifications not suppressed
   if (source !== 'Telegram' && _alertedActionMap.size > 0) {
     const resolvedIn = source === 'PWA' ? 'PWA' : 'AG';
-    for (const [key, info] of _alertedActionMap) {
-      const label = info.val ? `${info.title}\n\`${info.val}\`` : info.title;
-      telegramNotifyInline(`↩️ *Handled in ${resolvedIn}* — ${label}`, []);
+    if (!isTelegramSuppressedInfo()) {
+      for (const [key, info] of _alertedActionMap) {
+        const label = info.val ? `${info.title}\n\`${info.val}\`` : info.title;
+        telegramNotifyInline(`↩️ *Handled in ${resolvedIn}* — ${label}`, []);
+      }
     }
     _alertedActionMap.clear();
   }
@@ -1001,7 +1004,8 @@ setInterval(async () => {
     }
 
     // Detect alerted modals that disappeared without Telegram action → notify correct source
-    if (_pendingActionSource !== 'Telegram') {
+    // Only send if notifications are not suppressed (mute/notify state respected)
+    if (_pendingActionSource !== 'Telegram' && !isTelegramSuppressedInfo()) {
       const resolvedIn = _pendingActionSource === 'PWA' ? 'PWA' : 'AG';
       for (const [key, info] of _alertedActionMap) {
         if (!currentKeys.has(key)) {
@@ -1009,6 +1013,11 @@ setInterval(async () => {
           telegramNotifyInline(`↩️ *Handled in ${resolvedIn}* — ${label}`, []);
           _alertedActionMap.delete(key);
         }
+      }
+    } else if (_pendingActionSource !== 'Telegram') {
+      // Suppressed — still clean up the map silently
+      for (const [key] of _alertedActionMap) {
+        if (!currentKeys.has(key)) _alertedActionMap.delete(key);
       }
     }
 
