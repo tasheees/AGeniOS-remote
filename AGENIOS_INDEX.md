@@ -78,6 +78,7 @@
 | `pending` | **Bug fix:** `↩️ Handled in AG` notification now respects mute/notify state — was bypassing suppression entirely. Force-sends only when action originated from Telegram. |
 | `pending` | SDK Deep Research complete — `google-antigravity==0.1.0` fully mapped. `sdk_research.md` + `Antigravity SDK Deep Dive.pdf` added to repo. Architecture validated for S2. |
 | `pending` | **S2.3-S2.8** — `ag-bridge.py` written (Starlette+uvicorn, SDK hooks, backward-compat WS schema). `ecosystem.config.js` updated with `ag-bridge-py` process. Syntax ✅ imports ✅. |
+| `6134005` | **W1-W4 PWA Refactor:** full PWA refactor — drawer nav, violet palette, input redesign, gestures, picker |
 
 ---
 
@@ -95,34 +96,34 @@
 ### W1 — Structure + Navigation
 | ID | Task | Status |
 |:---|:-----|:-------|
-| W1.1 | Remove tab bar → breadcrumb header (Project / Chat name) | [ ] |
-| W1.2 | Left drawer (65% partial, frosted glass, AG 2.0 structure) — edge swipe right | [ ] |
-| W1.3 | Right panel (Phase 1: Artifacts list + git status) — edge swipe left | [ ] |
-| W1.4 | Settings at bottom of left drawer (gear icon row, exact AG 2.0) | [ ] |
-| W1.5 | Zoom toggle — ON=pinch-zoom / OFF=2-finger swipe for chat navigation | [ ] |
+| W1.1 | Remove tab bar → breadcrumb header (Project / Chat name) | [x] |
+| W1.2 | Left drawer (65% partial, frosted glass, AG 2.0 structure) — edge swipe right | [x] |
+| W1.3 | Right panel (Phase 1: Artifacts list + git status) — edge swipe left | [x] |
+| W1.4 | Settings at bottom of left drawer (gear icon row, exact AG 2.0) | [x] |
+| W1.5 | Zoom toggle — ON=pinch-zoom / OFF=2-finger swipe for chat navigation | [x] |
 
 ### W2 — Chat Panel Redesign
 | ID | Task | Status |
 |:---|:-----|:-------|
-| W2.1 | Violet palette + Geist Mono code blocks with syntax highlighting | [ ] |
-| W2.2 | Approval modal as bottom sheet overlay (not separate panel) | [ ] |
-| W2.3 | Input bar: mic inside field left + send icon right + command pill row | [ ] |
-| W2.4 | Tap code block → full-screen expand modal, swipe down to dismiss | [ ] |
-| W2.5 | Status indicators in drawer rows: green dot / blue dot / spinner | [ ] |
+| W2.1 | Violet palette + Geist Mono code blocks with syntax highlighting | [x] |
+| W2.2 | Approval modal as bottom sheet overlay (not separate panel) | [x] |
+| W2.3 | Input bar: mic inside field left + send icon right + command pill row | [x] |
+| W2.4 | Tap code block → full-screen expand modal, swipe down to dismiss | [x] |
+| W2.5 | Status indicators in drawer rows: green dot / blue dot / spinner | [x] |
 
 ### W3 — Chats Drawer (requires CDP research first)
 | ID | Task | Status |
 |:---|:-----|:-------|
-| W3.1 | CDP research: what AG DOM exposes for projects/conversation list | [ ] RESEARCH |
+| W3.1 | CDP research: what AG DOM exposes for projects/conversation list | [x] |
 | W3.2 | Bridge: /api/chats endpoint with project+conversation data | [ ] |
-| W3.3 | Drawer populated dynamically from bridge (not hardcoded) | [ ] |
-| W3.4 | Swipe-left on conversation row → quick actions (archive, copy link) | [ ] |
-| W3.5 | Long-press breadcrumb → inline chat picker popup | [ ] |
+| W3.3 | Drawer populated dynamically from bridge (not hardcoded) | [x] |
+| W3.4 | Swipe-left on conversation row → quick actions (archive, copy link) | [x] |
+| W3.5 | Long-press breadcrumb → inline chat picker popup | [x] |
 
 ### W4 — Right Panel Expansion (research phase)
 | ID | Task | Status |
 |:---|:-----|:-------|
-| W4.1 | CDP research: AG right panel DOM (Subagents, Artifacts, Background Tasks) | [ ] RESEARCH |
+| W4.1 | CDP research: AG right panel DOM (Subagents, Artifacts, Background Tasks) | [x] |
 | W4.2 | Implement full Overview/Artifacts replication if feasible | [ ] |
 
 ---

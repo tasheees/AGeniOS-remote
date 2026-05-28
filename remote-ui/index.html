@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AGenIOS Remote">
-  <meta name="theme-color" content="#0f0f13">
+  <meta name="theme-color" content="#0d0d0f">
   <title>AGenIOS Remote</title>
 
   <!-- Inline Web App Manifest -->
@@ -15,24 +15,24 @@
     &quot;short_name&quot;:&quot;AGenIOS&quot;,
     &quot;start_url&quot;:&quot;/&quot;,
     &quot;display&quot;:&quot;standalone&quot;,
-    &quot;background_color&quot;:&quot;#0f0f13&quot;,
+    &quot;background_color&quot;:&quot;#0d0d0f&quot;,
     &quot;theme_color&quot;:&quot;#7c3aed&quot;,
     &quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]
   }">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     /* ─── Reset + Tokens ─────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #0f0f13;
-      --bg-card:    #16161f;
-      --bg-surface: #1e1e2e;
-      --bg-hover:   #252535;
-      --border:     #2a2a3e;
+      --bg:         #0d0d0f;
+      --bg-card:    #141418;
+      --bg-surface: #1a1a22;
+      --bg-hover:   #222230;
+      --border:     #2a2a38;
       --accent:     #7c3aed;
       --accent-dim: #4c1d95;
       --accent-glow:rgba(124,58,237,0.25);
@@ -44,10 +44,10 @@
       --text-muted: #475569;
       --user-bubble:#1e293b;
       --ai-bubble:  #1a0f2e;
-      --radius:     12px;
-      --radius-sm:  8px;
-      --font:       'Inter', -apple-system, sans-serif;
-      --mono:       'JetBrains Mono', monospace;
+      --radius:     14px;
+      --radius-sm:  10px;
+      --font:       'Geist', 'Inter', -apple-system, sans-serif;
+      --mono:       'Geist Mono', 'JetBrains Mono', monospace;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
@@ -68,6 +68,27 @@
       height: 100dvh;
       max-width: 640px;
       margin: 0 auto;
+      transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    body.drawer-left-open #app {
+      flex-direction: row;
+      max-width: 100%;
+    }
+
+    #main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      transition: width 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      width: 100%;
+      height: 100dvh;
+    }
+
+    body.drawer-left-open #main-content {
+      width: 35%;
+      overflow: hidden;
     }
 
     /* ─── Header ─────────────────────────────────────────────── */
@@ -82,21 +103,47 @@
       padding-top: max(14px, env(safe-area-inset-top));
     }
 
-    #header .logo {
-      font-size: 20px;
+    #drawer-toggle {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 26px;
+      font-weight: 300;
+      cursor: pointer;
+      padding: 2px 10px 2px 4px;
+      line-height: 1;
+      transition: color 0.15s;
     }
+    #drawer-toggle:hover { color: var(--text); }
 
-    #header .title {
+    .breadcrumb {
       flex: 1;
-      font-weight: 700;
-      font-size: 16px;
-      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      user-select: none;
+    }
+    .bc-segment {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+    .bc-sep {
+      color: var(--text-muted);
+      font-size: 12px;
+      flex-shrink: 0;
     }
 
-    #header .subtitle {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 400;
+    #header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
     }
 
     #status-dot {
@@ -114,78 +161,149 @@
 
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
-    #lock-icon {
+    #artifacts-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
       font-size: 16px;
-      opacity: 0.5;
-    }
-
-    /* ─── Tabs ───────────────────────────────────────────────── */
-    #tabs {
+      cursor: pointer;
+      padding: 4px;
       display: flex;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg-card);
+      align-items: center;
+      position: relative;
+      transition: color 0.15s;
+    }
+    #artifacts-btn:hover { color: var(--text); }
+
+    /* ─── Left Drawer ────────────────────────────────────────── */
+    #left-drawer {
+      position: relative;
+      width: 0;
+      height: 100dvh;
+      overflow: hidden;
+      background: rgba(20, 20, 24, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: width 0.3s cubic-bezier(0.32, 0.72, 0, 1);
       flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+    body.drawer-left-open #left-drawer {
+      width: 65%;
+      border-right: 1px solid var(--border);
     }
 
-    .tab-btn {
-      flex: 1;
-      padding: 10px 4px;
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      padding-top: max(16px, env(safe-area-inset-top));
+      border-bottom: 1px solid var(--border);
+    }
+    .drawer-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .drawer-close {
       background: none;
       border: none;
       color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 8px 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .drawer-section-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 16px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
       font-family: var(--font);
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
-      position: relative;
-      transition: color 0.2s;
+      text-align: left;
+      transition: background 0.15s, color 0.15s;
     }
-    .tab-btn.active { color: var(--accent); }
-    .tab-btn.active::after {
-      content: '';
-      position: absolute;
-      bottom: 0; left: 20%; right: 20%;
-      height: 2px;
-      background: var(--accent);
-      border-radius: 2px 2px 0 0;
+    .drawer-section-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text);
     }
-    .tab-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px; height: 16px;
-      background: var(--red);
-      border-radius: 50%;
-      font-size: 10px;
-      font-weight: 700;
-      margin-left: 4px;
-      vertical-align: middle;
-      color: white;
+    .drawer-section-btn span:first-child {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
     }
-    .tab-badge:empty { display: none; }
+    .drawer-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 8px 0;
+    }
+    .drawer-settings-btn {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+    #drawer-expand-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 8px;
+      transition: color 0.15s;
+    }
+    #drawer-expand-btn:hover {
+      color: var(--text);
+    }
 
-    /* ─── Panels ─────────────────────────────────────────────── */
-    #panels {
-      flex: 1;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .panel {
-      position: absolute;
-      inset: 0;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      -webkit-overflow-scrolling: touch;
-      display: none;
+    /* ─── Right Drawer ───────────────────────────────────────── */
+    #right-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 65%;
+      max-width: 320px;
+      background: rgba(20, 20, 24, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-left: 1px solid var(--border);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      z-index: 190;
+      display: flex;
       flex-direction: column;
     }
-    .panel.active { display: flex; }
+    #right-drawer.open {
+      transform: translateX(0);
+    }
 
     /* ─── Chat Panel ─────────────────────────────────────────── */
     #chat-panel {
+      flex: 1;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       padding: 8px 0 0;
-      gap: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     /* AG 2.0 style message row */
@@ -203,9 +321,9 @@
     }
     .msg-row.ai .msg-card {
       width: 100%;
-      background: #111827;
-      border-top: 1px solid #1f2937;
-      border-bottom: 1px solid #1f2937;
+      background: #111115;
+      border-top: 1px solid #1f1f26;
+      border-bottom: 1px solid #1f1f26;
       padding: 12px 16px 14px;
     }
 
@@ -216,11 +334,11 @@
     }
     .msg-row.user .msg-card {
       max-width: 82%;
-      background: linear-gradient(135deg, #312e81, #4c1d95);
-      border: 1px solid #5b21b6;
+      background: linear-gradient(135deg, #3b0764, #4c1d95);
+      border: 1px solid #6d28d9;
       border-radius: 18px 18px 4px 18px;
       padding: 10px 14px;
-      box-shadow: 0 2px 12px rgba(109,40,217,0.25);
+      box-shadow: 0 2px 12px rgba(124,58,237,0.25);
     }
 
     /* Message metadata (Thought for Xs, Worked for Xs) */
@@ -240,7 +358,7 @@
       letter-spacing: 0.7px;
       margin-bottom: 5px;
     }
-    .msg-row.ai .msg-label { color: #6366f1; }
+    .msg-row.ai .msg-label { color: #818cf8; }
     .msg-row.user .msg-label { color: rgba(255,255,255,0.5); text-align: right; }
 
     /* Message text */
@@ -265,13 +383,13 @@
 
     /* Code block */
     .msg-text pre {
-      background: #0d1117;
-      border: 1px solid #30363d;
+      background: #0d0d0f;
+      border: 1px solid rgba(255,255,255,0.08);
       border-radius: 8px;
       padding: 10px 12px;
       margin: 8px 0;
       overflow-x: auto;
-      font-size: 12px;
+      font-size: 12.5px;
       line-height: 1.5;
     }
     .msg-text pre code { background: none; padding: 0; color: #e6edf3; }
@@ -284,7 +402,7 @@
       font-size: 9px;
       background: rgba(124,58,237,0.2);
       border: 1px solid rgba(124,58,237,0.35);
-      color: #a78bfa;
+      color: #c4b5fd;
       border-radius: 4px;
       padding: 0 4px;
       line-height: 14px;
@@ -382,12 +500,12 @@
       top: 8px; right: 8px;
       padding: 3px 10px;
       background: rgba(255,255,255,0.08);
-      color: #8b9ac7;
+      color: #c4b5fd;
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: 5px;
       font-size: 11px;
       cursor: pointer;
-      font-family: var(--sans);
+      font-family: var(--font);
       transition: all 0.15s;
       z-index: 2;
     }
@@ -401,17 +519,17 @@
 
     /* Blockquotes from AG */
     .msg-text blockquote {
-      border-left: 3px solid #7c6af7;
+      border-left: 3px solid var(--accent);
       margin: 8px 0;
       padding: 4px 12px;
       color: #a0a8c0;
-      background: rgba(124,106,247,0.06);
+      background: rgba(124,58,237,0.06);
       border-radius: 0 6px 6px 0;
     }
 
     /* Inline code highlight */
     .msg-text :not(pre) > code {
-      background: #1e213a;
+      background: #1e1e24;
       color: #c9d1f0;
       padding: 1px 5px;
       border-radius: 4px;
@@ -422,7 +540,7 @@
 
     /* Prism-themed pre blocks */
     .msg-text pre {
-      background: #0d1117 !important;
+      background: #0d0d0f !important;
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 8px;
       padding: 14px 16px 12px;
@@ -433,7 +551,6 @@
       position: relative;
     }
     .msg-text pre code { background: none !important; border: none !important; padding: 0 !important; color: #e6edf3; }
-
 
     .ag-section {
       margin: 2px 0;
@@ -469,7 +586,7 @@
       font-style: italic;
     }
     .ag-section-meta.thinking {
-      color: rgba(99,102,241,0.7); /* indigo tint for live thinking */
+      color: rgba(139, 92, 246, 0.7);
     }
     .ag-section-body {
       padding: 6px 0 4px 16px;
@@ -480,7 +597,8 @@
 
     /* ─── Verbosity pills ────────────────────────────────────────── */
     .vpill {
-      width: 32px; height: 32px;
+      flex: 1;
+      height: 32px;
       border-radius: 8px;
       background: rgba(255,255,255,0.07);
       border: 1px solid rgba(255,255,255,0.12);
@@ -489,14 +607,13 @@
       font-weight: 700;
       font-family: var(--mono);
       cursor: pointer;
-      transition: background 0.15s, color 0.15s;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
     .vpill:hover { background: rgba(255,255,255,0.12); color: #fff; }
     .vpill.active {
-      background: #6366f1;
-      border-color: #6366f1;
+      background: var(--accent);
+      border-color: var(--accent);
       color: #fff;
-    }
     }
 
     /* Ghost streaming bubble — matches AI style */
@@ -520,7 +637,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.7px;
-      color: #6366f1;
+      color: var(--accent);
       margin-bottom: 5px;
     }
     .ghost-text {
@@ -570,16 +687,6 @@
       cursor: pointer;
       padding: 0;
     }
-    #attach-btn {
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      padding: 0 4px;
-      opacity: 0.6;
-      transition: opacity 0.15s;
-    }
-    #attach-btn:hover { opacity: 1; }
 
     #chat-empty {
       flex: 1;
@@ -720,47 +827,8 @@
       font-weight: 500;
       letter-spacing: 0.2px;
     }
-    .typing-dot {
-      width: 5px; height: 5px;
-      background: #a78bfa;
-      border-radius: 50%;
-      animation: typingBounce 1.4s infinite;
-      opacity: 0.5;
-    }
-    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typingBounce {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-      30% { transform: translateY(-3px); opacity: 1; }
-    }
 
-
-
-    #actions-panel {
-      padding: 12px 0 24px;
-      gap: 10px;
-    }
-
-    /* ─── Notification Settings ───────────────────────────────────────────────── */
-    #notif-settings {
-      margin: 16px 12px 8px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .notif-settings-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      padding-bottom: 4px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
+    /* ─── Action Settings (Bottom Sheet style) ────────────────── */
     .notif-row {
       display: flex;
       align-items: center;
@@ -768,7 +836,7 @@
       gap: 12px;
     }
     .notif-row-info { flex: 1; min-width: 0; }
-    .notif-row-label { font-size: 13px; font-weight: 500; color: var(--text-main); }
+    .notif-row-label { font-size: 13px; font-weight: 500; color: var(--text); }
     .notif-row-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
     .notif-badge {
       font-size: 11px; font-weight: 700;
@@ -777,8 +845,9 @@
       background: rgba(255,255,255,0.08);
       color: var(--text-muted);
     }
-    .notif-badge.active  { background: rgba(52,211,153,0.15); color: #34d399; }
-    .notif-badge.away    { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    .notif-badge.active  { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .notif-badge.away    { background: rgba(245,158,11,0.15);  color: #f59e0b; }
+    
     /* Toggle switch */
     .notif-toggle { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
     .notif-toggle input { opacity: 0; width: 0; height: 0; }
@@ -798,7 +867,7 @@
       border-radius: 50%;
       transition: transform 0.2s;
     }
-    .notif-toggle input:checked + .notif-slider { background: #f87171; }
+    .notif-toggle input:checked + .notif-slider { background: var(--accent); }
     .notif-toggle input:checked + .notif-slider::before { transform: translateX(18px); }
     .notif-hint {
       font-size: 11px;
@@ -809,6 +878,7 @@
     }
     .notif-hint.visible { display: block; }
 
+    /* Action Cards */
     .action-card {
       background: var(--bg-surface);
       border: 1px solid var(--border);
@@ -867,19 +937,6 @@
       border: 1px solid rgba(239,68,68,0.25);
     }
 
-    #actions-empty {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-muted);
-      gap: 8px;
-      padding: 40px;
-      text-align: center;
-    }
-    #actions-empty .icon { font-size: 40px; }
-
     /* ─── AG Permission Modal ─────────────────────────────────── */
     #perm-modal {
       display: none;
@@ -897,7 +954,7 @@
     @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
 
     #perm-card {
-      background: #1c1c1e;
+      background: #18181c;
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: 18px 18px 0 0;
       width: 100%;
@@ -923,10 +980,11 @@
     }
     #perm-header .perm-icon {
       width: 30px; height: 30px;
-      background: rgba(99,102,241,0.2);
+      background: rgba(124,58,237,0.2);
       border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       font-size: 14px;
+      color: var(--accent);
     }
 
     #perm-command {
@@ -937,7 +995,7 @@
       padding: 12px 14px;
       font-family: var(--mono);
       font-size: 12px;
-      color: #a5b4fc;
+      color: #c4b5fd;
       max-height: 180px;
       overflow-y: auto;
       white-space: pre-wrap;
@@ -971,8 +1029,8 @@
     }
     .perm-opt:hover { background: rgba(255,255,255,0.06); }
     .perm-opt.selected {
-      background: rgba(99,102,241,0.15);
-      border-color: rgba(99,102,241,0.35);
+      background: rgba(124,58,237,0.15);
+      border-color: rgba(124,58,237,0.35);
       color: #fff;
     }
     .perm-opt-num {
@@ -985,7 +1043,7 @@
       flex-shrink: 0;
     }
     .perm-opt.selected .perm-opt-num {
-      background: #6366f1;
+      background: var(--accent);
       color: #fff;
     }
 
@@ -1009,7 +1067,7 @@
     }
     #perm-skip:hover { color: rgba(255,255,255,0.7); }
     #perm-submit {
-      background: #6366f1;
+      background: var(--accent);
       color: #fff;
       border: none;
       border-radius: 9px;
@@ -1023,7 +1081,7 @@
       gap: 6px;
       transition: background 0.15s, transform 0.1s;
     }
-    #perm-submit:hover { background: #4f46e5; }
+    #perm-submit:hover { background: #6d28d9; }
     #perm-submit:active { transform: scale(0.97); }
     #perm-submit kbd {
       background: rgba(255,255,255,0.2);
@@ -1033,7 +1091,7 @@
       font-family: var(--mono);
     }
 
-    /* ─── Input + Quick Actions (bottom) ─────────────────────── */
+    /* ─── Bottom Bar ─────────────────────────────────────────── */
     #bottom-bar {
       background: var(--bg-card);
       border-top: 1px solid var(--border);
@@ -1071,32 +1129,71 @@
 
     #input-row {
       display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 8px 12px;
+    }
+
+    #input-row-inner {
+      display: flex;
       align-items: flex-end;
       gap: 8px;
-      padding: 0 12px 0;
+      width: 100%;
+    }
+
+    #input-field-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 4px 4px 4px 8px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #input-field-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    #mic-btn {
+      width: 32px; height: 32px;
+      background: none;
+      border: none;
+      font-size: 15px;
+      cursor: pointer;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      transition: color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #mic-btn:hover { color: var(--text); }
+    #mic-btn.recording {
+      color: var(--red);
+      animation: micPulse 1.2s infinite;
     }
 
     #msg-input {
       flex: 1;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 10px 16px;
+      background: none;
+      border: none;
+      padding: 8px 4px;
       color: var(--text);
       font-family: var(--font);
       font-size: 15px;
       resize: none;
       max-height: 100px;
-      min-height: 40px;
+      min-height: 32px;
       outline: none;
       line-height: 1.4;
-      transition: border-color 0.2s;
     }
-    #msg-input:focus { border-color: var(--accent); }
     #msg-input::placeholder { color: var(--text-muted); }
 
     #send-btn {
-      width: 40px; height: 40px;
+      width: 34px; height: 34px;
       background: var(--accent);
       border: none;
       border-radius: 50%;
@@ -1104,72 +1201,120 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 16px;
+      color: white;
       flex-shrink: 0;
       transition: transform 0.1s, background 0.2s;
     }
     #send-btn:hover { background: #6d28d9; }
     #send-btn:active { transform: scale(0.92); }
 
-    /* ─── Mic button ────────────────────────────────────────────── */
-    #mic-btn {
-      width: 40px; height: 40px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 50%;
+    #attach-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 4px;
+      opacity: 0.6;
+      transition: opacity 0.15s, color 0.15s;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+    }
+    #attach-btn:hover { opacity: 1; color: var(--text); }
+
+    /* ─── Conversations Folder Layout ────────────────────────── */
+    .folder-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: color 0.15s;
+      user-select: none;
+    }
+    .folder-row:hover {
+      color: var(--text);
+    }
+    .folder-chevron {
+      font-size: 14px;
+      width: 12px;
+      display: inline-block;
+      color: var(--text-muted);
+    }
+    .folder-label {
+      flex: 1;
+    }
+    .folder-convs {
+      padding-left: 0;
+    }
+
+    /* Swipe Row Action Items */
+    .conv-row-container {
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 2px;
+    }
+    .conv-row-actions {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: stretch;
+      z-index: 1;
+    }
+    .conv-row-action-btn {
+      border: none;
+      color: white;
+      font-family: var(--font);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 0 14px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 17px;
-      flex-shrink: 0;
-      transition: transform 0.1s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
-      color: var(--text-dim);
     }
-    #mic-btn:active { transform: scale(0.92); }
-    #mic-btn.recording {
-      background: rgba(239,68,68,0.15);
-      border-color: var(--red);
-      box-shadow: 0 0 0 0 rgba(239,68,68,0.4);
-      animation: micPulse 1.2s infinite;
+    .conv-row-action-btn.copy {
+      background: var(--accent-dim);
+      border-right: 1px solid var(--border);
     }
-    @keyframes micPulse {
-      0%   { box-shadow: 0 0 0 0   rgba(239,68,68,0.4); }
-      70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0);   }
-      100% { box-shadow: 0 0 0 0   rgba(239,68,68,0);   }
-    }
-
-    /* ─── Chat list (Chats tab) ──────────────────────────────── */
-    #chats-panel { padding: 8px; overflow-y: auto; }
-
-    .conv-group-label {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--text-muted);
-      padding: 10px 8px 4px;
+    .conv-row-action-btn.archive {
+      background: #991b1b;
     }
 
     .conv-row {
+      position: relative;
+      z-index: 2;
+      background: var(--bg-card);
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 9px 10px;
-      border-radius: 10px;
+      padding: 9px 16px;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.15s, transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+      will-change: transform;
     }
-    .conv-row:hover { background: var(--bg-surface); }
-    .conv-row.active { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.25); }
+    .conv-row:hover { background: var(--bg-hover); }
+    .conv-row.active { background: rgba(124,58,237,0.15); }
 
     .conv-dot {
       width: 8px; height: 8px;
       border-radius: 50%;
-      background: var(--border);
+      background: rgba(255, 255, 255, 0.2);
       flex-shrink: 0;
     }
-    .conv-row.active .conv-dot { background: var(--accent); }
+    .conv-dot.active {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
 
     .conv-spinner {
       width: 8px; height: 8px;
@@ -1196,10 +1341,121 @@
       color: var(--text-muted);
       flex-shrink: 0;
     }
+
+    /* ─── Settings Modal Bottom Sheet ────────────────────────── */
+    #settings-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 600;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      animation: fadeIn 0.15s ease;
+    }
+    #settings-modal.open { display: flex; }
+
+    #settings-card {
+      width: 100%;
+      max-width: 600px;
+      background: #141418;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 20px 20px 0 0;
+      padding: 12px 16px 32px;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    .settings-handle {
+      width: 36px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .settings-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .settings-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
+    .settings-body {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ─── Code Modal Full Screen ─────────────────────────────── */
+    #code-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 250;
+      background: #0d0d0f;
+      display: none;
+      flex-direction: column;
+      animation: fadeIn 0.2s ease;
+    }
+    #code-modal.open { display: flex; }
+
+    #code-modal-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #code-modal-lang {
+      flex: 1;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      text-transform: lowercase;
+    }
+    #code-modal-copy, #code-modal-close {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      color: var(--text-dim);
+      font-size: 13px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-family: var(--font);
+    }
+    #code-modal-content {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      border: none;
+      border-radius: 0;
+    }
+
+    /* ─── Overlay / Scroll / Toast ────────────────────────────── */
     #overlay {
       position: fixed;
       inset: 0;
-      background: rgba(15,15,19,0.92);
+      background: rgba(13,13,15,0.94);
       backdrop-filter: blur(8px);
       display: none;
       align-items: center;
@@ -1226,7 +1482,6 @@
     .overlay-card h2 { font-size: 18px; margin-bottom: 8px; }
     .overlay-card p  { font-size: 13px; color: var(--text-muted); }
 
-    /* ─── Scroll-to-bottom button ────────────────────────────── */
     #scroll-btn {
       position: fixed;
       bottom: calc(110px + var(--safe-bottom));
@@ -1250,7 +1505,6 @@
     }
     #scroll-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
 
-    /* ─── Toast ──────────────────────────────────────────────── */
     #toast {
       position: fixed;
       bottom: calc(100px + var(--safe-bottom));
@@ -1268,7 +1522,6 @@
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* ─── Reconnect banner (slim, non-blocking) ───────────────── */
     #reconnect-banner {
       position: fixed;
       top: 0; left: 0; right: 0;
@@ -1284,8 +1537,7 @@
       letter-spacing: 0.3px;
     }
     #reconnect-banner.visible { transform: translateY(0); }
-  
-    /* ─── Pending (optimistic) user bubble ───────────────────────── */
+
     .pending-bubble {
       display: flex;
       justify-content: flex-end;
@@ -1319,16 +1571,14 @@
       0%,100% { opacity: 0.3; } 50% { opacity: 1; }
     }
 
-    /* ─── AG dump container ───────────────────────────────────────── */
+    /* ─── AG dump container ─── */
     #ag-dump-panel {
       flex: 1;
       overflow: hidden;
       position: relative;
     }
-    /* Ensure AG's dark bg shows inside dump */
     #ag-dump-panel * { box-sizing: border-box; }
 
-    /* Copy button overlay on code blocks inside the dump */
     .ag-copy-btn {
       position: absolute;
       top: 6px; right: 8px;
@@ -1345,26 +1595,19 @@
     }
     .ag-copy-btn:hover { color: #fff; background: rgba(99,102,241,0.3); }
 
-  
-    /* ─── AG Document View (dump content) ─────────────────────────── */
+    /* ─── AG Document View (dump content) ─── */
     #chat-panel {
       color: #d1d5db;
       line-height: 1.7;
       font-size: 14px;
     }
-
-    /* Turn wrappers — each is one conversation turn */
     #chat-panel > div {
       padding: 16px 20px;
       border-bottom: 1px solid rgba(255,255,255,0.04);
     }
     #chat-panel > div:last-child { border-bottom: none; }
+    #chat-panel [role="dialog"], #chat-panel [role="alertdialog"], #chat-panel form { display: none !important; }
 
-    /* Kill any modals/dialogs that leaked */
-    #chat-panel [role="dialog"], #chat-panel [role="alertdialog"],
-    #chat-panel form { display: none !important; }
-
-    /* User messages */
     #chat-panel [role="article"][aria-label="User message"] {
       background: rgba(255,255,255,0.03);
       border-left: 3px solid #6366f1;
@@ -1383,7 +1626,6 @@
       margin-bottom: 6px;
     }
 
-    /* AG responses */
     #chat-panel [role="article"]:not([aria-label="User message"]) {
       padding: 16px 0;
     }
@@ -1398,7 +1640,6 @@
       margin-bottom: 10px;
     }
 
-    /* Typography */
     #chat-panel p { margin: 0 0 10px; }
     #chat-panel p:last-child { margin-bottom: 0; }
     #chat-panel h1,#chat-panel h2,#chat-panel h3,#chat-panel h4 {
@@ -1411,19 +1652,17 @@
     #chat-panel h2 { font-size: 1.15em; }
     #chat-panel h3 { font-size: 1em; }
 
-    /* Inline code */
     #chat-panel code {
       background: rgba(255,255,255,0.08);
       color: #e879f9;
       padding: 1px 6px;
       border-radius: 4px;
       font-size: 0.875em;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-family: var(--mono);
     }
 
-    /* Code blocks */
     #chat-panel pre {
-      background: #0d1117;
+      background: #0d0d0f;
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 8px;
       padding: 14px 16px;
@@ -1439,12 +1678,10 @@
       font-size: 0.85em;
     }
 
-    /* Lists */
     #chat-panel ul { list-style: disc; padding-left: 22px; margin: 8px 0; }
     #chat-panel ol { list-style: decimal; padding-left: 22px; margin: 8px 0; }
     #chat-panel li { margin: 4px 0; }
 
-    /* Tables */
     #chat-panel table {
       width: 100%;
       border-collapse: collapse;
@@ -1465,7 +1702,6 @@
     }
     #chat-panel tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 
-    /* Blockquotes */
     #chat-panel blockquote {
       border-left: 3px solid #6366f1;
       margin: 10px 0;
@@ -1473,16 +1709,11 @@
       color: #94a3b8;
       font-style: italic;
     }
-
-    /* Strong / em */
     #chat-panel strong { color: #f1f5f9; font-weight: 600; }
     #chat-panel em { color: #cbd5e1; }
-
-    /* Links */
     #chat-panel a { color: #7c86ff; text-decoration: underline; }
     #chat-panel a:hover { color: #a78bfa; }
 
-    /* Collapsible: show everything (read-only mirror, data-state stripped from dump) */
     #chat-panel summary, #chat-panel [role="button"] {
       cursor: default;
       color: #94a3b8;
@@ -1490,6 +1721,7 @@
       padding: 4px 0;
     }
 
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 
   <!-- Prism.js syntax highlighting -->
@@ -1500,160 +1732,206 @@
 <body>
 <div id="app">
 
-  <!-- Header -->
-  <div id="header">
-    <span class="logo">🤖</span>
-    <div class="title">
-      AGenIOS Remote
-      <div class="subtitle" id="status-label">Connecting...</div>
+  <!-- Left Drawer (Conversations & Quick Navigation) -->
+  <div id="left-drawer">
+    <div class="drawer-header">
+      <span class="drawer-title">Conversations</span>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button id="drawer-expand-btn" onclick="toggleDrawerExpand()" title="Expand">→|</button>
+        <button class="drawer-close" onclick="closeDrawer('left')">✕</button>
+      </div>
     </div>
-    <div id="active-chat-name" style="font-size:11px;color:#a78bfa;text-align:right;flex:1;padding-right:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"></div>
-    <button id="verbosity-btn" onclick="toggleVerbosityPicker()" title="Verbosity" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:#a78bfa;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;padding:3px 7px;letter-spacing:0.3px;">V<span id="verbosity-num">3</span></button>
-    <div id="status-dot" class="connecting"></div>
-    <span id="lock-icon">🔒</span>
-    <button onclick="location.reload()" title="Force reload" style="background:none;border:none;color:#6b7280;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1;opacity:0.6;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.6'">↺</button>
-  </div>
-
-  <!-- Verbosity picker (hidden by default) -->
-  <div id="verbosity-picker" style="display:none;position:fixed;top:54px;right:10px;z-index:100;background:#1c1c1e;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:12px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.6);animation:fadeInUp 0.15s ease;">
-    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:8px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Verbosity</div>
-    <div style="display:flex;gap:6px;">
-      <button class="vpill" onclick="setVerbosity(1)" title="Text only">1</button>
-      <button class="vpill" onclick="setVerbosity(2)" title="+ Thought headers">2</button>
-      <button class="vpill" onclick="setVerbosity(3)" title="+ Thinking label">3</button>
-      <button class="vpill" onclick="setVerbosity(4)" title="+ Thinking excerpt">4</button>
-      <button class="vpill" onclick="setVerbosity(5)" title="Full reasoning">5</button>
+    <div class="drawer-body">
+      <button class="drawer-section-btn" onclick="sendCommand('/new')">
+        <span>＋</span> New Conversation
+      </button>
+      <button class="drawer-section-btn" onclick="sendCommand('/history')">
+        <span>⊙</span> Conversation History
+      </button>
+      <button class="drawer-section-btn" onclick="sendCommand('/scheduled')">
+        <span>⏱</span> Scheduled Tasks
+      </button>
+      <div class="drawer-divider"></div>
+      <div id="drawer-conv-list"></div>
+      <div class="drawer-divider" style="margin-top:auto;"></div>
+      <button class="drawer-section-btn drawer-settings-btn" onclick="openSettings()">
+        <span>⚙️</span> Settings
+      </button>
     </div>
-    <div id="verbosity-desc" style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:8px;line-height:1.4;"></div>
   </div>
 
-  <!-- Tabs -->
-  <div id="tabs">
-    <button class="tab-btn active" onclick="switchTab('chat')">💬 Chat</button>
-    <button class="tab-btn" onclick="switchTab('actions')">
-      ⚡ Actions <span class="tab-badge" id="actions-badge"></span>
-    </button>
-    <button class="tab-btn" onclick="switchTab('chats')">📋 Chats</button>
-  </div>
-
-  <!-- Panels -->
-  <div id="panels">
+  <!-- Main Content wrapper -->
+  <div id="main-content">
+    <!-- Header -->
+    <div id="header">
+      <button id="drawer-toggle" aria-label="Open menu" onclick="openDrawer('left')">‹</button>
+      <div class="breadcrumb">
+        <span id="project-name" class="bc-segment">AGenIOS</span>
+        <span class="bc-sep">/</span>
+        <span id="chat-name" class="bc-segment"></span>
+      </div>
+      <div id="header-right">
+        <div id="status-dot" class="connecting"></div>
+        <button id="artifacts-btn" onclick="openDrawer('right')" title="Artifacts & Actions">
+          📁
+          <span id="actions-badge" class="tab-badge"></span>
+        </button>
+        <button onclick="location.reload()" title="Force reload" style="background:none;border:none;color:#6b7280;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1;opacity:0.6;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.6'">↺</button>
+      </div>
+    </div>
 
     <!-- Chat Panel -->
-    <div class="panel active" id="chat-panel">
+    <div id="chat-panel">
       <div id="chat-empty">
         <div class="icon">💭</div>
         <p>AG chat will appear here once connected</p>
       </div>
-      <!-- no typing indicator here anymore -->
     </div>
 
-    <!-- Actions Panel -->
-    <div class="panel" id="actions-panel">
-      <div id="actions-empty">
-        <div class="icon">✅</div>
-        <p>No pending actions</p>
+    <!-- Status strip: slides in when AG is active, zero-height when idle -->
+    <div id="status-strip">
+      <span class="strip-label">Antigravity</span>
+      <span class="typing-dots">
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+      </span>
+      <div id="strip-ticker">
+        <span id="strip-ticker-text"></span>
       </div>
+      <button id="stop-btn" onclick="stopAG()">⏹ Stop</button>
+    </div>
 
-      <!-- Notification Settings -->
-      <div id="notif-settings">
-        <div class="notif-settings-title">🔔 Notification Settings</div>
-
-        <div class="notif-row">
-          <div class="notif-row-info">
-            <div class="notif-row-label">Mac presence</div>
-            <div class="notif-row-sub" id="mac-active-label">Detecting…</div>
-          </div>
-          <div id="mac-active-badge" class="notif-badge">–</div>
-        </div>
-
-        <div class="notif-row">
-          <div class="notif-row-info">
-            <div class="notif-row-label">Telegram notifications</div>
-            <div class="notif-row-sub">Off when you're at your Mac · /mute from Telegram</div>
-          </div>
-          <label class="notif-toggle">
-            <input type="checkbox" id="telegram-muted-toggle" onchange="setTelegramMuted(this.checked)">
-            <span class="notif-slider"></span>
-          </label>
-        </div>
-
-        <div class="notif-hint" id="notif-hint-text">Auto-suppressed — you're at your Mac</div>
-
-        <div class="notif-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-          <div class="notif-row-info">
-            <div class="notif-row-label">📡 Tunnel mode</div>
-            <div class="notif-row-sub" id="tunnel-mode-label">Loading…</div>
-          </div>
-          <label class="notif-toggle">
-            <input type="checkbox" id="tunnel-mode-toggle" onchange="setTunnelMode(this.checked)">
-            <span class="notif-slider" style=""></span>
-          </label>
-        </div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:4px;padding:0 2px">
-          OFF = ngrok (default) &nbsp;•&nbsp; ON = cloudflare
-        </div>
-
+    <!-- Bottom Bar -->
+    <div id="bottom-bar">
+      <div id="quick-actions">
+        <button class="quick-btn" onclick="promptAndSend('/ask')">🤖 /ask</button>
+        <button class="quick-btn" onclick="sendCommand('/status')">📊 /status</button>
+        <button class="quick-btn" onclick="sendCommand('/pending')">⏳ /pending</button>
+        <button class="quick-btn" onclick="sendCommand('/notify')">🔔 /notify</button>
+        <button class="quick-btn" onclick="sendCommand('/mute')">🔕 /mute</button>
+        <button class="quick-btn" onclick="sendCommand('/unmute')">🔔 /unmute</button>
+        <button class="quick-btn" onclick="sendCommand('/restart')">🔄 /restart</button>
+        <button class="quick-btn" onclick="sendCommand('/eod')">📋 /eod</button>
+        <button class="quick-btn" onclick="sendCommand('/logs')">📄 /logs</button>
+        <button class="quick-btn" onclick="sendCommand('/tsc')">🔍 /tsc</button>
+        <button class="quick-btn" onclick="sendCommand('/push')">🚀 /push</button>
+        <button class="quick-btn" onclick="sendCommand('/deploy')">☁️ /deploy</button>
       </div>
-    </div>
-
-    <!-- Chats Panel -->
-    <div class="panel" id="chats-panel">
-      <div id="chats-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:var(--text-muted);gap:8px;padding:40px;text-align:center;">
-        <div style="font-size:40px">💬</div>
-        <p style="font-size:14px">Conversation list will appear once connected</p>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Status strip: slides in when AG is active, zero-height when idle -->
-  <div id="status-strip">
-    <span class="strip-label">Antigravity</span>
-    <span class="typing-dots">
-      <span class="typing-dot"></span>
-      <span class="typing-dot"></span>
-      <span class="typing-dot"></span>
-    </span>
-    <div id="strip-ticker">
-      <span id="strip-ticker-text"></span>
-    </div>
-    <button id="stop-btn" onclick="stopAG()">⏹ Stop</button>
-  </div>
-
-  <!-- Bottom Bar -->
-  <div id="bottom-bar">
-    <div id="quick-actions">
-      <button class="quick-btn" onclick="promptAndSend('/ask')">🤖 /ask</button>
-      <button class="quick-btn" onclick="sendCommand('/status')">📊 /status</button>
-      <button class="quick-btn" onclick="sendCommand('/pending')">⏳ /pending</button>
-      <button class="quick-btn" onclick="sendCommand('/notify')">🔔 /notify</button>
-      <button class="quick-btn" onclick="sendCommand('/mute')">🔕 /mute</button>
-      <button class="quick-btn" onclick="sendCommand('/unmute')">🔔 /unmute</button>
-      <button class="quick-btn" onclick="sendCommand('/restart')">🔄 /restart</button>
-      <button class="quick-btn" onclick="sendCommand('/eod')">📋 /eod</button>
-      <button class="quick-btn" onclick="sendCommand('/logs')">📄 /logs</button>
-      <button class="quick-btn" onclick="sendCommand('/tsc')">🔍 /tsc</button>
-      <button class="quick-btn" onclick="sendCommand('/push')">🚀 /push</button>
-      <button class="quick-btn" onclick="sendCommand('/deploy')">☁️ /deploy</button>
-    </div>
-    <div id="input-row">
-      <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleFileSelect(event)">
-      <div id="img-preview-strip"></div>
-      <div style="display:flex;align-items:center;gap:4px;width:100%;">
-        <button id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach image">📎</button>
-        <textarea id="msg-input" placeholder="Message AG..." rows="1"></textarea>
-        <button id="mic-btn" onclick="toggleMic()" title="Voice input">🎤</button>
-        <button id="send-btn" onclick="sendUserMessage()">↑</button>
+      <div id="input-row">
+        <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleFileSelect(event)">
+        <div id="img-preview-strip"></div>
+        <div id="input-row-inner">
+          <button id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach image">📎</button>
+          <div id="input-field-wrap">
+            <button id="mic-btn" onclick="toggleMic()" title="Voice input">🎤</button>
+            <textarea id="msg-input" placeholder="Message AG..." rows="1"></textarea>
+            <button id="send-btn" onclick="sendUserMessage()">↑</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
 </div>
 
+<!-- Right Drawer (Artifacts list & actions panel) -->
+<div id="right-drawer">
+  <div class="drawer-header">
+    <span class="drawer-title">Artifacts & Actions</span>
+    <button class="drawer-close" onclick="closeDrawer('right')">✕</button>
+  </div>
+  <div class="drawer-body">
+    <!-- Actions Section -->
+    <div id="drawer-actions-container" style="padding: 10px 14px;"></div>
+    
+    <!-- Artifacts Section -->
+    <div class="drawer-empty" id="artifacts-placeholder" style="padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 14px;">
+      <div style="font-size: 36px; margin-bottom: 8px;">📁</div>
+      <p>Artifacts will appear here</p>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Bottom Sheet -->
+<div id="settings-modal" onclick="if(event.target===this) closeSettings()">
+  <div id="settings-card">
+    <div class="settings-handle"></div>
+    <div class="settings-header">
+      <span class="settings-title">Settings</span>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-body">
+      <!-- Mac presence -->
+      <div class="notif-row">
+        <div class="notif-row-info">
+          <div class="notif-row-label">Mac presence</div>
+          <div class="notif-row-sub" id="mac-active-label">Detecting…</div>
+        </div>
+        <div id="mac-active-badge" class="notif-badge">–</div>
+      </div>
+
+      <!-- Telegram notifications -->
+      <div class="notif-row">
+        <div class="notif-row-info">
+          <div class="notif-row-label">Telegram notifications</div>
+          <div class="notif-row-sub">Off when you're at your Mac · /mute from Telegram</div>
+        </div>
+        <label class="notif-toggle">
+          <input type="checkbox" id="telegram-muted-toggle" onchange="setTelegramMuted(this.checked)">
+          <span class="notif-slider"></span>
+        </label>
+      </div>
+
+      <div class="notif-hint" id="notif-hint-text">Auto-suppressed — you're at your Mac</div>
+
+      <!-- Tunnel mode row -->
+      <div class="notif-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div class="notif-row-info">
+          <div class="notif-row-label">📡 Tunnel mode</div>
+          <div class="notif-row-sub" id="tunnel-mode-label">Loading…</div>
+        </div>
+        <label class="notif-toggle">
+          <input type="checkbox" id="tunnel-mode-toggle" onchange="setTunnelMode(this.checked)">
+          <span class="notif-slider"></span>
+        </label>
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;padding:0 2px">
+        OFF = ngrok (default) &nbsp;•&nbsp; ON = cloudflare
+      </div>
+
+      <!-- Zoom toggle -->
+      <div class="notif-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div class="notif-row-info">
+          <div class="notif-row-label">🔍 Zoom mode</div>
+          <div class="notif-row-sub">ON = pinch zoom · OFF = swipe navigation</div>
+        </div>
+        <label class="notif-toggle">
+          <input type="checkbox" id="zoom-toggle" onchange="setZoomMode(this.checked)">
+          <span class="notif-slider"></span>
+        </label>
+      </div>
+
+      <!-- Verbosity pills -->
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:8px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Verbosity</div>
+        <div style="display:flex;gap:6px;">
+          <button class="vpill" onclick="setVerbosity(1)" title="Text only">1</button>
+          <button class="vpill" onclick="setVerbosity(2)" title="+ Thought headers">2</button>
+          <button class="vpill" onclick="setVerbosity(3)" title="+ Thinking label">3</button>
+          <button class="vpill" onclick="setVerbosity(4)" title="+ Thinking excerpt">4</button>
+          <button class="vpill" onclick="setVerbosity(5)" title="Full reasoning">5</button>
+        </div>
+        <div id="verbosity-desc" style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:8px;line-height:1.4;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- AG Permission Modal -->
 <div id="perm-modal">
   <div id="perm-card">
+    <div class="settings-handle" style="margin-top: 10px; margin-bottom: 0;"></div>
     <div id="perm-header">
       <div class="perm-icon">⊡</div>
       <span id="perm-title">Allow running this command?</span>
@@ -1665,6 +1943,16 @@
       <button id="perm-submit" onclick="permSubmit()">Submit <kbd>↵</kbd></button>
     </div>
   </div>
+</div>
+
+<!-- Code Expand Modal -->
+<div id="code-modal" onclick="if(event.target===this) closeCodeModal()">
+  <div id="code-modal-header">
+    <span id="code-modal-lang"></span>
+    <button id="code-modal-copy" onclick="copyCodeModal()">Copy</button>
+    <button id="code-modal-close" onclick="closeCodeModal()">✕</button>
+  </div>
+  <pre id="code-modal-content"><code></code></pre>
 </div>
 
 <!-- Connecting overlay -->
@@ -1691,7 +1979,6 @@
 // ─── State ──────────────────────────────────────────────────────────────────
 let ws        = null;
 let connected = false;
-let currentTab = 'chat';
 let messages   = [];
 let actions    = [];
 let conversations = [];
@@ -1699,7 +1986,6 @@ let conversations = [];
 // ─── WebSocket ───────────────────────────────────────────────────────────────
 function getWsUrl() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  // iOS WebKit blocks SameSite cookies on WS upgrade — pass token in URL instead
   const params = new URLSearchParams(location.search);
   const token  = params.get('token') || '';
   const qs     = token ? '?token=' + encodeURIComponent(token) : '';
@@ -1708,7 +1994,6 @@ function getWsUrl() {
 
 let hasEverConnected = false;
 let _authFailed      = false;  // set on auth_failed message — stops reconnect loop
-// Show overlay on initial load until first connect
 document.getElementById('overlay').classList.add('visible');
 
 function showReconnectBanner(show) {
@@ -1738,20 +2023,26 @@ function connect() {
     try { msg = JSON.parse(e.data); } catch { return; }
     switch (msg.type) {
       case 'state': {
-        // Inject AG CSS vars once (first time or if changed)
         if (msg.data.cssVars && !window._agVarsInjected) {
           injectAgCssVars(msg.data.cssVars);
           window._agVarsInjected = true;
         }
-        // Apply full HTML dump
         if (msg.data.chatDump) applyDump(msg.data.chatDump);
         actions       = msg.data.actions       || [];
         conversations = msg.data.conversations || [];
         renderActions();
         renderConversations();
         if (msg.data.chatName) {
-          const el = document.getElementById('active-chat-name');
-          if (el) el.textContent = msg.data.chatName.replace(/"/g, '');
+          const el = document.getElementById('chat-name');
+          if (el) el.textContent = msg.data.chatName.replace(/"/g, '').trim();
+
+          const activeConv = conversations.find(c => c.isActive);
+          const projEl = document.getElementById('project-name');
+          if (projEl && activeConv && activeConv.project) {
+            projEl.textContent = activeConv.project;
+          } else if (projEl) {
+            projEl.textContent = 'AGenIOS';
+          }
         }
         break;
       }
@@ -1766,7 +2057,6 @@ function connect() {
         const src = msg.data?.source || 'Mac';
         actions = [];
         renderActions();
-        // Only toast if action was taken elsewhere (Mac or Telegram) — not by the user themselves
         if (src !== 'PWA') {
           const label = src === 'Telegram' ? '💬 Telegram' : '🖥️ Mac';
           showSystemMessage(`✅ Action resolved from ${label}`);
@@ -1780,7 +2070,6 @@ function connect() {
         applySettings(msg.data);
         break;
       case 'auth_failed':
-        // Bridge rejected our token — go back to login page
         document.cookie = 'ag_token=; Max-Age=0; Path=/';
         location.href = '/';
         break;
@@ -1797,7 +2086,7 @@ function connect() {
       document.cookie = 'ag_token=; Max-Age=0; Path=/';
       document.getElementById('overlay').classList.add('visible');
       setStatus('disconnected', 'Session expired — please log in again');
-      return; // do NOT reconnect — user must log in fresh
+      return;
     }
     if (hasEverConnected) {
       showReconnectBanner(true);
@@ -1813,19 +2102,17 @@ function connect() {
 }
 
 function scheduleReconnect() {
-  setTimeout(connect, 800);  // Fast reconnect — 800ms
+  setTimeout(connect, 800);
 }
 
 function setStatus(state, label) {
   const dot = document.getElementById('status-dot');
   const lbl = document.getElementById('status-label');
   dot.className = state === 'connected' ? 'connected' : state === 'connecting' ? 'connecting' : '';
-  lbl.textContent = label;
+  if (lbl) lbl.textContent = label;
 }
 
 // ─── Typing indicator ────────────────────────────────────────────────────────
-// ─── Client-side typing state machine ────────────────────────────────────────────────
-// Instant trigger from send — no bridge polling latency
 let _idleTimer = null;
 let _lastAICount = 0;
 let _typingState = 'idle';
@@ -1836,16 +2123,13 @@ function setTypingState(state, label) {
 }
 
 function onUserSent() {
-  // Immediately show Thinking... as soon as user sends
   clearTimeout(_idleTimer);
   setTypingState('thinking', 'Thinking…');
 }
 
 function onNewAIMessage() {
-  // New AI article appeared — switch to Writing...
   clearTimeout(_idleTimer);
   setTypingState('writing', 'Writing…');
-  // After 2.5s of no new content — back to idle
   _idleTimer = setTimeout(() => setTypingState('idle', ''), 2500);
 }
 
@@ -1875,14 +2159,11 @@ function updateTypingIndicator(state, label, snippet, currentText) {
     strip.classList.add('active');
     _lastAgStatePwa = state;
     if (!_thinkingStart) _thinkingStart = Date.now();
-    // Only show ticker if there is REAL content — strip header already shows state
     if (snippet && ticker.textContent !== snippet) ticker.textContent = snippet;
     else if (!snippet) ticker.textContent = '';
-    // Ghost bubble: real text or empty (no echoing 'Thinking…')
     updateGhostBubble(state, currentText || snippet || '');
   }
 }
-
 
 // ─── Ghost Bubble (live streaming preview in chat panel) ──────────────────
 let _ghostBubble = null;
@@ -1894,7 +2175,6 @@ function escapeHtml(t) {
 function updateGhostBubble(state, text) {
   const panel = document.getElementById('chat-panel');
   if (!panel) return;
-  // No real content — hide bubble entirely
   if (!text) { removeGhostBubble(); return; }
   if (!_ghostBubble) {
     _ghostBubble = document.createElement('div');
@@ -1945,14 +2225,11 @@ function updateScrollBtn() {
   btn.classList.toggle('visible', distFromBottom > 80);
 }
 
-// ─── Render Chat (incremental — no flicker) ───────────────────────────────────
-let lastRenderedCount = 0;
-
 // ─── Verbosity state (1–5, persisted) ───────────────────────────────────────
 let _verbosity = parseInt(localStorage.getItem('verbosity') || '3', 10);
 
 const VERBOSITY_LABELS = [
-  '', // placeholder for index 0
+  '',
   'Text only — no headers, no reasoning',
   '+ Worked/Thought for headers (collapsed)',
   '+ Thinking label when live (default)',
@@ -1961,40 +2238,28 @@ const VERBOSITY_LABELS = [
 ];
 
 function toggleVerbosityPicker() {
-  const p = document.getElementById('verbosity-picker');
-  p.style.display = p.style.display === 'none' ? 'block' : 'none';
-  updateVerbosityUI();
-  // Close on outside click
-  if (p.style.display === 'block') {
-    setTimeout(() => document.addEventListener('click', _closeVerbosity, { once: true }), 0);
-  }
-}
-function _closeVerbosity(e) {
-  const p = document.getElementById('verbosity-picker');
-  const b = document.getElementById('verbosity-btn');
-  if (!p?.contains(e.target) && e.target !== b) p.style.display = 'none';
+  // Stub retained for compatibility
 }
 function setVerbosity(v) {
   _verbosity = v;
   localStorage.setItem('verbosity', v);
   updateVerbosityUI();
-  // Full re-render so verbosity takes effect immediately
   const panel = document.getElementById('chat-panel');
   const empty = document.getElementById('chat-empty');
   Array.from(panel.children).forEach(c => { if (c !== empty && c.id !== 'action-alert-banner') c.remove(); });
   lastRenderedCount = 0;
   renderChat();
-  setTimeout(() => document.getElementById('verbosity-picker').style.display = 'none', 200);
 }
 function updateVerbosityUI() {
-  document.getElementById('verbosity-num').textContent = _verbosity;
-  document.getElementById('verbosity-desc').textContent = VERBOSITY_LABELS[_verbosity] || '';
   document.querySelectorAll('.vpill').forEach((b, i) => {
     b.classList.toggle('active', i + 1 === _verbosity);
   });
+  const desc = document.getElementById('verbosity-desc');
+  if (desc) desc.textContent = VERBOSITY_LABELS[_verbosity] || '';
 }
 
 // ─── Render one message ──────────────────────────────────────────────────────
+let lastRenderedCount = 0;
 function appendMessageEl(msg) {
   const panel = document.getElementById('chat-panel');
   const role  = detectRole(msg);
@@ -2010,8 +2275,6 @@ function appendMessageEl(msg) {
     ? `<img class="msg-img-thumb" src="${msg.imageUrl}" alt="attached image">` : '';
 
   if (role === 'ai') {
-    // msg.text = metaLine ("Worked for X" / "Thought for X")
-    // msg.html = sanitized innerHTML of AG's rendered content container
     const metaLine = (msg.text || '').trim();
     const bodyHtml = msg.html || '';
     const isWorkedFor  = /^(Worked for|Thought for)\s/i.test(metaLine);
@@ -2021,10 +2284,8 @@ function appendMessageEl(msg) {
 
     if (!metaLine || _verbosity === 1) {
       innerHtml = `<div class="msg-text">${bodyHtml || escHtml(msg.text || '')}</div>`;
-
     } else if (isThinkingFor && _verbosity <= 2) {
-      return; // hide entirely
-
+      return;
     } else if (isThinkingFor && _verbosity === 3) {
       innerHtml = `<div class="ag-section collapsed">
         <button class="ag-section-btn" onclick="this.parentElement.classList.toggle('collapsed')">
@@ -2032,9 +2293,7 @@ function appendMessageEl(msg) {
           <span class="ag-section-meta thinking">${escHtml(metaLine)}</span>
         </button>
       </div>`;
-
     } else if (isThinkingFor) {
-      // V4/V5: show thinking content
       innerHtml = `<div class="ag-section collapsed">
         <button class="ag-section-btn" onclick="this.parentElement.classList.toggle('collapsed')">
           <span class="ag-chevron">›</span>
@@ -2042,9 +2301,7 @@ function appendMessageEl(msg) {
         </button>
         <div class="ag-section-body msg-text">${bodyHtml}</div>
       </div>`;
-
     } else {
-      // "Worked for / Thought for" — real response, expanded by default
       innerHtml = `<div class="ag-section">
         <button class="ag-section-btn" onclick="this.parentElement.classList.toggle('collapsed')">
           <span class="ag-chevron">›</span>
@@ -2055,29 +2312,28 @@ function appendMessageEl(msg) {
     }
 
     row.innerHTML = `<div class="msg-card">${labelHtml}${innerHtml}${imgHtml}</div>`;
+    row.querySelectorAll('pre').forEach(pre => {
+      addCopyBtn(pre);
+      pre.style.cursor = 'pointer';
+      pre.addEventListener('click', e => {
+        if (e.target.closest('.copy-btn')) return;
+        openCodeModal(pre);
+      });
+    });
 
-    // Add copy buttons to all code blocks in this message
-    row.querySelectorAll('pre').forEach(pre => addCopyBtn(pre));
-
-    // Syntax highlight with Prism — run after innerHTML is set
     if (window.Prism) {
-      // 1. highlight blocks that already have a language-* class (from bridge)
       row.querySelectorAll('pre code[class*="language-"]').forEach(el => {
         try { Prism.highlightElement(el); } catch(e) {}
       });
-      // 2. add language-text fallback to bare code blocks (no class)
       row.querySelectorAll('pre code:not([class*="language-"])').forEach(el => {
         el.classList.add('language-text');
         try { Prism.highlightElement(el); } catch(e) {}
       });
-      // 3. inline code — style but don't highlight
       row.querySelectorAll('code:not(pre code)').forEach(el => {
         if (!el.className) el.classList.add('inline-code');
       });
     }
-
   } else {
-    // User message — plain text (could be multi-line)
     row.innerHTML = `<div class="msg-card">${labelHtml}<div class="msg-text user-text">${escHtml(msg.text || '').replace(/\n/g, '<br>')}</div>${imgHtml}</div>`;
   }
 
@@ -2085,11 +2341,12 @@ function appendMessageEl(msg) {
 }
 
 function addCopyBtn(preEl) {
-  if (preEl.querySelector('.copy-btn')) return; // already added
+  if (preEl.querySelector('.copy-btn')) return;
   const btn = document.createElement('button');
   btn.className = 'copy-btn';
   btn.textContent = 'Copy';
-  btn.onclick = function() {
+  btn.onclick = function(e) {
+    e.stopPropagation();
     const code = preEl.querySelector('code');
     navigator.clipboard.writeText(code ? code.innerText : preEl.innerText).then(() => {
       btn.textContent = 'Copied!';
@@ -2100,15 +2357,10 @@ function addCopyBtn(preEl) {
   preEl.appendChild(btn);
 }
 
-
-
-// Simple markdown renderer: bold, inline code, code blocks, line breaks
+// Simple markdown renderer
 function renderMarkdown(text) {
   if (!text) return '';
-
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  // Inline formatter (bold, italic, inline code, links)
   function inlineFmt(s) {
     s = esc(s);
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -2119,15 +2371,11 @@ function renderMarkdown(text) {
     s = s.replace(/_(.+?)_/g, '<em>$1</em>');
     return s;
   }
-
   const lines = text.split('\n');
   let out = '';
   let i = 0;
-
   while (i < lines.length) {
     const line = lines[i];
-
-    // ── Fenced code block ──────────────────────────────────────────
     const codeStart = line.match(/^```(\w*)/);
     if (codeStart) {
       const lang = codeStart[1] || '';
@@ -2137,29 +2385,22 @@ function renderMarkdown(text) {
         codeLines.push(lines[i]);
         i++;
       }
-      i++; // skip closing ```
+      i++;
       const langLabel = lang ? `<span class="code-lang">${esc(lang)}</span>` : '';
       out += `<div class="code-block">${langLabel}<pre><code>${esc(codeLines.join('\n'))}</code></pre></div>`;
       continue;
     }
-
-    // ── Heading ────────────────────────────────────────────────────
     const h3 = line.match(/^###\s+(.+)/);
     const h2 = line.match(/^##\s+(.+)/);
     const h1 = line.match(/^#\s+(.+)/);
     if (h3) { out += `<h3>${inlineFmt(h3[1])}</h3>`; i++; continue; }
     if (h2) { out += `<h2>${inlineFmt(h2[1])}</h2>`; i++; continue; }
     if (h1) { out += `<h1>${inlineFmt(h1[1])}</h1>`; i++; continue; }
-
-    // ── Horizontal rule ────────────────────────────────────────────
     if (line.match(/^[-*_]{3,}$/)) { out += '<hr>'; i++; continue; }
-
-    // ── Table ──────────────────────────────────────────────────────
     if (line.startsWith('|') && i + 1 < lines.length && lines[i+1].match(/^\|[-:\s|]+\|/)) {
-      // Header row
       const headers = line.split('|').filter((_,j,a) => j>0 && j<a.length-1).map(h => `<th>${inlineFmt(h.trim())}</th>`);
       out += `<table><thead><tr>${headers.join('')}</tr></thead><tbody>`;
-      i += 2; // skip header + separator
+      i += 2;
       while (i < lines.length && lines[i].startsWith('|')) {
         const cells = lines[i].split('|').filter((_,j,a) => j>0 && j<a.length-1).map(c => `<td>${inlineFmt(c.trim())}</td>`);
         out += `<tr>${cells.join('')}</tr>`;
@@ -2168,8 +2409,6 @@ function renderMarkdown(text) {
       out += '</tbody></table>';
       continue;
     }
-
-    // ── Unordered list ─────────────────────────────────────────────
     if (line.match(/^[\-\*\+]\s+/)) {
       out += '<ul>';
       while (i < lines.length && lines[i].match(/^[\-\*\+]\s+/)) {
@@ -2179,8 +2418,6 @@ function renderMarkdown(text) {
       out += '</ul>';
       continue;
     }
-
-    // ── Ordered list ───────────────────────────────────────────────
     if (line.match(/^\d+\.\s+/)) {
       out += '<ol>';
       while (i < lines.length && lines[i].match(/^\d+\.\s+/)) {
@@ -2190,32 +2427,23 @@ function renderMarkdown(text) {
       out += '</ol>';
       continue;
     }
-
-    // ── Blank line ─────────────────────────────────────────────────
     if (line.trim() === '') {
       out += '<br>';
       i++;
       continue;
     }
-
-    // ── Regular paragraph line ─────────────────────────────────────
     out += inlineFmt(line) + '<br>';
     i++;
   }
-
   return out;
 }
 
 function detectRole(msg) {
-  // AG articles alternate: odd=user, even=ai (0-indexed)
-  // Also check text for role hints
   if (msg.role === 'user') return 'user';
   if (msg.role === 'assistant' || msg.role === 'ai') return 'ai';
-  // Fallback: even index = user message in AG layout
   return (msg.index % 2 === 0) ? 'user' : 'ai';
 }
 
-// ─── AG CSS vars injection ────────────────────────────────────────────────────
 function injectAgCssVars(vars) {
   let el = document.getElementById('ag-css-vars');
   if (!el) { el = document.createElement('style'); el.id = 'ag-css-vars'; document.head.appendChild(el); }
@@ -2236,31 +2464,23 @@ function injectPendingBubble(text) {
 }
 
 // ─── Apply AG full dump ───────────────────────────────────────────────────────
-let _lastDumpLen = 0;
-let _pendingBubble = null; // { el: HTMLElement, text: string } | null
-
+let _pendingBubble = null;
 function applyDump(dumpHtml) {
   if (!dumpHtml || dumpHtml.length < 100) return;
   const panel = document.getElementById('chat-panel');
 
-  // Dedup: skip if dump length unchanged AND no pending bubble waiting
   if (panel.dataset.dumped === dumpHtml.length.toString() && !_pendingBubble) return;
   panel.dataset.dumped = dumpHtml.length.toString();
 
-  // Remove empty-state placeholder permanently
   const empty = document.getElementById('chat-empty');
   if (empty) empty.remove();
 
-  // Check if our pending bubble message is confirmed in the dump yet
-  const confirmed = !_pendingBubble ||
-    dumpHtml.includes((_pendingBubble.text || '').slice(0, 30));
+  const confirmed = !_pendingBubble || dumpHtml.includes((_pendingBubble.text || '').slice(0, 30));
 
   if (confirmed) {
-    // Full replace: pending confirmed or no pending — just set innerHTML
     if (_pendingBubble) { _pendingBubble.el?.remove(); _pendingBubble = null; }
     panel.innerHTML = dumpHtml;
   } else {
-    // Pending not yet in dump — show dump + keep pending bubble at bottom
     if (_pendingBubble?.el) _pendingBubble.el.remove();
     panel.innerHTML = dumpHtml;
     if (_pendingBubble) panel.appendChild(_pendingBubble.el);
@@ -2272,16 +2492,11 @@ function applyDump(dumpHtml) {
 }
 
 function postProcessDump(panel) {
-  // ── Strip AG approval/permission dialogs from dump ──────────────────────────
-  // AG dialogs have no role="dialog" — detect by content: look for elements
-  // that contain both "Yes, allow" button text AND a keyboard shortcut input.
-  // Walk bottom-up: find the smallest ancestor that contains the approval UI.
   const APPROVAL_RE = /yes.*allow|allow.*time|allow this/i;
   const seen = new Set();
   [...panel.querySelectorAll('button, input[type="text"], input:not([type])')].forEach(el => {
     const btnText = (el.innerText || el.value || '').trim();
     if (APPROVAL_RE.test(btnText) || (el.tagName === 'INPUT' && /^\d+$/.test(el.value))) {
-      // Walk up to find the approval container (stop at panel itself)
       let container = el;
       while (container.parentElement && container.parentElement !== panel) {
         container = container.parentElement;
@@ -2297,10 +2512,9 @@ function postProcessDump(panel) {
     }
   });
 
-  // ── Relay clicks to AG via CDP (buttons + collapsibles) ─────────────────────
   const _relayClick = (elText, isButton, occIdx) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
-    panel.dataset.dumped = ''; // reset dedup → next dump re-renders immediately
+    panel.dataset.dumped = '';
     if (isButton) {
       ws.send(JSON.stringify({ type: 'click', selector: 'button', matchText: elText, occurrenceIndex: occIdx || 0 }));
     } else {
@@ -2309,23 +2523,20 @@ function postProcessDump(panel) {
         expression: '(function(){var needle=' + JSON.stringify(elText.slice(0,40)) + ';var el=[...document.querySelectorAll("*")].find(function(e){return((e.innerText||e.textContent||"").trim()).startsWith(needle)&&e.children.length<5;});if(el){el.click();return true;}return false;})()'
       }));
     }
-    toast('\u26a1 ' + elText.slice(0, 30));
+    toast('⚡ ' + elText.slice(0, 30));
   };
 
-  // Buttons
   const _btnCounts = {};
-  [...panel.querySelectorAll('button')].forEach(function(btn) {
-    var t = (btn.innerText || btn.textContent || '').trim().slice(0, 100);
+  [...panel.querySelectorAll('button')].forEach(btn => {
+    const t = (btn.innerText || btn.textContent || '').trim().slice(0, 100);
     if (!t) return;
     _btnCounts[t] = _btnCounts[t] || 0;
-    var idx = _btnCounts[t]++;
+    const idx = _btnCounts[t]++;
     btn.style.cursor = 'pointer'; btn.style.pointerEvents = 'auto';
-    btn.addEventListener('click', function(e) {
+    btn.addEventListener('click', e => {
       e.stopPropagation(); e.preventDefault();
       if (/delete|remove|trash/i.test(t)) {
         if (!confirm('This will ' + t + ' in AG — continue?')) return;
-        // Use aria-label selector — element may be CSS-hidden (opacity/visibility)
-        // dispatchEvent works even on hidden elements unlike .click()
         ws.send(JSON.stringify({
           type: 'evaluate',
           expression: '(function(){var el=document.querySelector("[aria-label=\\"Delete message\\"],[aria-label=\\"Remove\\"],[aria-label=\\"Delete\\"]");if(el){el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));return true;}return false;})()'
@@ -2336,42 +2547,36 @@ function postProcessDump(panel) {
     });
   });
 
-  // Collapsibles — elements with aria-expanded (confirmed by Deep Research as stable selector)
-  // aria-expanded is preserved in the dump (only data-* and class/style are stripped)
-  [...panel.querySelectorAll('[aria-expanded]')].forEach(function(el) {
-    var t = (el.innerText || el.textContent || '').trim().slice(0, 80);
+  [...panel.querySelectorAll('[aria-expanded]')].forEach(el => {
+    const t = (el.innerText || el.textContent || '').trim().slice(0, 80);
     if (!t) return;
-    var isExpanded = el.getAttribute('aria-expanded') !== 'false';
     el.style.cursor = 'pointer';
     el.style.userSelect = 'none';
-    el.addEventListener('click', function(e) {
+    el.addEventListener('click', e => {
       e.stopPropagation(); e.preventDefault();
-      // Optimistic: flip aria-expanded immediately for instant visual feedback
-      var cur = el.getAttribute('aria-expanded') !== 'false';
+      const cur = el.getAttribute('aria-expanded') !== 'false';
       el.setAttribute('aria-expanded', cur ? 'false' : 'true');
-      // Relay via aria-expanded selector — more reliable than full-DOM text search
-      var needle = JSON.stringify(t.slice(0, 50));
+      const needle = JSON.stringify(t.slice(0, 50));
       ws.send(JSON.stringify({
         type: 'evaluate',
         expression: '(function(){var n=' + needle + ';var el=[...document.querySelectorAll("[aria-expanded]")].find(function(e){return(e.innerText||e.textContent||"").trim().startsWith(n);});if(el){el.click();return true;}return false;})()'
       }));
-      toast('\u26a1 ' + t.slice(0, 30));
+      toast('⚡ ' + t.slice(0, 30));
     });
   });
 
-  // Legacy text-based collapsibles (fallback for elements without aria-expanded)
-  var COLL_RE = /^(Worked for|Thought for|Explored|Reading|Analyzing|Running|Searching|Checking|Writing|Viewing|Fetching|Editing|Listing|Used \d)/i;
-  [...panel.querySelectorAll('div, span')].forEach(function(el) {
-    if (el.hasAttribute('aria-expanded')) return; // already handled above
+  const COLL_RE = /^(Worked for|Thought for|Explored|Reading|Analyzing|Running|Searching|Checking|Writing|Viewing|Fetching|Editing|Listing|Used \d)/i;
+  [...panel.querySelectorAll('div, span')].forEach(el => {
+    if (el.hasAttribute('aria-expanded')) return;
     if (el.children.length > 4) return;
-    var t = (el.innerText || el.textContent || '').trim();
+    const t = (el.innerText || el.textContent || '').trim();
     if (!COLL_RE.test(t) || t.length > 120) return;
     el.style.cursor = 'pointer';
-    el.addEventListener('click', function(e) {
+    el.addEventListener('click', e => {
       e.stopPropagation();
-      var next = el.nextElementSibling;
+      const next = el.nextElementSibling;
       if (next) {
-        var collapsed = next.style.display === 'none';
+        const collapsed = next.style.display === 'none';
         next.style.display = collapsed ? '' : 'none';
         el.innerHTML = el.innerHTML.replace(/›|˅|&rsaquo;/g, collapsed ? '›' : '˅');
       }
@@ -2379,22 +2584,27 @@ function postProcessDump(panel) {
     });
   });
 
-
-  // Add copy buttons to all code blocks
   panel.querySelectorAll('pre').forEach(pre => {
-    if (pre.querySelector('.ag-copy-btn')) return;
-    const btn = document.createElement('button');
-    btn.className = 'ag-copy-btn';
-    btn.textContent = 'Copy';
-    btn.onclick = () => {
-      const code = pre.querySelector('code');
-      navigator.clipboard.writeText(code ? code.innerText : pre.innerText)
-        .then(() => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000); });
-    };
-    pre.style.position = 'relative';
-    pre.appendChild(btn);
+    if (!pre.querySelector('.ag-copy-btn')) {
+      const btn = document.createElement('button');
+      btn.className = 'ag-copy-btn';
+      btn.textContent = 'Copy';
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const code = pre.querySelector('code');
+        navigator.clipboard.writeText(code ? code.innerText : pre.innerText)
+          .then(() => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000); });
+      };
+      pre.style.position = 'relative';
+      pre.appendChild(btn);
+    }
+    pre.style.cursor = 'pointer';
+    pre.addEventListener('click', e => {
+      if (e.target.closest('.ag-copy-btn, .copy-btn')) return;
+      openCodeModal(pre);
+    });
   });
-  // Prism highlighting on all code blocks in panel
+
   if (window.Prism) {
     panel.querySelectorAll('pre code[class*="language-"]').forEach(el => {
       try { Prism.highlightElement(el); } catch(e) {}
@@ -2410,20 +2620,17 @@ function renderChat() {
   const panel = document.getElementById('chat-panel');
   const empty = document.getElementById('chat-empty');
 
-  // Never wipe existing chat on empty — 0 messages = scrape failure or loading, not empty convo
   if (messages.length === 0) {
-    if (lastRenderedCount === 0) empty.style.display = 'flex'; // truly first load
+    if (lastRenderedCount === 0 && empty) empty.style.display = 'flex';
     return;
   }
-  empty.style.display = 'none';
+  if (empty) empty.style.display = 'none';
 
   if (messages.length < lastRenderedCount) {
-    // Messages reduced (new conversation?) — full re-render
     Array.from(panel.children).forEach(c => { if (c !== empty && !c.classList.contains('sys-msg')) c.remove(); });
     lastRenderedCount = 0;
   }
 
-  // Append only new messages (no flicker)
   for (let i = lastRenderedCount; i < messages.length; i++) {
     appendMessageEl(messages[i]);
   }
@@ -2431,7 +2638,6 @@ function renderChat() {
   const prevCount = lastRenderedCount;
   if (newCount > prevCount) checkAIMessages(newCount);
 
-  // Auto-scroll: always on first load, or if user is near bottom
   const distFromBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
   const nearBottom = distFromBottom < 120;
   if (prevCount === 0 || (newCount > prevCount && nearBottom)) {
@@ -2441,11 +2647,10 @@ function renderChat() {
   updateScrollBtn();
 }
 
-// System message (command results)
 function showSystemMessage(text) {
   const panel = document.getElementById('chat-panel');
   const empty = document.getElementById('chat-empty');
-  empty.style.display = 'none';
+  if (empty) empty.style.display = 'none';
   const div = document.createElement('div');
   div.className = 'sys-msg';
   div.style.cssText = 'margin:6px 0;padding:10px 14px;background:#0f2027;border:1px solid #1e3a4a;border-radius:10px;font-size:13px;font-family:var(--mono);color:#7dd3fc;white-space:pre-wrap;word-break:break-word;animation:fadeInUp 0.2s ease';
@@ -2454,20 +2659,31 @@ function showSystemMessage(text) {
   panel.scrollTop = panel.scrollHeight;
 }
 
-// ─── Render Conversations (Chats tab) ──────────────────────────────────────────────
+// ─── Render Conversations (Left Drawer List) ───────────────────────────────
+const collapsedProjects = new Set(JSON.parse(localStorage.getItem('collapsedProjects') || '[]'));
+
+function toggleProjectCollapse(projName) {
+  if (collapsedProjects.has(projName)) {
+    collapsedProjects.delete(projName);
+  } else {
+    collapsedProjects.add(projName);
+  }
+  localStorage.setItem('collapsedProjects', JSON.stringify([...collapsedProjects]));
+  renderConversations();
+}
+
 function renderConversations() {
-  const panel = document.getElementById('chats-panel');
-  const empty = document.getElementById('chats-empty');
-  if (!conversations.length) { empty.style.display = 'flex'; return; }
-  empty.style.display = 'none';
+  const panel = document.getElementById('drawer-conv-list');
+  if (!panel) return;
+  
+  if (!conversations.length) {
+    panel.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-size:13px;">No conversations</div>';
+    return;
+  }
 
-  // Preserve scroll position
   const scrollTop = panel.scrollTop;
+  panel.innerHTML = '';
 
-  // Clear old rows (keep empty placeholder)
-  Array.from(panel.children).forEach(c => { if (c !== empty) c.remove(); });
-
-  // Group by project
   const groups = {};
   for (const c of conversations) {
     const grp = c.project || 'Conversations';
@@ -2476,39 +2692,144 @@ function renderConversations() {
   }
 
   for (const [grpName, convs] of Object.entries(groups)) {
-    const lbl = document.createElement('div');
-    lbl.className = 'conv-group-label';
-    lbl.textContent = grpName;
-    panel.appendChild(lbl);
+    const isCollapsed = collapsedProjects.has(grpName);
 
-    for (const conv of convs) {
-      const row = document.createElement('div');
-      row.className = 'conv-row' + (conv.isActive ? ' active' : '');
-      row.title = conv.text;
-      row.dataset.convId = conv.id;
+    const folderRow = document.createElement('div');
+    folderRow.className = 'folder-row';
+    folderRow.style.cursor = 'pointer';
+    
+    const folderChevron = document.createElement('span');
+    folderChevron.className = 'folder-chevron';
+    folderChevron.textContent = isCollapsed ? '›' : '˅';
+    
+    const folderLabel = document.createElement('span');
+    folderLabel.className = 'folder-label';
+    folderLabel.textContent = `📁 ${grpName}`;
 
-      const indicator = document.createElement('div');
-      indicator.className = conv.hasSpinner ? 'conv-spinner' : 'conv-dot';
+    folderRow.appendChild(folderChevron);
+    folderRow.appendChild(folderLabel);
+    folderRow.addEventListener('click', () => toggleProjectCollapse(grpName));
+    panel.appendChild(folderRow);
 
-      const name = document.createElement('div');
-      name.className = 'conv-name';
-      name.textContent = conv.text;
+    if (!isCollapsed) {
+      const listContainer = document.createElement('div');
+      listContainer.className = 'folder-convs';
 
-      const time = document.createElement('div');
-      time.className = 'conv-time';
-      time.textContent = conv.time;
+      for (const conv of convs) {
+        const container = document.createElement('div');
+        container.className = 'conv-row-container';
 
-      row.appendChild(indicator);
-      row.appendChild(name);
-      row.appendChild(time);
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'conv-row-actions';
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'conv-row-action-btn copy';
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const link = `${location.origin}/?conv=${conv.id}`;
+          navigator.clipboard.writeText(link).then(() => {
+            toast('📋 Conversation link copied');
+            row.style.transform = '';
+          });
+        });
 
-      // Click → navigate AG to this conversation
-      if (!conv.isActive) {
-        row.style.cursor = 'pointer';
-        row.addEventListener('click', () => navigateToConv(conv.id, row));
+        const archiveBtn = document.createElement('button');
+        archiveBtn.className = 'conv-row-action-btn archive';
+        archiveBtn.textContent = 'Archive';
+        archiveBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          sendCommand('/archive ' + conv.id);
+          toast('📁 Archiving conversation...');
+          row.style.transform = '';
+        });
+
+        actionsEl.appendChild(copyBtn);
+        actionsEl.appendChild(archiveBtn);
+        container.appendChild(actionsEl);
+
+        const row = document.createElement('div');
+        row.className = 'conv-row' + (conv.isActive ? ' active' : '');
+        row.title = conv.text;
+        row.dataset.convId = conv.id;
+
+        const indicator = document.createElement('div');
+        indicator.className = conv.hasSpinner ? 'conv-spinner' : (conv.isActive ? 'conv-dot active' : 'conv-dot');
+
+        const name = document.createElement('div');
+        name.className = 'conv-name';
+        name.textContent = conv.text;
+
+        const time = document.createElement('div');
+        time.className = 'conv-time';
+        time.textContent = conv.time;
+
+        row.appendChild(indicator);
+        row.appendChild(name);
+        row.appendChild(time);
+
+        if (!conv.isActive) {
+          row.style.cursor = 'pointer';
+          row.addEventListener('click', () => {
+            if (row.style.transform && row.style.transform !== 'translateX(0px)' && row.style.transform !== 'none') {
+              row.style.transform = '';
+            } else {
+              navigateToConv(conv.id, row);
+            }
+          });
+        }
+
+        let startX = 0;
+        let startY = 0;
+        let currentX = 0;
+        let isSwiping = false;
+        let swipeDirection = null;
+
+        row.addEventListener('touchstart', e => {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          isSwiping = true;
+          swipeDirection = null;
+          row.style.transition = 'none';
+        }, { passive: true });
+
+        row.addEventListener('touchmove', e => {
+          if (!isSwiping) return;
+          const dx = e.touches[0].clientX - startX;
+          const dy = e.touches[0].clientY - startY;
+
+          if (swipeDirection === null) {
+            if (Math.abs(dx) > Math.abs(dy) * 1.5) {
+              swipeDirection = 'horizontal';
+            } else {
+              swipeDirection = 'vertical';
+              isSwiping = false;
+            }
+          }
+
+          if (swipeDirection === 'horizontal') {
+            if (dx < 0 && dx > -140) {
+              row.style.transform = `translateX(${dx}px)`;
+              currentX = dx;
+            }
+          }
+        }, { passive: true });
+
+        row.addEventListener('touchend', e => {
+          if (!isSwiping) return;
+          isSwiping = false;
+          row.style.transition = 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)';
+          if (currentX < -60) {
+            row.style.transform = 'translateX(-120px)';
+          } else {
+            row.style.transform = '';
+          }
+        }, { passive: true });
+
+        container.appendChild(row);
+        listContainer.appendChild(container);
       }
-
-      panel.appendChild(row);
+      panel.appendChild(listContainer);
     }
   }
 
@@ -2517,26 +2838,22 @@ function renderConversations() {
 
 function navigateToConv(convId, rowEl) {
   if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
-  // Visual feedback — dim row and show switching state
   rowEl.style.opacity = '0.5';
   rowEl.style.pointerEvents = 'none';
   const nameEl = rowEl.querySelector('.conv-name');
   if (nameEl) nameEl.textContent = '⟳ Switching…';
   ws.send(JSON.stringify({ type: 'navigate_conversation', id: convId }));
-  // Switch to chat tab so user sees the incoming chat
-  setTimeout(() => switchTab('chat'), 400);
+  setTimeout(() => closeDrawer('left'), 400);
 }
-
 
 // ─── Render Actions ─────────────────────────────────────────────────────────────────
 function renderActions() {
-  const panel  = document.getElementById('actions-panel');
-  const empty  = document.getElementById('actions-empty');
+  const container = document.getElementById('drawer-actions-container');
   const badge  = document.getElementById('actions-badge');
+  if (!container) return;
 
   badge.textContent = actions.length > 0 ? String(actions.length) : '';
 
-  // ── Inline chat banner: shows in Chat tab so user never misses a permission ──
   let banner = document.getElementById('action-alert-banner');
   if (actions.length > 0) {
     if (!banner) {
@@ -2544,16 +2861,15 @@ function renderActions() {
       banner.id = 'action-alert-banner';
       banner.style.cssText = [
         'position:sticky','top:0','z-index:20',
-        'background:linear-gradient(90deg,#78350f,#92400e)',
-        'border-bottom:1px solid #f59e0b',
+        'background:linear-gradient(90deg,#4c1d95,#7c3aed)',
+        'border-bottom:1px solid #7c3aed',
         'padding:10px 16px','display:flex','align-items:center','gap:10px',
         'font-size:13px','font-weight:600','color:#fef3c7','cursor:pointer',
         'animation:fadeInUp 0.2s ease',
       ].join(';');
-      banner.onclick = () => switchTab('actions');
-      // Insert at top of chat panel
+      banner.onclick = () => openDrawer('right');
       const chatPanel = document.getElementById('chat-panel');
-      chatPanel.insertBefore(banner, chatPanel.firstChild);
+      if (chatPanel) chatPanel.insertBefore(banner, chatPanel.firstChild);
     }
     const plural = actions.length > 1 ? 's' : '';
     banner.innerHTML = `⚡ <strong>${actions.length} action${plural} waiting for approval</strong> — tap to review`;
@@ -2561,33 +2877,20 @@ function renderActions() {
     banner.remove();
   }
 
-  // Show OR auto-close permission modal based on pending dialog actions
   const dialogAction = actions.find(a => a.type === 'dialog');
   const modal = document.getElementById('perm-modal');
   if (dialogAction && !modal?.classList.contains('open')) {
     showPermModal(dialogAction);
   } else if (!dialogAction && modal?.classList.contains('open')) {
-    // Action resolved on Mac — auto-close modal + notify user
     modal.classList.remove('open');
     toast('✅ Action resolved on Mac');
   }
 
-  if (actions.length === 0) {
-    empty.style.display = 'flex';
-    Array.from(panel.children).forEach(c => {
-      if (c !== empty && c.id !== 'notif-settings') c.remove();
-    });
-    return;
-  }
-
-  empty.style.display = 'none';
-  Array.from(panel.children).forEach(c => {
-    if (c !== empty && c.id !== 'notif-settings') c.remove();
-  });
-
+  container.innerHTML = '';
   for (const action of actions) {
     const card = document.createElement('div');
     card.className = 'action-card';
+    card.style.marginBottom = '12px';
     card.innerHTML = `
       <div class="action-card-title">⚡ Pending Action #${action.occurrenceIndex + 1}</div>
       <div class="action-card-text">${escHtml(action.text)}</div>
@@ -2596,22 +2899,20 @@ function renderActions() {
           ✅ Allow
         </button>
         <button class="btn-reject" onclick="dismissAction(${action.occurrenceIndex})">
-          ❌ Dismiss
+          Dismiss
         </button>
       </div>
     `;
-    panel.appendChild(card);
+    container.appendChild(card);
   }
 }
 
-// ─── Actions ─────────────────────────────────────────────────────────────────
 function clickAction(selector, occurrenceIndex) {
   if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
   ws.send(JSON.stringify({ type: 'click', selector, occurrenceIndex }));
   toast('✅ Clicking...');
 }
 
-// Direct approve via submitSelector — bypasses generic selector, fires the exact button
 function approveActionDirect(submitSelector) {
   if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
   if (!submitSelector) { toast('❌ No selector'); return; }
@@ -2657,7 +2958,6 @@ function applySettings(data) {
       hint.classList.remove('visible');
     }
   }
-  // Tunnel mode row
   const tunnelToggle = document.getElementById('tunnel-mode-toggle');
   const tunnelLabel  = document.getElementById('tunnel-mode-label');
   if (tunnelToggle && tunnelMode) {
@@ -2697,7 +2997,6 @@ function showPermModal(action) {
   const modal = document.getElementById('perm-modal');
   document.getElementById('perm-title').textContent = action.title || 'Allow this action?';
 
-  // Show command block if available, otherwise show descriptive context
   const cmdEl = document.getElementById('perm-command');
   const context = action.command || action.context || '';
   cmdEl.textContent = context;
@@ -2706,8 +3005,6 @@ function showPermModal(action) {
   const optsEl = document.getElementById('perm-options');
   optsEl.innerHTML = '';
 
-  // Show exactly what the bridge extracted — any number of options.
-  // Only use minimal fallback if bridge sent 0 options (detection failed entirely).
   const opts = (action.options && action.options.length > 0) ? action.options : [
     { index: 0, text: '1  Yes, allow this time' },
     { index: 1, text: '2  No (tell the agent what to do instead)' },
@@ -2719,7 +3016,7 @@ function showPermModal(action) {
     const label = opt.text.replace(/^\d+\s+/, '');
     const el = document.createElement('div');
     el.className = 'perm-opt' + (i === 0 ? ' selected' : '');
-    el.innerHTML = `<div class="perm-opt-num">${escHtml(num)}</div><div>${escHtml(label)}</div>`;
+    el.innerHTML = `<div class="perm-opt-num">${escapeHtml(num)}</div><div>${escapeHtml(label)}</div>`;
     el.onclick = () => {
       _selectedPermOpt = i;
       optsEl.querySelectorAll('.perm-opt').forEach((o,j) => o.classList.toggle('selected', j===i));
@@ -2728,7 +3025,6 @@ function showPermModal(action) {
   });
 
   modal.classList.add('open');
-  // Store current action for submit
   modal._action = action;
 }
 
@@ -2756,10 +3052,8 @@ function permSubmit() {
   const N = _selectedPermOpt;
   const optText = (action.options?.[N]?.text || `Option ${N+1}`).replace(/^\d+[\. ]+/, '').slice(0, 40);
 
-  // Signal to bridge that PWA is taking action (source attribution)
   ws.send(JSON.stringify({ type: 'action_source', source: 'PWA' }));
 
-  // Step 1 — click Nth option button in AG dialog (3-strategy fallback)
   const clickOptExpr = `(function(N){
     var btns=Array.from(document.querySelectorAll('button[data-tooltip-id]'));
     var skipBtn=null,submitBtn=null;
@@ -2788,7 +3082,6 @@ function permSubmit() {
 
   ws.send(JSON.stringify({ type: 'evaluate', expression: clickOptExpr }));
 
-  // Step 2 — click Submit 200ms later
   setTimeout(() => {
     ws.send(JSON.stringify({
       type: 'evaluate',
@@ -2796,10 +3089,9 @@ function permSubmit() {
     }));
   }, 200);
 
-  toast(`\u2705 ${optText} \u2014 submitted`);
+  toast(`✅ ${optText} — submitted`);
 }
 
-// Keyboard shortcut: Enter = submit when modal open
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('perm-modal')?.classList.contains('open')) {
     e.preventDefault();
@@ -2808,7 +3100,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ─── Image attachment ────────────────────────────────────────────────────────
-let attachedImages = []; // { dataUrl, file }
+let attachedImages = [];
 
 function handleFileSelect(e) {
   const files = Array.from(e.target.files);
@@ -2826,6 +3118,7 @@ function handleFileSelect(e) {
 
 function renderImagePreview() {
   const strip = document.getElementById('img-preview-strip');
+  if (!strip) return;
   strip.innerHTML = '';
   strip.classList.toggle('has-images', attachedImages.length > 0);
   attachedImages.forEach((img, i) => {
@@ -2854,8 +3147,6 @@ function sendUserMessage() {
 
   const imageDataUrls = attachedImages.map(i => i.dataUrl);
 
-  // Show locally immediately (with thumbnail if image) — increment lastRenderedCount
-  // so renderChat() won't duplicate it when bridge scrapes the message back
   const localMsg = {
     role: 'user',
     text: text || '[Image]',
@@ -2864,8 +3155,9 @@ function sendUserMessage() {
     imageUrl: hasImages ? attachedImages[0].dataUrl : null
   };
   appendMessageEl(localMsg);
-  lastRenderedCount++;  // ← key: skip this message in next renderChat()
-  document.getElementById('chat-panel').scrollTop = 99999;
+  lastRenderedCount++;
+  const chatPanel = document.getElementById('chat-panel');
+  if (chatPanel) chatPanel.scrollTop = 99999;
 
   ws.send(JSON.stringify({
     type: 'send_message',
@@ -2881,7 +3173,6 @@ function sendUserMessage() {
   onUserSent();
 }
 
-// ─── Quick actions — execute via bridge local executor ────────────────────────
 async function sendCommand(cmd) {
   toast(`⏳ Running ${cmd}...`);
   try {
@@ -2897,17 +3188,221 @@ async function sendCommand(cmd) {
   }
 }
 
-// ─── Tab switching ────────────────────────────────────────────────────────────
-function switchTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', ['chat','actions','chats'][i] === tab);
-  });
-  const panelMap = { chat: 'chat-panel', actions: 'actions-panel', chats: 'chats-panel' };
-  document.querySelectorAll('.panel').forEach(p => {
-    p.classList.toggle('active', p.id === panelMap[tab]);
-  });
+// ─── Drawer System (Relative Squeeze and absolute fixed overlays) ─────────
+let drawerExpanded = false;
+
+function openDrawer(side) {
+  if (side === 'left') {
+    document.body.classList.add('drawer-left-open');
+    renderConversations();
+  }
+  if (side === 'right') {
+    document.getElementById('right-drawer').classList.add('open');
+    renderActions();
+  }
 }
+
+function closeDrawer(side) {
+  if (side === 'left') {
+    document.body.classList.remove('drawer-left-open');
+    drawerExpanded = false;
+    document.getElementById('left-drawer').style.width = '';
+    document.getElementById('main-content').style.width = '';
+    const expBtn = document.getElementById('drawer-expand-btn');
+    if (expBtn) expBtn.textContent = '→|';
+  }
+  if (side === 'right') {
+    document.getElementById('right-drawer').classList.remove('open');
+  }
+}
+
+function toggleDrawerExpand() {
+  drawerExpanded = !drawerExpanded;
+  document.getElementById('left-drawer').style.width = drawerExpanded ? '100%' : '';
+  document.getElementById('main-content').style.width = drawerExpanded ? '0%' : '';
+  const expBtn = document.getElementById('drawer-expand-btn');
+  if (expBtn) expBtn.textContent = drawerExpanded ? '|←' : '→|';
+}
+
+function openSettings() {
+  document.getElementById('settings-modal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+// ─── Zoom Mode ──────────────────────────────────────────────────────────────
+let _zoomEnabled = localStorage.getItem('zoomEnabled') === 'true';
+
+function setZoomMode(enabled) {
+  _zoomEnabled = enabled;
+  localStorage.setItem('zoomEnabled', enabled);
+  const viewport = document.querySelector('meta[name="viewport"]');
+  if (viewport) {
+    if (enabled) {
+      viewport.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
+    } else {
+      viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+    }
+  }
+}
+
+// ─── Code modal ─────────────────────────────────────────────────────────────
+function openCodeModal(preEl) {
+  const modal = document.getElementById('code-modal');
+  const code = preEl.querySelector('code');
+  const content = modal.querySelector('#code-modal-content code');
+  content.textContent = code ? code.innerText : preEl.innerText;
+  
+  const langClass = code?.className?.match(/language-(\w+)/);
+  document.getElementById('code-modal-lang').textContent = langClass ? langClass[1] : 'text';
+  modal.classList.add('open');
+  
+  if (window.Prism && langClass) {
+    content.className = code.className;
+    try { Prism.highlightElement(content); } catch(e) {}
+  }
+}
+
+function closeCodeModal() {
+  document.getElementById('code-modal').classList.remove('open');
+}
+
+function copyCodeModal() {
+  const code = document.querySelector('#code-modal-content code');
+  if (code) {
+    navigator.clipboard.writeText(code.innerText).then(() => {
+      const btn = document.getElementById('code-modal-copy');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+  }
+}
+
+// ─── Long-press breadcrumb → inline chat picker ─────
+(function() {
+  let pressTimer = null;
+  const bc = document.querySelector('.breadcrumb');
+  if (!bc) return;
+
+  const triggerPicker = (e) => {
+    if (e) e.preventDefault();
+    showInlineChatPicker();
+  };
+
+  bc.addEventListener('touchstart', e => {
+    pressTimer = setTimeout(() => triggerPicker(e), 500);
+  }, { passive: false });
+
+  bc.addEventListener('touchend', () => clearTimeout(pressTimer));
+  bc.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
+  bc.addEventListener('mousedown', () => {
+    pressTimer = setTimeout(() => triggerPicker(), 500);
+  });
+  bc.addEventListener('mouseup', () => clearTimeout(pressTimer));
+  bc.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+})();
+
+function showInlineChatPicker() {
+  let picker = document.getElementById('inline-chat-picker');
+  if (picker) { picker.remove(); return; }
+
+  picker = document.createElement('div');
+  picker.id = 'inline-chat-picker';
+  picker.style.cssText = [
+    'position:fixed', 'top:54px', 'left:10px', 'right:10px',
+    'z-index:300', 'background:#18181c',
+    'border:1px solid rgba(255,255,255,0.15)',
+    'border-radius:14px', 'padding:8px',
+    'box-shadow:0 8px 32px rgba(0,0,0,0.6)',
+    'max-height:60vh', 'overflow-y:auto',
+    'animation:fadeInUp 0.15s ease'
+  ].join(';');
+
+  if (!conversations.length) {
+    picker.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px">No conversations</div>';
+  } else {
+    for (const conv of conversations) {
+      const row = document.createElement('div');
+      row.className = 'conv-row' + (conv.isActive ? ' active' : '');
+      row.style.padding = '8px 12px';
+      row.innerHTML = `
+        <div class="${conv.hasSpinner ? 'conv-spinner' : (conv.isActive ? 'conv-dot active' : 'conv-dot')}"></div>
+        <div class="conv-name">${escapeHtml(conv.text)}</div>
+      `;
+      if (!conv.isActive) {
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => {
+          navigateToConv(conv.id, row);
+          picker.remove();
+        });
+      }
+      picker.appendChild(row);
+    }
+  }
+
+  document.body.appendChild(picker);
+
+  setTimeout(() => {
+    document.addEventListener('click', function handler(e) {
+      if (!picker.contains(e.target)) {
+        picker.remove();
+        document.removeEventListener('click', handler);
+      }
+    });
+  }, 0);
+}
+
+// ─── Edge Swipe Gesture Detection ──────────────────
+(function() {
+  const EDGE_ZONE = 30;
+  const SWIPE_THRESHOLD = 60;
+  let startX = 0, startY = 0, tracking = false, direction = null;
+
+  document.addEventListener('touchstart', e => {
+    if (_zoomEnabled) return;
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    const w = window.innerWidth;
+    if (x < EDGE_ZONE || x > w - EDGE_ZONE) {
+      startX = x;
+      startY = y;
+      tracking = true;
+      direction = x < EDGE_ZONE ? 'right' : 'left';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!tracking) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = Math.abs(e.touches[0].clientY - startY);
+    if (dy > Math.abs(dx) * 1.5) { tracking = false; return; }
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!tracking) return;
+    tracking = false;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (direction === 'right' && dx > SWIPE_THRESHOLD) {
+      openDrawer('left');
+    } else if (direction === 'left' && dx < -SWIPE_THRESHOLD) {
+      openDrawer('right');
+    }
+  }, { passive: true });
+})();
+
+// Swipe-down to dismiss code modal
+(function() {
+  let startY = 0;
+  const modal = document.getElementById('code-modal');
+  modal?.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+  modal?.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY - startY;
+    if (dy > 80) closeCodeModal();
+  }, { passive: true });
+})();
 
 // ─── Input auto-resize ────────────────────────────────────────────────────────
 document.getElementById('msg-input').addEventListener('input', function() {
@@ -2936,10 +3431,12 @@ function escAttr(s) {
 let toastTimer;
 function toast(msg) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  if (el) {
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  }
 }
 
 // ─── Microphone / Speech Recognition ─────────────────────────────────────────────
@@ -2968,7 +3465,7 @@ function toggleMic() {
   recognition.onstart = () => {
     isRecording = true;
     btn.classList.add('recording');
-    btn.textContent = '🔴';   // red dot while recording
+    btn.textContent = '🔴';
     toast('🎤 Listening...');
   };
 
@@ -2997,10 +3494,15 @@ function toggleMic() {
   recognition.start();
 }
 
-// ─── Scroll button visibility on scroll ──────────────────────────────────────
-document.getElementById('chat-panel').addEventListener('scroll', updateScrollBtn);
-
 // ─── Boot ─────────────────────────────────────────────────────────────────────
+const chatPanel = document.getElementById('chat-panel');
+if (chatPanel) chatPanel.addEventListener('scroll', updateScrollBtn);
+
+// Apply on boot
+const zoomToggle = document.getElementById('zoom-toggle');
+if (zoomToggle) zoomToggle.checked = _zoomEnabled;
+setZoomMode(_zoomEnabled);
+
 updateVerbosityUI();
 connect();
 
