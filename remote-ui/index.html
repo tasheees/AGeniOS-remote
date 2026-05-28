@@ -2942,6 +2942,13 @@ function renderRightPanel(data) {
       color: ${tab.active ? 'var(--text)' : 'var(--text-muted)'};
       font-weight: ${tab.active ? '600' : '400'};
     `;
+    if (!tab.active) {
+      btn.addEventListener('click', () => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        btn.style.opacity = '0.5';
+        ws.send(JSON.stringify({ type: 'navigate_tab', tabId: tab.id }));
+      });
+    }
     tabsEl.appendChild(btn);
   }
 

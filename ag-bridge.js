@@ -1704,6 +1704,22 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
+      case 'navigate_tab': {
+        const tabId = (msg.tabId || '').slice(0, 200);
+        if (!tabId) break;
+        log(`[navigate_tab] switching to tab: ${tabId.slice(0, 60)}`);
+        await cdpEvaluate(`
+          (function() {
+            var btn = document.querySelector('[data-tab-id="` + tabId.replace(/"/g, '') + `"]');
+            if (btn) { btn.click(); return 'clicked'; }
+            return 'not found';
+          })()
+        `);
+        await new Promise(r => setTimeout(r, 800));
+        await broadcastState();
+        break;
+      }
+
       case 'action_source':
         // PWA signals it is about to take action — set source so resolution detector knows
         if (msg.source === 'PWA') _pendingActionSource = 'PWA';
