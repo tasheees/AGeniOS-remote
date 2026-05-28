@@ -1799,22 +1799,44 @@ wss.on('connection', (ws, req) => {
         break;
 
       case 'toggle_ag_panel': {
-        // Simulate AG keyboard shortcuts to toggle panels
+        // Toggle AG panels via DOM button click or fallback to keyboard shortcuts
         // sidebar: ⌘B, auxiliary: ⇧⌘B
         const isAux = msg.panel === 'right';
-        const modifiers = isAux ? 12 : 4; // 4=Meta (⌘B), 12=Meta+Shift (⇧⌘B)
         try {
-          await cdpSend('Input.dispatchKeyEvent', {
-            type: 'keyDown', key: 'b', code: 'KeyB',
-            windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66,
-            modifiers
-          });
-          await cdpSend('Input.dispatchKeyEvent', {
-            type: 'keyUp', key: 'b', code: 'KeyB',
-            windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66,
-            modifiers
-          });
-          log(`[toggle_ag_panel] sent ${isAux ? '⇧⌘B' : '⌘B'} to AG`);
+          // Attempt DOM click first
+          const clicked = await cdpEvaluate(`(function() {
+            const btn = ${isAux ? 
+              `document.querySelector('[data-testid="toggle-aux-sidebar"]') || document.querySelector('[data-testid="close-aux-pane"]')` : 
+              `document.querySelector('[data-testid="sidebar-toggle"]')`
+            };
+            if (btn) {
+              btn.click();
+              return true;
+            }
+            return false;
+          })()`);
+
+          if (clicked) {
+            log(`[toggle_ag_panel] toggled ${isAux ? 'right' : 'left'} panel via DOM click`);
+          } else {
+            log(`[toggle_ag_panel] DOM button not found, falling back to hotkey`);
+            // Blur active element to avoid hotkey swallowing
+            await cdpEvaluate('if (document.activeElement) document.activeElement.blur();');
+            
+            const modifiers = isAux ? 12 : 4; // 4=Meta (⌘B), 12=Meta+Shift (⇧⌘B)
+            await cdpSend('Input.dispatchKeyEvent', {
+              type: 'keyDown', key: 'b', code: 'KeyB',
+              windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66,
+              modifiers
+            });
+            await cdpSend('Input.dispatchKeyEvent', {
+              type: 'keyUp', key: 'b', code: 'KeyB',
+              windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66,
+              modifiers
+            });
+            log(`[toggle_ag_panel] sent fallback hotkey ${isAux ? '⇧⌘B' : '⌘B'} to AG`);
+          }
+
           // Dual-phase broadcast:
           // Phase 1: Fast update (200ms) so PWA layout updates immediately
           await new Promise(r => setTimeout(r, 200));

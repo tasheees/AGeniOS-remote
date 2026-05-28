@@ -1,6 +1,6 @@
 # AGENIOS_INDEX.md
 > AGenIOS — Task Registry & Source of Truth
-> Last Sync: 2026-05-28T14:38+03:00 · Studio 23aba18b
+> Last Sync: 2026-05-28T23:38+03:00 · Studio 23aba18b
 
 ---
 
@@ -80,7 +80,7 @@
 | `pending` | **S2.3-S2.8** — `ag-bridge.py` written (Starlette+uvicorn, SDK hooks, backward-compat WS schema). `ecosystem.config.js` updated with `ag-bridge-py` process. Syntax ✅ imports ✅. |
 | `6134005` | **W1-W4 PWA Refactor:** full PWA refactor — drawer nav, violet palette, input redesign, gestures, picker |
 | `pending` | **Bug fix:** Fixed ReferenceError in `ag-bridge.js` (undefined actions variable in /cmd response dismissal). |
-| `pending` | **Bug fix:** Corrected CDP modifier bitmasks (12 for Cmd+Shift+B, 4 for Cmd+B) and implemented a dual-phase broadcast (200ms & 800ms) to eliminate lag when toggling panels. |
+| `pending` | **Bug fix:** Corrected CDP modifier bitmasks, implemented DOM click targeting with active element blurring, and added hotkey fallbacks to prevent panel toggle swallowing. |
 
 ---
 
@@ -103,7 +103,7 @@
 | W1.3 | Right panel (Phase 1: Artifacts list + git status) — edge swipe left | [x] |
 | W1.4 | Settings at bottom of left drawer (gear icon row, exact AG 2.0) | [x] |
 | W1.5 | Zoom toggle — ON=pinch-zoom / OFF=2-finger swipe for chat navigation | [x] |
-| W1.6 | Fix right/left panel toggle keyboard modifiers in bridge | [x] |
+| W1.6 | Fix right/left panel toggle keyboard modifiers in bridge | [x] | DOM button click (`data-testid`) with active element blur & keyboard event fallback |
 
 ### W2 — Chat Panel Redesign
 | ID | Task | Status |
