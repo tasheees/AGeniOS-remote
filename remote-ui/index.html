@@ -1410,7 +1410,18 @@
       gap: 8px;
       transition: background 0.15s;
     }
+    .files-changed-header::before {
+      content: '📄';
+      font-size: 15px;
+      flex-shrink: 0;
+    }
     .files-changed-header:active { background: rgba(255,255,255,0.08); }
+    .files-changed-header svg {
+      width: 14px; height: 14px;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      stroke: currentColor;
+    }
     .text-green-500 { color: #22c55e !important; font-weight: 600; }
     .text-red-500 { color: #ef4444 !important; font-weight: 600; }
     .text-secondary-foreground { color: var(--text-muted); }
@@ -1429,6 +1440,11 @@
       transition: background 0.15s;
     }
     .review-button:active { background: rgba(255,255,255,0.12); }
+    .review-button svg {
+      width: 14px; height: 14px;
+      fill: currentColor;
+      opacity: 0.7;
+    }
     .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* ─── Settings Modal Bottom Sheet ────────────────────────── */
