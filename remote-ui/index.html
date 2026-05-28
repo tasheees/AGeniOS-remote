@@ -1330,6 +1330,7 @@
       will-change: transform;
     }
     .conv-row:hover { background: var(--bg-hover); }
+    .conv-row:active { background: rgba(124,58,237,0.22); transform: scale(0.97); }
     .conv-row.active { background: rgba(124,58,237,0.15); }
 
     .conv-dot {
@@ -2818,7 +2819,11 @@ function renderConversations() {
             if (row.style.transform && row.style.transform !== 'translateX(0px)' && row.style.transform !== 'none') {
               row.style.transform = '';
             } else {
-              navigateToConv(conv.id, row);
+              row.classList.add('pressed');
+              setTimeout(() => {
+                row.classList.remove('pressed');
+                navigateToConv(conv.id, row);
+              }, 120);
             }
           });
         }
