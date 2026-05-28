@@ -267,11 +267,16 @@ Research artifacts (in repo root):
 - Privacy pitch: "AGenIOS cannot steal your data — the bridge runs on your machine. Your code never leaves your computer."
 
 **Distribution & Onboarding Spec (Decided 2026-05-28):**
-- **Control Channel**: Shared Telegram Bot (`@AGenIOSBot` hosted on GCloud) handles lightweight notifications & remote commands. User accounts linked via 6-digit code. Zero user-bot creation needed.
+- **Control Channel**: User-Owned Bot + Direct Long-Polling (Model B).
+  - **Zero-Server Setup**: Local Mac bridge uses long-polling (`getUpdates`) directly to Telegram to receive commands and send alerts. No central server is needed.
+  - **Friction Reduction**:
+    - **Step-by-Step CLI/UI Wizard**: Guides the user with direct deep links to open `@BotFather` and name their bot.
+    - **Automated Chat ID Detection**: The user just pastes the bot token. The bridge starts listening, instructs the user to tap "Start" in their bot, automatically extracts their `chat_id` from the incoming request, and saves it. The user never has to look up their ID.
 - **Data Channel**: Local-first direct tunnels. User choice during setup:
   - **ngrok (Priority/Primary)**: Prompt user for their free ngrok authtoken during setup. Provides the most stable/prioritized link.
   - **Cloudflare (Secondary/Fallback)**: Quick Tunnel (`trycloudflare.com`) with zero signup/zero config if user has no ngrok token.
 - **PWA Serving**: Local bridge serves PWA files over the tunnel. No central static hosting needed.
+- **Future Expansion**: Scale to Shared Bot + Cloud Relay (Model A) as a premium cloud add-on later.
 
 | ID | Task | Status |
 |:---|:-----|:-------|
@@ -282,7 +287,8 @@ Research artifacts (in repo root):
 | S3.5 | AGenIOS Cloud infrastructure (stable URL, managed tunnel, billing) | [ ] FUTURE |
 | S3.6 | Donation nudge UI (tasteful banner, Ko-fi/GitHub Sponsors integration) | [ ] FUTURE |
 | S3.7 | Native app (Capacitor.js) for push notifications + App Store | [ ] FUTURE |
-| S3.8 | npx agenios zero-install package + interactive first-run wizard (support ngrok authtoken/Cloudflare fallback + `@AGenIOSBot` link code setup) | [ ] FUTURE |
+| S3.8 | npx agenios zero-install package + interactive first-run wizard (guided Model B bot creation + auto chat_id lookup + ngrok/Cloudflare tunnel selection) | [ ] FUTURE |
+
 
 
 ---
