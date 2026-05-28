@@ -818,9 +818,19 @@ async function scrapeRightPanel() {
               e.removeAttribute('style');
               e.removeAttribute('tabindex');
             });
-            // Replace img src with placeholder
-            clone.querySelectorAll('img').forEach(function(e) {
-              e.replaceWith(document.createTextNode('[image]'));
+            // Replace img with file-icon spans for PWA badge rendering
+            clone.querySelectorAll('img').forEach(function(img) {
+              var src = img.getAttribute('src') || '';
+              var alt = (img.getAttribute('alt') || '').trim();
+              var sp = document.createElement('span');
+              sp.textContent = alt || '';
+              var idx = src.lastIndexOf('/files/');
+              if (idx >= 0) {
+                var after = src.substring(idx + 7);
+                var dot = after.indexOf('.');
+                if (dot > 0) sp.setAttribute('data-file-icon', after.substring(0, dot).toLowerCase());
+              }
+              img.replaceWith(sp);
             });
             contentHTML = clone.innerHTML.slice(0, 30000);
           }

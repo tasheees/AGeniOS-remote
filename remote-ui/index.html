@@ -3127,6 +3127,18 @@ function renderRightPanel(data) {
 
   // Set content HTML
   contentEl.innerHTML = data.content || '<div style="color:var(--text-muted);text-align:center;padding:20px;">No content</div>';
+
+  // Convert data-file-icon spans into language badges
+  const RP_LANG_SET = new Set('ts,tsx,js,jsx,py,html,css,json,md,sh,yml,yaml,toml,rs,go,rb,java,c,cpp,h,swift,kt,dart,vue,svelte'.split(','));
+  contentEl.querySelectorAll('[data-file-icon]').forEach(el => {
+    let icon = el.dataset.fileIcon;
+    if (icon.startsWith('code-')) icon = 'js';
+    if (RP_LANG_SET.has(icon)) {
+      el.textContent = icon.toUpperCase();
+      el.className = 'lang-badge';
+      el.setAttribute('data-lang', icon);
+    }
+  });
 }
 
 // ─── Render Actions ─────────────────────────────────────────────────────────────────
