@@ -1395,6 +1395,42 @@
     #right-panel-content blockquote { border-left: 3px solid var(--primary, #7c3aed); padding: 4px 12px; margin: 8px 0; color: var(--text-muted); }
     #right-panel-content a { color: #818cf8; text-decoration: none; }
 
+    /* ─── AG File-Change Cards (preserved classes from scraper) ─── */
+    .files-changed-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 13px;
+      cursor: pointer;
+      margin: 6px 0;
+      background: rgba(255,255,255,0.03);
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .files-changed-header:active { background: rgba(255,255,255,0.08); }
+    .text-green-500 { color: #22c55e !important; font-weight: 600; }
+    .text-red-500 { color: #ef4444 !important; font-weight: 600; }
+    .text-secondary-foreground { color: var(--text-muted); }
+    .text-muted-foreground { color: var(--text-muted); opacity: 0.6; }
+    .review-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      transition: background 0.15s;
+    }
+    .review-button:active { background: rgba(255,255,255,0.12); }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
     /* ─── Settings Modal Bottom Sheet ────────────────────────── */
     #settings-modal {
       position: fixed;

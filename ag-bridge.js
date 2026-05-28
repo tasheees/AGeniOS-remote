@@ -524,15 +524,12 @@ async function scrapeChat() {
         Array.from(clone.querySelectorAll('*')).forEach(function(e){
           if (e.children.length===0 && /^(Ask anything|Message AG|@ to mention)/.test((e.textContent||'').trim())) e.remove();
         });
-        // Strip Tailwind classes and inline styles — but PRESERVE language-* on <code> for Prism
+        // Strip Tailwind classes and inline styles — but PRESERVE semantic classes for PWA styling
+        var _keepClass = /^(language-|files-changed|text-green|text-red|review-button|text-secondary|text-muted|truncate|rounded)/;
         Array.from(clone.querySelectorAll('[class]')).forEach(function(e){
-          if (e.tagName === 'CODE') {
-            var kept = Array.from(e.classList).filter(function(c){ return /^language-/.test(c); });
-            e.removeAttribute('class');
-            kept.forEach(function(c){ e.classList.add(c); });
-          } else {
-            e.removeAttribute('class');
-          }
+          var kept = Array.from(e.classList).filter(function(c){ return _keepClass.test(c); });
+          e.removeAttribute('class');
+          kept.forEach(function(c){ e.classList.add(c); });
         });
         Array.from(clone.querySelectorAll('[style]')).forEach(function(e){ e.removeAttribute('style'); });
          // Replace images with emoji — img.src paths are local/relative, never load in PWA
