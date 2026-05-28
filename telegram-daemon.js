@@ -371,6 +371,8 @@ async function processUpdate(update) {
 let offset = 0;
 let wpaLock = false;
 
+let pollBackoff = 2000;  // start at 2s, doubles on each error, caps at 30s
+
 async function poll() {
   try {
     const res = await telegramRequest('getUpdates', {
@@ -387,13 +389,15 @@ async function poll() {
         });
       }
     }
+    pollBackoff = 2000;  // reset backoff on success
   } catch (err) {
     console.error('[daemon] Poll error:', err.message);
-    // Back off 5 seconds on network error
-    await new Promise((r) => setTimeout(r, 5000));
+    // Exponential backoff: 2s → 4s → 8s → 16s → 30s max
+    await new Promise((r) => setTimeout(r, pollBackoff));
+    pollBackoff = Math.min(pollBackoff * 2, 30000);
   }
 
-  // Re-schedule immediately — long-poll timeout handles the 30s wait server-side
+  // Re-schedule — long-poll timeout handles the 30s wait server-side
   setTimeout(poll, 100);
 }
 
