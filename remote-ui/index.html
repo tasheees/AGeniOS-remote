@@ -1538,6 +1538,107 @@
     }
     .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+    /* ─── Review Tab Diff Styling ──────────────────────────── */
+    .diff-file-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px 8px 0 0;
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .diff-file-header .diff-filename { color: var(--text); flex: 1; }
+    .diff-file-header .diff-path { color: var(--text-muted); font-size: 11px; font-weight: 400; }
+    .diff-file-header .diff-adds { color: #22c55e; font-size: 12px; font-weight: 600; }
+    .diff-file-header .diff-dels { color: #ef4444; font-size: 12px; font-weight: 600; }
+    .diff-code-block {
+      font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      overflow-x: auto;
+      margin-bottom: 8px;
+    }
+    .diff-line {
+      display: flex;
+      white-space: pre;
+      min-height: 20px;
+    }
+    .diff-line-num {
+      display: inline-block;
+      min-width: 36px;
+      padding: 0 6px;
+      text-align: right;
+      color: rgba(255,255,255,0.25);
+      user-select: none;
+      flex-shrink: 0;
+      font-size: 11px;
+    }
+    .diff-line-content {
+      flex: 1;
+      padding: 0 8px;
+      min-width: 0;
+    }
+    .diff-line.added { background: rgba(34,197,94,0.1); }
+    .diff-line.added .diff-line-content { color: #86efac; }
+    .diff-line.removed { background: rgba(239,68,68,0.1); }
+    .diff-line.removed .diff-line-content { color: #fca5a5; }
+    .diff-line.context .diff-line-content { color: var(--text-muted); }
+    .diff-hunk-header {
+      padding: 4px 12px;
+      background: rgba(99,102,241,0.08);
+      color: rgba(167,139,250,0.7);
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 11px;
+      border-top: 1px solid var(--border);
+    }
+    .diff-expand-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      background: rgba(255,255,255,0.03);
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      border-top: 1px solid var(--border);
+    }
+    .diff-expand-btn:hover { background: rgba(255,255,255,0.06); }
+    .review-filter-pills {
+      display: flex;
+      gap: 6px;
+      padding: 8px 0;
+      flex-wrap: wrap;
+    }
+    .review-filter-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 14px;
+      font-size: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .review-filter-pill.active {
+      background: rgba(167,139,250,0.15);
+      border-color: rgba(167,139,250,0.3);
+      color: var(--accent-light, #a78bfa);
+    }
+    .review-filter-pill .pill-x {
+      font-size: 10px;
+      opacity: 0.6;
+      cursor: pointer;
+    }
+
     /* ─── Settings Modal Bottom Sheet ────────────────────────── */
     #settings-modal {
       position: fixed;
@@ -3238,6 +3339,93 @@ function renderRightPanel(data) {
       }
     }
   });
+
+  // ─── Style Review tab content ─────────────────────────────────────────────
+  if (data.activeTabName === 'Review') {
+    styleReviewContent(contentEl);
+  }
+}
+
+// Style the Review tab content to look like AG's diff viewer
+function styleReviewContent(container) {
+  // Walk through all leaf text elements and style diff patterns
+  const allEls = [...container.querySelectorAll('div, span, p')];
+
+  allEls.forEach(el => {
+    if (el.children.length > 0 || el.dataset.reviewStyled) return;
+    const text = (el.textContent || '').trim();
+
+    // Style @@ hunk headers
+    if (text.startsWith('@@') || text.match(/^[-+]\d+\s+more\s+lines/i)) {
+      el.className = 'diff-hunk-header';
+      el.dataset.reviewStyled = '1';
+      return;
+    }
+
+    // Style "N files changed" / "+X -Y" change summary lines
+    if (text.match(/^\d+\s+(file|change)/i) || text.match(/^[+-]\d+$/)) {
+      if (text.startsWith('+')) {
+        el.style.color = '#22c55e';
+        el.style.fontWeight = '600';
+        el.style.fontSize = '12px';
+      } else if (text.startsWith('-')) {
+        el.style.color = '#ef4444';
+        el.style.fontWeight = '600';
+        el.style.fontSize = '12px';
+      }
+      el.dataset.reviewStyled = '1';
+      return;
+    }
+
+    // Style lines that look like code (start with line numbers or diff markers)
+    // Detect code lines with old/new line numbers
+    const codeMatch = text.match(/^(\d+)\s+(\d+)\s+(.*)$/);
+    if (codeMatch) {
+      const oldNum = codeMatch[1];
+      const newNum = codeMatch[2];
+      const code = codeMatch[3];
+      const isAdded = code.trimStart().startsWith('+') || parseInt(oldNum) === 0;
+      const isRemoved = code.trimStart().startsWith('-') || parseInt(newNum) === 0;
+      el.innerHTML = '';
+      el.className = 'diff-line' + (isAdded ? ' added' : isRemoved ? ' removed' : ' context');
+      el.innerHTML = `<span class="diff-line-num">${oldNum}</span><span class="diff-line-num">${newNum}</span><span class="diff-line-content">${escapeHtml(code)}</span>`;
+      el.style.fontFamily = "'SF Mono','Menlo','Consolas',monospace";
+      el.style.fontSize = '12px';
+      el.style.whiteSpace = 'pre';
+      el.dataset.reviewStyled = '1';
+      return;
+    }
+
+    // Single line number (just a number) — likely a line num display
+    if (/^\d+$/.test(text) && parseInt(text) > 0) {
+      el.style.color = 'rgba(255,255,255,0.2)';
+      el.style.fontSize = '11px';
+      el.style.fontFamily = "'SF Mono','Menlo',monospace";
+      el.dataset.reviewStyled = '1';
+      return;
+    }
+
+    // Code content lines (HTML tags, code-like content)
+    if (text.startsWith('<') || text.startsWith('{') || text.startsWith('}') ||
+        text.match(/^(const|let|var|function|if|else|return|import|export|class|async|await)\s/) ||
+        text.match(/^\s*(\/\/|\/\*|\*)/) || text.match(/\.(js|ts|html|css|py|json)\b/)) {
+      el.style.fontFamily = "'SF Mono','Menlo','Consolas',monospace";
+      el.style.fontSize = '12px';
+      el.style.color = 'var(--text-muted)';
+      el.style.whiteSpace = 'pre-wrap';
+      el.style.lineHeight = '1.5';
+      el.dataset.reviewStyled = '1';
+    }
+  });
+
+  // Style the container for mono font
+  container.style.fontFamily = "'SF Mono','Menlo','Consolas',monospace";
+  container.style.fontSize = '12px';
+  container.style.lineHeight = '1.5';
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ─── Render Actions ─────────────────────────────────────────────────────────────────
