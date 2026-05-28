@@ -1,6 +1,6 @@
 # AGENIOS_INDEX.md
 > AGenIOS — Task Registry & Source of Truth
-> Last Sync: 2026-05-27T12:00+03:00 · Full extraction complete · Console a7a666a2
+> Last Sync: 2026-05-28T10:00+03:00 · Studio 23aba18b
 
 ---
 
@@ -69,6 +69,79 @@
 | `abafb21` | `/wpa` fixed — no-tunnel vs bridge-down distinction; ngrok added to PM2 |
 | `3aea822` | Syntax highlighting — `language-*` classes preserved through bridge class strip |
 | `4e033ed` | Conversations tab — fully wired with tappable navigation to any AG conversation |
+
+### ✅ DONE TODAY — 2026-05-28
+
+| Commit | What |
+|:-------|:-----|
+| `2a86ede` | Telegram poll: exponential backoff on ECONNRESET (2s→30s max) — fixes bulk-delayed replies |
+
+---
+
+## 🗺️ PWA Refactor Roadmap
+
+> Design direction locked 2026-05-28. Mobile-first. AG 2.0 spirit × Codex/Linear/Warp polish.
+> Design system: violet `#7c3aed`, near-black `#0d0d0f`, Geist font, frosted glass drawer.
+
+### W1 — Structure + Navigation
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W1.1 | Remove tab bar → breadcrumb header (Project / Chat name) | [ ] |
+| W1.2 | Left drawer (65% partial, frosted glass, AG 2.0 structure) — edge swipe right | [ ] |
+| W1.3 | Right panel (Phase 1: Artifacts list + git status) — edge swipe left | [ ] |
+| W1.4 | Settings at bottom of left drawer (gear icon row, exact AG 2.0) | [ ] |
+| W1.5 | Zoom toggle — ON=pinch-zoom / OFF=2-finger swipe for chat navigation | [ ] |
+
+### W2 — Chat Panel Redesign
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W2.1 | Violet palette + Geist Mono code blocks with syntax highlighting | [ ] |
+| W2.2 | Approval modal as bottom sheet overlay (not separate panel) | [ ] |
+| W2.3 | Input bar: mic inside field left + send icon right + command pill row | [ ] |
+| W2.4 | Tap code block → full-screen expand modal, swipe down to dismiss | [ ] |
+| W2.5 | Status indicators in drawer rows: green dot / blue dot / spinner | [ ] |
+
+### W3 — Chats Drawer (requires CDP research first)
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W3.1 | CDP research: what AG DOM exposes for projects/conversation list | [ ] RESEARCH |
+| W3.2 | Bridge: /api/chats endpoint with project+conversation data | [ ] |
+| W3.3 | Drawer populated dynamically from bridge (not hardcoded) | [ ] |
+| W3.4 | Swipe-left on conversation row → quick actions (archive, copy link) | [ ] |
+| W3.5 | Long-press breadcrumb → inline chat picker popup | [ ] |
+
+### W4 — Right Panel Expansion (research phase)
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W4.1 | CDP research: AG right panel DOM (Subagents, Artifacts, Background Tasks) | [ ] RESEARCH |
+| W4.2 | Implement full Overview/Artifacts replication if feasible | [ ] |
+
+---
+
+## 🔭 Strategic Roadmap (Long-term)
+
+### S1 — Native Mobile App (iOS + Android)
+| ID | Task | Status |
+|:---|:-----|:-------|
+| S1.1 | Research: Capacitor.js wrapper around existing PWA | [ ] FUTURE |
+| S1.2 | Native push notifications — bypass web push iOS limits | [ ] FUTURE |
+| S1.3 | App Store + Play Store submission | [ ] FUTURE |
+| S1.4 | Native biometric auth (Face ID / fingerprint) | [ ] FUTURE |
+
+> Rationale: Web Push on iOS requires 16.4+ and home screen install. A Capacitor wrapper
+> unlocks true native push, background delivery, and App Store distribution.
+
+### S2 — Antigravity SDK Integration (Major Refactor)
+| ID | Task | Status |
+|:---|:-----|:-------|
+| S2.1 | Research: Does AG expose an official SDK, API, or plugin interface? | [ ] RESEARCH |
+| S2.2 | Research: AG extension/plugin model — can we hook natively? | [ ] RESEARCH |
+| S2.3 | If SDK exists: replace CDP scraping with native SDK calls | [ ] FUTURE |
+| S2.4 | If no SDK: propose to AG team / contribute to AG core | [ ] FUTURE |
+
+> Rationale: CDP bridge is a clever workaround. An official AG SDK would give us stable APIs
+> (not DOM-dependent), native event streams for approvals/artifacts/status, and proper auth.
+> Potential massive leap — research before any implementation.
 
 ---
 
