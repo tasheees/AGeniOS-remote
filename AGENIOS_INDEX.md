@@ -266,6 +266,13 @@ Research artifacts (in repo root):
 - Reference models: WinRAR honor system, Ko-fi/GitHub Sponsors, open-core (Linear, GitLab).
 - Privacy pitch: "AGenIOS cannot steal your data — the bridge runs on your machine. Your code never leaves your computer."
 
+**Distribution & Onboarding Spec (Decided 2026-05-28):**
+- **Control Channel**: Shared Telegram Bot (`@AGenIOSBot` hosted on GCloud) handles lightweight notifications & remote commands. User accounts linked via 6-digit code. Zero user-bot creation needed.
+- **Data Channel**: Local-first direct tunnels. User choice during setup:
+  - **ngrok (Priority/Primary)**: Prompt user for their free ngrok authtoken during setup. Provides the most stable/prioritized link.
+  - **Cloudflare (Secondary/Fallback)**: Quick Tunnel (`trycloudflare.com`) with zero signup/zero config if user has no ngrok token.
+- **PWA Serving**: Local bridge serves PWA files over the tunnel. No central static hosting needed.
+
 | ID | Task | Status |
 |:---|:-----|:-------|
 | S3.1 | Research standalone SDK mode (no AG 2.0) | [x] DONE 2026-05-28 |
@@ -275,7 +282,8 @@ Research artifacts (in repo root):
 | S3.5 | AGenIOS Cloud infrastructure (stable URL, managed tunnel, billing) | [ ] FUTURE |
 | S3.6 | Donation nudge UI (tasteful banner, Ko-fi/GitHub Sponsors integration) | [ ] FUTURE |
 | S3.7 | Native app (Capacitor.js) for push notifications + App Store | [ ] FUTURE |
-| S3.8 | npx agenios zero-install package + interactive first-run wizard | [ ] FUTURE |
+| S3.8 | npx agenios zero-install package + interactive first-run wizard (support ngrok authtoken/Cloudflare fallback + `@AGenIOSBot` link code setup) | [ ] FUTURE |
+
 
 ---
 
