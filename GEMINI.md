@@ -134,6 +134,17 @@ INDEX:      [rows updated]
 ─────────────────────────────────────────────────────────────────────
 ```
 
+**Rule 6 — Batch research into a single script.**
+Never use multiple `python3 -c "..."` one-liners for inspection or research.
+Each one-liner is a separate approval dialog — a Marwan Interface Rule violation.
+Correct pattern:
+1. Write one script file (e.g. `inspect_sdk.py`) with all research logic
+2. Run it once — one approval, all results
+3. Delete it immediately after: `rm inspect_sdk.py`
+4. Commit without the script
+Applies to: SDK inspection, import checks, module dumps, attribute listing, any exploratory code.
+
+
 ---
 
 ## 6. Known Architecture Notes (CDP)

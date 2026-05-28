@@ -266,6 +266,31 @@ Task: M5 above.
 
 ---
 
-*Last updated: 2026-05-28T12:49+03:00 by Impl — S2 · Python SDK Bridge*
+## 🏛️ Proposed Governance Addition (pending Marwan approval)
+
+> **Proposed by:** Studio 23aba18b · 2026-05-28
+> **Trigger:** Impl — S2 used multiple `python3 -c` one-liners for SDK research,
+> each generating a separate approval dialog — a Marwan Interface Rule violation.
+> **Proposed fix:** Add Rule 6 to GEMINI.md §5 Standing Rules.
+
+### Proposed GEMINI.md §5 Rule 6 — Research Scripts
+
+> **Rule 6 — Batch research into a single script.**
+> Never use multiple `python3 -c "..."` one-liners for inspection or research.
+> Each one-liner triggers a separate approval dialog, violating the Marwan Interface Rule.
+> **Correct pattern:**
+> 1. Write one script file (e.g. `inspect_sdk.py`) with all research logic
+> 2. Run it once — one approval, all results
+> 3. Delete it immediately after (`rm inspect_sdk.py`)
+> 4. Commit without the script
+> This applies to: SDK inspection, import checks, module dumps, attribute listing, any exploratory code.
+
+**Status:** `[x] DONE 2026-05-28 — Added to GEMINI.md §5 Rule 6`
+
+---
+
+*Last updated: 2026-05-28T15:00+03:00 by AGenIOS Studio 23aba18b*
+
+*Changes: Correction sent to Impl — S2 (one-liner pattern). Rule 6 proposed for GEMINI.md §5. S2.3-S2.8 marked done by Impl.*
 
 *Changes this session: S2.3-S2.8 complete. ag-bridge.py written (Starlette+uvicorn, SDK hooks, backward-compat WS events). ecosystem.config.js updated with ag-bridge-py. Pending: S2.9 (deprecate ag-bridge.js) and S2.10 (Telegram daemon compat) after live smoke test.*
