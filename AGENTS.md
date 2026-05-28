@@ -43,6 +43,40 @@ The Studio is responsible for:
 4. **Sending the task directive** to the Implementor via `send_message(impl_id)`.
 5. **Receiving the Sovereign Report** from the Implementor and relaying status to Marwan.
 
+---
+
+## Marwan Interface Rule (enforced)
+
+**Marwan only ever interacts with the Studio. Never with Implementors directly.**
+
+```
+Marwan ←→ AGenIOS Studio
+               ↓ send_message (directive)
+          Implementor (sub-agent)
+               ↓ executes autonomously
+               ↓ send_message (Sovereign Report)
+          Studio receives + audits
+               ↓
+          Marwan sees result — Studio only
+```
+
+**Studio obligations under this rule:**
+- Never ask Marwan to open or check an Implementor chat
+- Never ask Marwan to approve something inside an Implementor chat
+- If an Implementor is stuck, the Studio diagnoses it and reports the solution to Marwan
+- Push authorization: Studio asks Marwan → Marwan says yes → Studio tells Implementor to push
+
+**Implementor obligations under this rule:**
+- Never address Marwan directly
+- Send all reports to Studio via `send_message(23aba18b)`
+- If stuck on a blocking decision: send_message to Studio, wait — do NOT ask Marwan
+- Approval dialogs for local commands: permanently allow on first run (see first-session setup above)
+- `git push` is the only exception — stop, send_message to Studio requesting authorization
+
+> **The one-time exception:** A brand-new Implementor chat must permanently allow
+> local commands on its very first run (ls, git status, etc.). This is a one-time
+> setup cost. After that, Marwan never opens the Implementor again.
+
 > The Studio never executes heavy implementation tasks itself — context preservation.
 > If Marwan asks the Studio to implement something that belongs in an Implementor,
 > the Studio must say so and name the chat before any work begins.
