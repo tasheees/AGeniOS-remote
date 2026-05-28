@@ -3420,6 +3420,9 @@ function renderRightPanel(data) {
   if (data.activeTabName === 'Review') {
     styleReviewContent(contentEl);
   }
+
+  // ─── Syntax highlighting for ALL tabs ─────────────────────────────────────
+  styleCodeBlocks(contentEl);
 }
 
 // Style the Review tab content to look like AG's diff viewer
@@ -3502,6 +3505,98 @@ function styleReviewContent(container) {
 
 function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Syntax Highlighting Engine ─────────────────────────────────────────────────────
+const SYN_KEYWORDS = 'abstract|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally|for|from|function|if|implements|import|in|instanceof|interface|let|new|of|package|private|protected|public|return|static|super|switch|this|throw|try|typeof|var|void|while|with|yield';
+const SYN_BUILTINS = 'console|document|window|global|process|require|module|exports|Math|JSON|Array|Object|String|Number|Boolean|Date|RegExp|Error|Map|Set|Promise|setTimeout|setInterval|clearTimeout|clearInterval|fetch|parseInt|parseFloat|undefined|null|true|false|NaN|Infinity';
+
+function highlightCode(code, lang) {
+  // Escape HTML first
+  let html = escapeHtml(code);
+  // Use placeholder tokens to avoid re-matching
+  const tokens = [];
+  function tok(cls, match) {
+    const id = '\x00' + tokens.length + '\x00';
+    tokens.push(`<span class="${cls}">${match}</span>`);
+    return id;
+  }
+
+  // 1. Strings (double, single, backtick)
+  html = html.replace(/(&#39;|&quot;|`)(?:(?!\1).)*?\1/g, m => tok('syn-str', m));
+  
+  // 2. Comments (// and /* */)
+  html = html.replace(/\/\/.*$/gm, m => tok('syn-cmt', m));
+  html = html.replace(/\/\*[\s\S]*?\*\//g, m => tok('syn-cmt', m));
+  // Python/shell comments
+  if (lang === 'py' || lang === 'sh') {
+    html = html.replace(/#.*$/gm, m => tok('syn-cmt', m));
+  }
+
+  // 3. HTML tags (for HTML content)
+  if (lang === 'html' || code.includes('&lt;') || code.match(/<[a-z]/i)) {
+    html = html.replace(/(&lt;\/?)([\w-]+)/g, (m, bracket, tag) => 
+      tok('syn-tag', bracket + tag));
+    html = html.replace(/(\s)([\w-]+)(=)/g, (m, sp, attr, eq) =>
+      sp + tok('syn-attr', attr) + eq);
+  }
+
+  // 4. Numbers
+  html = html.replace(/\b(0x[\da-fA-F]+|0b[01]+|0o[0-7]+|\d+\.?\d*(?:e[+-]?\d+)?)\b/g, m => tok('syn-num', m));
+
+  // 5. Keywords
+  const kwRe = new RegExp(`\\b(${SYN_KEYWORDS})\\b`, 'g');
+  html = html.replace(kwRe, m => tok('syn-kw', m));
+
+  // 6. Built-ins
+  const biRe = new RegExp(`\\b(${SYN_BUILTINS})\\b`, 'g');
+  html = html.replace(biRe, m => tok('syn-bi', m));
+
+  // 7. Function calls (word followed by open paren)
+  html = html.replace(/\b([a-zA-Z_$][\w$]*)\s*(?=\()/g, (m, fn) => tok('syn-fn', fn));
+
+  // 8. Operators
+  html = html.replace(/(=&gt;|===|!==|==|!=|&lt;=|&gt;=|&&|\|\||[+\-*/%]=?|\.\.\.)/g, m => tok('syn-op', m));
+
+  // Restore tokens
+  tokens.forEach((replacement, i) => {
+    html = html.replace('\x00' + i + '\x00', replacement);
+  });
+
+  return html;
+}
+
+// Detect language from file extension or content
+function detectLang(text) {
+  const extMatch = text.match(/\.(ts|tsx|js|jsx|py|html|css|json|md|sh|yml|yaml|go|rs|rb|java|c|cpp|swift|kt|dart)(?:\s|$)/i);
+  if (extMatch) return extMatch[1].toLowerCase();
+  if (text.match(/\bdef\s|import\s.*from|print\(/)) return 'py';
+  if (text.match(/function\s|const\s|=>\s/)) return 'js';
+  if (text.match(/<html|<div|<span|<!DOCTYPE/i)) return 'html';
+  return 'js'; // default
+}
+
+// Post-process all code blocks in a container
+function styleCodeBlocks(container) {
+  // Style <pre><code> blocks
+  container.querySelectorAll('pre code, pre').forEach(el => {
+    if (el.dataset.synDone) return;
+    el.dataset.synDone = '1';
+    const raw = el.textContent || '';
+    if (raw.length < 5 || raw.length > 50000) return;
+    const lang = detectLang(raw);
+    el.innerHTML = highlightCode(raw, lang);
+  });
+
+  // Also find code-like leaf elements (monospace content in the review/artifact tabs)
+  container.querySelectorAll('[data-review-styled]').forEach(el => {
+    const content = el.querySelector('.diff-line-content');
+    if (!content || content.dataset.synDone) return;
+    content.dataset.synDone = '1';
+    const raw = content.textContent || '';
+    if (raw.length < 2) return;
+    content.innerHTML = highlightCode(raw, 'js');
+  });
 }
 
 // ─── Render Actions ─────────────────────────────────────────────────────────────────
