@@ -2776,7 +2776,7 @@ function postProcessDump(panel) {
   panel.querySelectorAll('[data-file-icon]').forEach(el => {
     let icon = el.dataset.fileIcon;
     // FIRST: detect from nearby filename text (nextSibling or parent)
-    const nearbyText = (el.nextSibling?.textContent || '') + ' ' + (el.nextElementSibling?.textContent || '') + ' ' + (el.parentElement?.textContent || '');
+    const nearbyText = (el.nextSibling?.textContent || '') + ' ' + (el.nextElementSibling?.textContent || '');
     const extMatch = nearbyText.match(/\.(ts|tsx|js|jsx|py|html|css|json|md|sh|yml|yaml|toml|rs|go|rb|java|cpp|swift|kt|dart|vue|svelte|c|h)(?![a-z])/i);
     if (extMatch && LANG_SET.has(extMatch[1].toLowerCase())) {
       icon = extMatch[1].toLowerCase();
@@ -3165,7 +3165,7 @@ function renderRightPanel(data) {
   const RP_ALIAS = {markdown:'md','code-orange':'js','code-blue':'ts','code-green':'py','code-red':'html','code':'js'};
   contentEl.querySelectorAll('[data-file-icon]').forEach(el => {
     let icon = el.dataset.fileIcon;
-    const nearbyText = (el.nextSibling?.textContent || '') + ' ' + (el.nextElementSibling?.textContent || '') + ' ' + (el.parentElement?.textContent || '');
+    const nearbyText = (el.nextSibling?.textContent || '') + ' ' + (el.nextElementSibling?.textContent || '');
     const extMatch = nearbyText.match(/\.(ts|tsx|js|jsx|py|html|css|json|md|sh|yml|yaml|toml|rs|go|rb|java|cpp|swift|kt|dart|vue|svelte|c|h)(?![a-z])/i);
     if (extMatch && RP_LANG_SET.has(extMatch[1].toLowerCase())) {
       icon = extMatch[1].toLowerCase();
