@@ -3425,80 +3425,83 @@ function renderRightPanel(data) {
   styleCodeBlocks(contentEl);
 }
 
-// Style the Review tab content to look like AG's diff viewer
+// Style the Review tab content using AG's data-diff-type attributes
 function styleReviewContent(container) {
-  // Walk through all leaf text elements and style diff patterns
-  const allEls = [...container.querySelectorAll('div, span, p')];
-
-  allEls.forEach(el => {
-    if (el.children.length > 0 || el.dataset.reviewStyled) return;
-    const text = (el.textContent || '').trim();
-
-    // Style @@ hunk headers
-    if (text.startsWith('@@') || text.match(/^[-+]\d+\s+more\s+lines/i)) {
-      el.className = 'diff-hunk-header';
-      el.dataset.reviewStyled = '1';
-      return;
+  // AG provides: data-diff-type="0" (added), "1" (removed), "2" (context/unchanged)
+  // Each diff line div contains: <span>[line nums]</span><div><span>code</span></div>
+  
+  container.querySelectorAll('[data-diff-type]').forEach(el => {
+    if (el.dataset.reviewStyled) return;
+    el.dataset.reviewStyled = '1';
+    const diffType = el.dataset.diffType;
+    
+    // Style the diff line container
+    el.style.cssText = 'display:flex;align-items:stretch;font-family:"SF Mono","Menlo","Consolas",monospace;font-size:12px;line-height:1.5;min-height:20px;';
+    
+    if (diffType === '0') {
+      // Added line
+      el.style.background = 'rgba(34,197,94,0.08)';
+    } else if (diffType === '1') {
+      // Removed line
+      el.style.background = 'rgba(239,68,68,0.08)';
     }
-
-    // Style "N files changed" / "+X -Y" change summary lines
-    if (text.match(/^\d+\s+(file|change)/i) || text.match(/^[+-]\d+$/)) {
-      if (text.startsWith('+')) {
-        el.style.color = '#22c55e';
-        el.style.fontWeight = '600';
-        el.style.fontSize = '12px';
-      } else if (text.startsWith('-')) {
-        el.style.color = '#ef4444';
-        el.style.fontWeight = '600';
-        el.style.fontSize = '12px';
+    
+    // Style line numbers (first span children with nested number spans)
+    const lineNumContainer = el.querySelector(':scope > span');
+    if (lineNumContainer) {
+      lineNumContainer.style.cssText = 'display:flex;flex-shrink:0;';
+      lineNumContainer.querySelectorAll('span > span').forEach(numSpan => {
+        numSpan.style.cssText = 'display:inline-block;min-width:40px;padding:0 6px;text-align:right;color:rgba(255,255,255,0.2);user-select:none;font-size:11px;';
+      });
+    }
+    
+    // Style code content (the div > span after line nums)
+    const codeDiv = el.querySelector(':scope > div');
+    if (codeDiv) {
+      codeDiv.style.cssText = 'flex:1;padding:0 8px;white-space:pre;overflow-x:auto;min-width:0;';
+      const codeSpan = codeDiv.querySelector('span');
+      if (codeSpan) {
+        const raw = codeSpan.textContent || '';
+        if (diffType === '0') {
+          codeSpan.style.color = '#86efac';
+        } else if (diffType === '1') {
+          codeSpan.style.color = '#fca5a5';
+        } else {
+          codeSpan.style.color = '#abb2bf';
+        }
+        // Apply syntax highlighting
+        if (raw.length > 1 && raw.length < 500) {
+          codeSpan.innerHTML = highlightCode(raw, 'js');
+        }
       }
-      el.dataset.reviewStyled = '1';
-      return;
-    }
-
-    // Style lines that look like code (start with line numbers or diff markers)
-    // Detect code lines with old/new line numbers
-    const codeMatch = text.match(/^(\d+)\s+(\d+)\s+(.*)$/);
-    if (codeMatch) {
-      const oldNum = codeMatch[1];
-      const newNum = codeMatch[2];
-      const code = codeMatch[3];
-      const isAdded = code.trimStart().startsWith('+') || parseInt(oldNum) === 0;
-      const isRemoved = code.trimStart().startsWith('-') || parseInt(newNum) === 0;
-      el.innerHTML = '';
-      el.className = 'diff-line' + (isAdded ? ' added' : isRemoved ? ' removed' : ' context');
-      el.innerHTML = `<span class="diff-line-num">${oldNum}</span><span class="diff-line-num">${newNum}</span><span class="diff-line-content">${escapeHtml(code)}</span>`;
-      el.style.fontFamily = "'SF Mono','Menlo','Consolas',monospace";
-      el.style.fontSize = '12px';
-      el.style.whiteSpace = 'pre';
-      el.dataset.reviewStyled = '1';
-      return;
-    }
-
-    // Single line number (just a number) — likely a line num display
-    if (/^\d+$/.test(text) && parseInt(text) > 0) {
-      el.style.color = 'rgba(255,255,255,0.2)';
-      el.style.fontSize = '11px';
-      el.style.fontFamily = "'SF Mono','Menlo',monospace";
-      el.dataset.reviewStyled = '1';
-      return;
-    }
-
-    // Code content lines (HTML tags, code-like content)
-    if (text.startsWith('<') || text.startsWith('{') || text.startsWith('}') ||
-        text.match(/^(const|let|var|function|if|else|return|import|export|class|async|await)\s/) ||
-        text.match(/^\s*(\/\/|\/\*|\*)/) || text.match(/\.(js|ts|html|css|py|json)\b/)) {
-      el.style.fontFamily = "'SF Mono','Menlo','Consolas',monospace";
-      el.style.fontSize = '12px';
-      el.style.color = 'var(--text-muted)';
-      el.style.whiteSpace = 'pre-wrap';
-      el.style.lineHeight = '1.5';
-      el.dataset.reviewStyled = '1';
     }
   });
 
-  // Style the container for mono font
-  container.style.fontFamily = "'SF Mono','Menlo','Consolas',monospace";
+  // Style "N files changed" summary cards
+  container.querySelectorAll('div, span').forEach(el => {
+    if (el.children.length > 0 || el.dataset.fcStyled) return;
+    const t = (el.textContent || '').trim();
+    // +N / -N change count badges
+    if (/^[+-]\d+$/.test(t) && t.length < 8) {
+      el.dataset.fcStyled = '1';
+      if (t.startsWith('+')) {
+        el.style.cssText = 'color:#22c55e;font-weight:600;font-size:12px;';
+      } else {
+        el.style.cssText = 'color:#ef4444;font-weight:600;font-size:12px;';
+      }
+    }
+  });
+
+  // Style expand/collapse buttons (divs between diff blocks with no data-diff-type)
+  container.querySelectorAll('div:not([data-diff-type])').forEach(el => {
+    const t = (el.textContent || '').trim();
+    if (/^\+\d+\s+more\s+lines$/i.test(t) || /^···$/i.test(t)) {
+      el.style.cssText = 'padding:4px 12px;background:rgba(99,102,241,0.06);color:rgba(167,139,250,0.7);font-family:"SF Mono","Menlo",monospace;font-size:11px;text-align:center;border-top:1px solid var(--border);cursor:pointer;';
+    }
+  });
+
+  // Set container base styles
+  container.style.fontFamily = '"SF Mono","Menlo","Consolas",monospace';
   container.style.fontSize = '12px';
   container.style.lineHeight = '1.5';
 }
@@ -3586,16 +3589,6 @@ function styleCodeBlocks(container) {
     if (raw.length < 5 || raw.length > 50000) return;
     const lang = detectLang(raw);
     el.innerHTML = highlightCode(raw, lang);
-  });
-
-  // Also find code-like leaf elements (monospace content in the review/artifact tabs)
-  container.querySelectorAll('[data-review-styled]').forEach(el => {
-    const content = el.querySelector('.diff-line-content');
-    if (!content || content.dataset.synDone) return;
-    content.dataset.synDone = '1';
-    const raw = content.textContent || '';
-    if (raw.length < 2) return;
-    content.innerHTML = highlightCode(raw, 'js');
   });
 }
 

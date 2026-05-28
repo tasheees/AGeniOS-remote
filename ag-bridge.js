@@ -1573,6 +1573,23 @@ const httpServer = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET /debug-rp — dump right panel HTML for debugging (temporary)
+  if (url.pathname === '/debug-rp') {
+    try {
+      const rp = await scrapeRightPanel();
+      const c = rp.content || '';
+      const embedded = embedLocalImages(c);
+      const tags = {};
+      embedded.replace(/<(\w+)/g, (m, t) => { tags[t] = (tags[t]||0)+1; });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ tab: rp.activeTabName, len: c.length, embeddedLen: embedded.length, tags, sample: embedded.substring(0, 3000) }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   res.writeHead(404);
   res.end('Not found');
 });
