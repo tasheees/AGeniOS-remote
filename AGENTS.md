@@ -8,20 +8,43 @@ Governance is intentionally lean. One active chat handles everything.
 
 ## Chat Model
 
-**Two chats. Studio is always open. Implementor is task-specific.**
+**Two chats. Studio is always open. Implementor is area-specific.**
 
 | Chat | Name | ID | Role |
 |:-----|:-----|:---|:-----|
 | **AG Studio** | `AGenIOS Studio — no restrictions` | `23aba18b` | Strategy + governance + light implementation. Full authority. No restrictions. |
-| **AG Implementor** | `Impl — [Task] · [Short description]` | TBD per task | Executes one registered task. Heavy isolated work only (e.g. full rewrites). |
+| **AG Implementor** | `Impl — [Area]` | TBD per area | Executes all tasks within one area until context grows heavy, then retire. |
 
-> **When to spin an Implementor:** only when a task is large enough to pollute the
-> Studio's context — estimated >10k tokens of file reads + deep reasoning.
-> Example: S2 (full Python bridge rewrite) → `Impl — S2 · SDK Bridge Migration`.
-> For everything else: Studio does it directly.
+> **When to spin an Implementor:** only for large, multi-task areas that would pollute
+> the Studio's context — e.g. S2 (full Python bridge rewrite, 10+ sub-tasks) or
+> W1-W4 (full PWA refactor). Simple fixes and small tasks: Studio does them directly.
 
-> **Naming convention:** `Impl — [ID] · [Short task description]` matching the exact
-> AGENIOS_INDEX.md row the chat will execute.
+> **Implementor lifespan:** One chat covers all tasks within its area. Retire after
+> 3–4 heavy sessions (context too large). Spin a fresh one with the same area name + v2.
+> Example: `Impl — S2` → retire → `Impl — S2 v2` for remaining tasks.
+
+> **Naming convention:** `Impl — [Area ID]` matching the AGENIOS_INDEX.md section.
+> Examples: `Impl — S2`, `Impl — W1-W4`, `Impl — M4`.
+
+---
+
+## Studio Naming Duty
+
+The Studio is responsible for:
+1. **Reminding Marwan** when a new Implementor is needed (before work begins on a
+   heavy area that shouldn't run in the Studio).
+2. **Recommending the chat name** by reading open `[ ]` rows in `AGENIOS_INDEX.md`
+   and matching the name to the area being executed.
+3. **Finding the new chat's ID** after Marwan creates it:
+   ```bash
+   ls -lt ~/.gemini/antigravity/brain/ | head -5
+   ```
+4. **Sending the task directive** to the Implementor via `send_message(impl_id)`.
+5. **Receiving the Sovereign Report** from the Implementor and relaying status to Marwan.
+
+> The Studio never executes heavy implementation tasks itself — context preservation.
+> If Marwan asks the Studio to implement something that belongs in an Implementor,
+> the Studio must say so and name the chat before any work begins.
 
 
 ---
