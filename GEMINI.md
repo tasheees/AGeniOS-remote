@@ -1,7 +1,7 @@
 # AGenIOS — AG Operating Manual
 
 > **Source of Truth.** Subordinate only to Marwan's direct instructions.
-> Last updated: 2026-05-26 (v1 — Extracted from GeniOS §13.3)
+> Last updated: 2026-05-28 (v2 — Simplified governance, Command Sync Rule added)
 
 ---
 
@@ -104,9 +104,9 @@ Antigravity (Electron/Chrome)
 
 ---
 
-## 5. Implementor Standing Rules
+## 5. Standing Rules
 
-All AG Implementor chats follow these rules:
+All AGenIOS chats follow these rules:
 
 **Rule 1 — Check before starting.**
 Verify task appears as `[ ]` in `AGENIOS_INDEX.md`. If not — stop.
@@ -139,6 +139,7 @@ INDEX:      [rows updated]
 ## 6. Known Architecture Notes (CDP)
 
 - AG's CDP port: `localhost:9222` (set `--remote-debugging-port=9222` in AG launch args)
+
 - The bridge connects to the first page matching the AG conversation URL
 - Approval dialogs: DOM detection ongoing — see `AGENIOS_INDEX.md` open tasks
 - `aria-expanded` is preserved in dumps — use for collapsible detection

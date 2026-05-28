@@ -21,3 +21,10 @@ Thumbs.db
 node_modules/
 .env
 .env.local
+
+# SDK research artifacts (local only — findings captured in AGENIOS_INDEX.md S2)
+sdk_research.md
+*.pdf
+*.zip
+*.html
+sdk_zip_extracted/
