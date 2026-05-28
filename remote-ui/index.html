@@ -102,44 +102,58 @@
       padding-top: max(14px, env(safe-area-inset-top));
     }
 
-    /* ─── Header: left chip = conversations, right chip = artifacts ─── */
+    /* ─── Header: flat typographic layout, no pill bubbles ───── */
     .breadcrumb {
       flex: 1;
       display: flex;
-      align-items: center;
-      gap: 6px;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1px;
       overflow: hidden;
       cursor: pointer;
       user-select: none;
-      padding: 5px 10px 5px 8px;
-      border-radius: 20px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.09);
-      transition: background 0.15s;
+      padding: 3px 6px;
+      border-radius: 6px;
       min-width: 0;
+      transition: background 0.15s;
     }
-    .breadcrumb:active { background: rgba(255,255,255,0.12); }
+    .breadcrumb:active { background: rgba(255,255,255,0.07); }
+    .bc-top-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
     .bc-menu-icon {
-      font-size: 15px;
+      font-size: 13px;
       flex-shrink: 0;
       color: var(--accent-light, #a78bfa);
+      opacity: 0.85;
       line-height: 1;
+    }
+    .bc-project {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.01em;
+    }
+    .bc-bottom-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow: hidden;
     }
     .bc-segment {
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       color: var(--text);
     }
-    .bc-sep {
-      color: var(--text-muted);
-      font-size: 11px;
-      flex-shrink: 0;
-    }
     .bc-chevron {
-      font-size: 9px;
       color: var(--text-muted);
       flex-shrink: 0;
       margin-left: 1px;
@@ -1781,13 +1795,16 @@
   <div id="main-content">
     <!-- Header -->
     <div id="header">
-      <!-- Left chip: tap to open Conversations drawer -->
+      <!-- Left: tap to open Conversations drawer. Two rows: project (top) + chat title (bottom) -->
       <div class="breadcrumb" onclick="openDrawer('left')" title="Open conversations">
-        <span class="bc-menu-icon">&#9776;</span>
-        <span id="project-name" class="bc-segment">AGenIOS</span>
-        <span class="bc-sep">/</span>
-        <span id="chat-name" class="bc-segment"></span>
-        <span class="bc-chevron">▾</span>
+        <div class="bc-top-row">
+          <span class="bc-menu-icon">&#9776;</span>
+          <span id="project-name" class="bc-project">AGenIOS</span>
+        </div>
+        <div class="bc-bottom-row">
+          <span id="chat-name" class="bc-segment">AG</span>
+          <span class="bc-chevron">&#9660;</span>
+        </div>
       </div>
       <div id="header-right">
         <div id="status-dot" class="connecting"></div>
@@ -2052,17 +2069,20 @@ function connect() {
         conversations = msg.data.conversations || [];
         renderActions();
         renderConversations();
-        if (msg.data.chatName) {
-          const el = document.getElementById('chat-name');
-          if (el) el.textContent = msg.data.chatName.replace(/"/g, '').trim();
-
-          const activeConv = conversations.find(c => c.isActive);
-          const projEl = document.getElementById('project-name');
-          if (projEl && activeConv && activeConv.project) {
-            projEl.textContent = activeConv.project;
-          } else if (projEl) {
-            projEl.textContent = 'AGenIOS';
-          }
+        // Update breadcrumb with real names
+        // Prefer the active conversation's text (full title) over document.title fallback
+        const activeConv = conversations.find(c => c.isActive);
+        const chatEl  = document.getElementById('chat-name');
+        const projEl  = document.getElementById('project-name');
+        if (chatEl) {
+          const name = (activeConv && activeConv.text)
+            ? activeConv.text
+            : (msg.data.chatName || 'AG').replace(/"/g, '').trim();
+          chatEl.textContent = name;
+          chatEl.title = name; // full text in tooltip
+        }
+        if (projEl) {
+          projEl.textContent = (activeConv && activeConv.project) ? activeConv.project : 'AGenIOS';
         }
         break;
       }
