@@ -2725,6 +2725,58 @@ function postProcessDump(panel) {
     });
   });
 
+  // ─── Style inline tool action lines (Edited JS ag-bridge.js +13 -5) ───────
+  const TOOL_ACTION_RE = /^(Edited|Created|Viewed|Ran|Analyzed|Deleted|Renamed)\s/i;
+  [...panel.querySelectorAll('div, span')].forEach(el => {
+    const t = (el.textContent || '').trim();
+    if (!TOOL_ACTION_RE.test(t) || t.length > 120 || el.dataset.toolStyled) return;
+    if (el.children.length > 6) return;
+    el.dataset.toolStyled = '1';
+    el.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;flex-wrap:wrap;';
+    
+    // Style the action verb (first text node) — light gray
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+    const firstText = walker.nextNode();
+    if (firstText) {
+      const verb = firstText.textContent.trim();
+      if (TOOL_ACTION_RE.test(verb)) {
+        const verbSpan = document.createElement('span');
+        verbSpan.textContent = verb;
+        verbSpan.style.cssText = 'color:var(--text-muted);font-weight:400;';
+        firstText.parentNode.replaceChild(verbSpan, firstText);
+      }
+    }
+    
+    // Style filename — bold white (find text node after lang-badge)
+    [...el.childNodes].forEach(node => {
+      if (node.nodeType === 3) { // text node
+        const txt = node.textContent.trim();
+        // Match filename patterns like "ag-bridge.js" or "types.ts"
+        const fileMatch = txt.match(/([a-zA-Z0-9_.-]+\.(js|ts|tsx|jsx|py|html|css|md|json|sh|yml|yaml|toml|rs|go|rb|java|c|cpp|h|swift|kt|dart|vue|svelte))/);
+        if (fileMatch) {
+          const parts = txt.split(fileMatch[1]);
+          const frag = document.createDocumentFragment();
+          if (parts[0]) { frag.appendChild(document.createTextNode(parts[0])); }
+          const fnSpan = document.createElement('span');
+          fnSpan.textContent = fileMatch[1];
+          fnSpan.style.cssText = 'color:#fff;font-weight:600;';
+          frag.appendChild(fnSpan);
+          // Style diff counts in remaining text
+          if (parts[1]) {
+            const diffHtml = parts[1]
+              .replace(/(\+\d+)/g, '<span style="color:#22c55e;font-weight:500;">$1</span>')
+              .replace(/(-\d+)/g, '<span style="color:#ef4444;font-weight:500;">$1</span>');
+            const diffSpan = document.createElement('span');
+            diffSpan.style.cssText = 'margin-left:4px;font-size:12px;';
+            diffSpan.innerHTML = diffHtml;
+            frag.appendChild(diffSpan);
+          }
+          node.parentNode.replaceChild(frag, node);
+        }
+      }
+    });
+  });
+
   panel.querySelectorAll('pre').forEach(pre => {
     if (!pre.querySelector('.ag-copy-btn')) {
       const btn = document.createElement('button');
