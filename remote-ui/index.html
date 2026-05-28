@@ -102,22 +102,31 @@
       padding-top: max(14px, env(safe-area-inset-top));
     }
 
-    /* Breadcrumb is the drawer trigger — Linear/Notion style */
+    /* ─── Header: left chip = conversations, right chip = artifacts ─── */
     .breadcrumb {
-      flex: 1;
       display: flex;
       align-items: center;
       gap: 6px;
       overflow: hidden;
       cursor: pointer;
       user-select: none;
-      padding: 4px 8px 4px 2px;
-      border-radius: 8px;
-      transition: background 0.15s;
+      padding: 5px 10px 5px 8px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.09);
+      transition: background 0.15s, border-color 0.15s;
+      flex-shrink: 1;
+      min-width: 0;
     }
-    .breadcrumb:hover, .breadcrumb:active { background: var(--bg-hover); }
+    .breadcrumb:active { background: rgba(255,255,255,0.12); }
+    .bc-menu-icon {
+      font-size: 15px;
+      flex-shrink: 0;
+      color: var(--accent-light, #a78bfa);
+      line-height: 1;
+    }
     .bc-segment {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
@@ -126,25 +135,41 @@
     }
     .bc-sep {
       color: var(--text-muted);
-      font-size: 12px;
+      font-size: 11px;
       flex-shrink: 0;
     }
     .bc-chevron {
-      font-size: 10px;
+      font-size: 9px;
       color: var(--text-muted);
       flex-shrink: 0;
-      margin-left: 2px;
+      margin-left: 1px;
       transition: transform 0.2s;
     }
     body.drawer-left-open .bc-chevron { transform: rotate(180deg); }
 
-    #header-right {
+    /* Artifacts button — right chip mirrors left chip */
+    #artifacts-btn {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 5px;
+      padding: 5px 10px 5px 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 20px;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+      white-space: nowrap;
       flex-shrink: 0;
     }
+    #artifacts-btn:active { background: rgba(255,255,255,0.12); }
+    #artifacts-btn .btn-icon { font-size: 14px; color: var(--accent-light, #a78bfa); }
+    #artifacts-btn .btn-label { color: var(--text); }
 
+    /* ─── Status dot ──────────────────────────────────────── */
     #status-dot {
       width: 10px;
       height: 10px;
@@ -157,32 +182,17 @@
     #status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
     #status-dot.connecting { background: var(--amber); box-shadow: 0 0 6px var(--amber);
                               animation: pulse 1s infinite; }
-
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
-    #artifacts-btn {
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-size: 16px;
-      cursor: pointer;
-      padding: 4px;
-      display: flex;
-      align-items: center;
-      position: relative;
-      transition: color 0.15s;
-    }
-    #artifacts-btn:hover { color: var(--text); }
-
-    /* ─── Left Drawer ────────────────────────────────────────── */
+    /* ─── Left Drawer ──────────────────────────────────────── */
     #left-drawer {
       position: relative;
       width: 0;
       height: 100dvh;
       overflow: hidden;
-      background: rgba(13, 13, 15, 0.55);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
+      background: rgba(28, 12, 64, 0.58);
+      backdrop-filter: blur(32px) saturate(1.4);
+      -webkit-backdrop-filter: blur(32px) saturate(1.4);
       transition: width 0.3s cubic-bezier(0.32, 0.72, 0, 1);
       flex-shrink: 0;
       display: flex;
@@ -191,10 +201,10 @@
     }
     body.drawer-left-open #left-drawer {
       width: 65%;
-      border-right: 1px solid rgba(255,255,255,0.08);
+      border-right: 1px solid rgba(167,139,250,0.15);
     }
 
-    /* ─── Tap-to-close backdrop (nearly invisible, just closes drawer on tap) ── */
+    /* Tap-to-close backdrop */
     #drawer-backdrop {
       display: none;
       position: fixed;
@@ -203,14 +213,10 @@
       z-index: 9;
     }
 
-    /* ─── Mobile: Overlay mode (drawer slides OVER chat) ─────── */
+    /* Mobile: overlay mode */
     @media (max-width: 600px) {
       #left-drawer {
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 200;
-        height: 100dvh;
+        position: fixed; top: 0; left: 0; z-index: 200; height: 100dvh;
       }
       body.drawer-left-open #left-drawer { width: 82%; }
       body.drawer-left-open #main-content { width: 100% !important; overflow: visible !important; }
@@ -283,27 +289,23 @@
       padding-top: 12px;
     }
 
-    /* ─── Right Drawer ────────────────────────────────────────── */
+    /* ─── Right Drawer ──────────────────────────────────────── */
     #right-drawer {
       position: fixed;
-      top: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; right: 0; bottom: 0;
       width: 65%;
       max-width: 320px;
-      background: rgba(13, 13, 15, 0.55);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-      border-left: 1px solid rgba(255,255,255,0.08);
+      background: rgba(28, 12, 64, 0.58);
+      backdrop-filter: blur(32px) saturate(1.4);
+      -webkit-backdrop-filter: blur(32px) saturate(1.4);
+      border-left: 1px solid rgba(167,139,250,0.15);
       transform: translateX(100%);
       transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
       z-index: 190;
       display: flex;
       flex-direction: column;
     }
-    #right-drawer.open {
-      transform: translateX(0);
-    }
+    #right-drawer.open { transform: translateX(0); }
 
     /* ─── Chat Panel ─────────────────────────────────────────── */
     #chat-panel {
@@ -1773,16 +1775,20 @@
   <div id="main-content">
     <!-- Header -->
     <div id="header">
+      <!-- Left chip: tap to open Conversations drawer -->
       <div class="breadcrumb" onclick="openDrawer('left')" title="Open conversations">
+        <span class="bc-menu-icon">&#9776;</span>
         <span id="project-name" class="bc-segment">AGenIOS</span>
         <span class="bc-sep">/</span>
         <span id="chat-name" class="bc-segment"></span>
-        <span class="bc-chevron">˅</span>
+        <span class="bc-chevron">▾</span>
       </div>
       <div id="header-right">
         <div id="status-dot" class="connecting"></div>
-        <button id="artifacts-btn" onclick="openDrawer('right')" title="Artifacts & Actions">
-          📁
+        <!-- Right chip: tap to open Artifacts drawer -->
+        <button id="artifacts-btn" onclick="openDrawer('right')" title="Artifacts &amp; Actions">
+          <span class="btn-icon">&#128193;</span>
+          <span class="btn-label">Artifacts</span>
           <span id="actions-badge" class="tab-badge"></span>
         </button>
         <button onclick="location.reload()" title="Force reload" style="background:none;border:none;color:#6b7280;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1;opacity:0.6;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.6'">↺</button>
@@ -3238,38 +3244,9 @@ function closeSettings() {
 }
 
 // ─── Touch Gesture Handler ────────────────────────────────────────────────
-// Avoids the browser's ~0-20px edge-nav zone by requiring start > 8px from edge.
-// Left drawer: swipe right starting within 60px of left edge.
-// Close drawer: swipe left anywhere when open.
-(function() {
-  const EDGE_ZONE    = 60;   // px — swipe-right must start within this from left
-  const MIN_TRAVEL   = 52;   // px — minimum horizontal travel to trigger
-  const AXIS_RATIO   = 1.4;  // horizontal must exceed vertical by this factor
-  const SAFE_EDGE    = 8;    // px — avoid browser's native edge-nav zone
-  let tx = 0, ty = 0;
-
-  document.addEventListener('touchstart', e => {
-    tx = e.touches[0].clientX;
-    ty = e.touches[0].clientY;
-  }, { passive: true });
-
-  document.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - tx;
-    const dy = e.changedTouches[0].clientY - ty;
-    const adx = Math.abs(dx), ady = Math.abs(dy);
-    if (adx < MIN_TRAVEL || adx / Math.max(ady, 1) < AXIS_RATIO) return;
-
-    const isOpen = document.body.classList.contains('drawer-left-open');
-    // Swipe RIGHT → open left drawer (from left zone, outside browser safe edge)
-    if (dx > 0 && tx >= SAFE_EDGE && tx < EDGE_ZONE && !isOpen) {
-      openDrawer('left');
-    }
-    // Swipe LEFT → close left drawer (anywhere on screen)
-    if (dx < 0 && isOpen) {
-      closeDrawer('left');
-    }
-  }, { passive: true });
-})();
+// DISABLED: caused conflicts with chat scroll and internal PWA horizontal pan.
+// Navigation: tap left chip (≡ AGenIOS/AG) or right chip (📁 Artifacts).
+// Snap drag gesture will be added in W6 with proper live tracking + velocity snap.
 
 // ─── Zoom Mode ──────────────────────────────────────────────────────────────
 let _zoomEnabled = localStorage.getItem('zoomEnabled') === 'true';
