@@ -144,6 +144,13 @@ Correct pattern:
 4. Commit without the script
 Applies to: SDK inspection, import checks, module dumps, attribute listing, any exploratory code.
 
+**Rule 7 — Planning phase isolation.**
+When a task directive says "planning only": read project files freely, but MUST NOT
+write to any project file. The only permitted write is a planning artifact saved to
+`~/.gemini/antigravity/brain/<conversation-id>/`.
+Completion = `send_message` to Studio with the artifact path. Nothing else.
+Violation: writing code, editing source files, or committing during a planning directive.
+Trigger for this rule: Opus ignored "planning only" twice and attempted 3000-line writes.
 
 ---
 

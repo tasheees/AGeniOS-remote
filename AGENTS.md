@@ -29,6 +29,29 @@ Governance is intentionally lean. One active chat handles everything.
 
 ---
 
+## Model Law
+
+The AI model for any chat is fixed at creation. Never change mid-chat.
+If a different model is needed, create a new chat.
+
+| Role | Permitted model | Rationale |
+|:-----|:---------------|:----------|
+| **AG Studio** | Claude Sonnet 4.6 (Thinking) | Governance awareness + orchestration |
+| **Impl — planning** | Claude Opus 4.6 (Thinking) | Deep reasoning for precise specs |
+| **Impl — large file writes** | Gemini 2.5 Flash (High) | Speed + large single-file generation; no stream limit |
+| **Impl — standard** | Claude Sonnet 4.6 (Thinking) | Default for all other implementation |
+
+> **Flash constraints (mandatory when used as Implementor):**
+> - Permitted ONLY for execution-from-spec tasks (implements a precise artifact, no design reasoning)
+> - Must follow GEMINI.md §5 Standing Rules identically to Claude Implementors
+> - Must send Sovereign Report to Studio via `send_message(23aba18b)`
+> - Must NOT make architectural decisions — if spec is ambiguous, stop and send_message to Studio
+> - Must NOT be used for governance-aware tasks (INDEX updates, GEMINI.md edits)
+
+---
+
+
+
 ## Studio Naming Duty
 
 The Studio is responsible for:
