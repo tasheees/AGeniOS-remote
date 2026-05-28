@@ -1795,16 +1795,14 @@
   <div id="main-content">
     <!-- Header -->
     <div id="header">
-      <!-- Left: tap to open Conversations drawer. Two rows: project (top) + chat title (bottom) -->
+      <!-- AG-native breadcrumb: Project / [Chat Title ▾] -->
       <div class="breadcrumb" onclick="openDrawer('left')" title="Open conversations">
-        <div class="bc-top-row">
-          <span class="bc-menu-icon">&#9776;</span>
-          <span id="project-name" class="bc-project">AGenIOS</span>
-        </div>
-        <div class="bc-bottom-row">
+        <span id="project-name" class="bc-project">AGenIOS</span>
+        <span class="bc-sep">/</span>
+        <span class="bc-chat-chip">
           <span id="chat-name" class="bc-segment">AG</span>
-          <span class="bc-chevron">&#9660;</span>
-        </div>
+          <span class="bc-chevron">▾</span>
+        </span>
       </div>
       <div id="header-right">
         <div id="status-dot" class="connecting"></div>
