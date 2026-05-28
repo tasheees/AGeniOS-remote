@@ -147,6 +147,23 @@
 | W6.3 | Animated drawer-tab pulse (draws attention on first load, fades after first tap) | [ ] |
 | W6.4 | Persistent localStorage flag — `ag_onboarded=true` — never show again after first dismiss | [ ] |
 
+### W7 — Sovereign Remote Mode
+> **Depends on:** S2 (Python SDK bridge reading conversations independently)
+
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W7.1 | Settings toggle: Mirror (PWA controls AG nav) vs Sovereign (PWA independent viewer) | [ ] FUTURE |
+| W7.2 | Sovereign mode: PWA reads conversation content via SDK, doesn't navigate AG desktop | [ ] FUTURE (blocked by S2) |
+| W7.3 | Mirror mode toast: "Switching to [chat name]…" confirmation UX | [ ] |
+
+### W8 — Tool Action Card Rendering
+> AG shows "Editing JS ag-bridge.js +0 -0" as styled cards. PWA shows raw text. Fix.
+
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W8.1 | CSS for tool action cards: language icon badge, file name, +N/-N diff counts, spinner | [ ] |
+| W8.2 | Parse AG tool action DOM structure and render as styled cards in PWA | [ ] |
+
 ---
 
 ## 🔭 Strategic Roadmap (Long-term)
