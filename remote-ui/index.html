@@ -3213,6 +3213,22 @@ function renderRightPanel(data) {
       el.setAttribute('data-lang', icon);
     }
   });
+
+  // ─── Path truncation: truncate from LEFT like AG ──────────────────────────
+  // Find text nodes/elements that look like file paths and style them
+  contentEl.querySelectorAll('div, span, p').forEach(el => {
+    const text = (el.textContent || '').trim();
+    // Match absolute paths like /Users/... or ~/...
+    if ((text.startsWith('/') || text.startsWith('~')) && text.indexOf('/') > -1 && el.children.length === 0) {
+      el.style.direction = 'rtl';
+      el.style.textOverflow = 'ellipsis';
+      el.style.overflow = 'hidden';
+      el.style.whiteSpace = 'nowrap';
+      el.style.unicodeBidi = 'plaintext';
+      el.style.color = 'var(--text-muted)';
+      el.style.fontSize = '12px';
+    }
+  });
 }
 
 // ─── Render Actions ─────────────────────────────────────────────────────────────────
