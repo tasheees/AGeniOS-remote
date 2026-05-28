@@ -80,7 +80,7 @@
 | `pending` | **S2.3-S2.8** — `ag-bridge.py` written (Starlette+uvicorn, SDK hooks, backward-compat WS schema). `ecosystem.config.js` updated with `ag-bridge-py` process. Syntax ✅ imports ✅. |
 | `6134005` | **W1-W4 PWA Refactor:** full PWA refactor — drawer nav, violet palette, input redesign, gestures, picker |
 | `pending` | **Bug fix:** Fixed ReferenceError in `ag-bridge.js` (undefined actions variable in /cmd response dismissal). |
-| `pending` | **Bug fix:** Corrected CDP modifier bitmasks (12 for Cmd+Shift+B, 4 for Cmd+B) to fix right/left panel toggling. |
+| `pending` | **Bug fix:** Corrected CDP modifier bitmasks (12 for Cmd+Shift+B, 4 for Cmd+B) and implemented a dual-phase broadcast (200ms & 800ms) to eliminate lag when toggling panels. |
 
 ---
 

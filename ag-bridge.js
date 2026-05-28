@@ -1815,7 +1815,12 @@ wss.on('connection', (ws, req) => {
             modifiers
           });
           log(`[toggle_ag_panel] sent ${isAux ? '⇧⌘B' : '⌘B'} to AG`);
-          await new Promise(r => setTimeout(r, 500));
+          // Dual-phase broadcast:
+          // Phase 1: Fast update (200ms) so PWA layout updates immediately
+          await new Promise(r => setTimeout(r, 200));
+          await broadcastState();
+          // Phase 2: Follow-up (600ms later) to capture dynamically mounted contents (artifacts/subagents)
+          await new Promise(r => setTimeout(r, 600));
           await broadcastState();
         } catch(e) {
           log(`[toggle_ag_panel] error: ${e.message}`);
