@@ -194,26 +194,28 @@
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
     /* ─── Left Drawer ──────────────────────────────────────── */
+    /* Default (desktop ≥769px): flex-layout push mode */
     #left-drawer {
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-      width: 280px;
+      position: relative;
+      width: 0;
+      height: 100dvh;
       overflow: hidden;
-      background: rgba(28, 12, 64, 0.88);
+      background: rgba(28, 12, 64, 0.92);
       backdrop-filter: blur(32px) saturate(1.4);
       -webkit-backdrop-filter: blur(32px) saturate(1.4);
-      transform: translateX(-100%);
-      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      transition: width 0.3s cubic-bezier(0.32, 0.72, 0, 1);
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      z-index: 200;
+      z-index: 10;
+      border-right: 1px solid transparent;
     }
     body.drawer-left-open #left-drawer {
-      transform: translateX(0);
+      width: 280px;
+      border-right: 1px solid rgba(167,139,250,0.15);
     }
 
-    /* Tap-to-close backdrop */
+    /* Tap-to-close backdrop — desktop: hidden, mobile: visible */
     #drawer-backdrop {
       display: none;
       position: fixed;
@@ -221,7 +223,6 @@
       background: rgba(0,0,0,0.3);
       z-index: 199;
     }
-    body.drawer-left-open #drawer-backdrop { display: block; }
 
     /* Resize handle — left drawer right edge */
     .resize-handle-left {
@@ -237,9 +238,22 @@
       background: rgba(167,139,250,0.3);
     }
 
-    /* Mobile */
-    @media (max-width: 600px) {
-      #left-drawer { width: 82%; }
+    /* Mobile (≤768px): overlay mode with transparency */
+    @media (max-width: 768px) {
+      #left-drawer {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        width: 82%;
+        z-index: 200;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+        background: rgba(28, 12, 64, 0.85);
+      }
+      body.drawer-left-open #left-drawer {
+        width: 82%;
+        transform: translateX(0);
+      }
+      body.drawer-left-open #drawer-backdrop { display: block; }
     }
 
     .drawer-header {
@@ -1440,37 +1454,45 @@
       stroke: currentColor;
     }
 
-    /* Language badges (TS, JS, PY etc.) — replaces AG's SVG icons */
+    /* Language badges (TS, JS, PY etc.) — matches AG's SVG icon style */
     .lang-badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 20px;
-      height: 18px;
-      padding: 0 4px;
-      border-radius: 3px;
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0;
+      border-radius: 2px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
       flex-shrink: 0;
-      font-family: 'SF Mono', 'Menlo', monospace;
-      background: #6a737d;
-      color: #fff;
+      font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+      background: transparent;
+      color: #e8a855;
+      vertical-align: middle;
     }
-    .lang-badge[data-lang="ts"], .lang-badge[data-lang="tsx"] { background: #3178c6; }
-    .lang-badge[data-lang="js"] { background: #f7df1e; color: #000; }
-    .lang-badge[data-lang="jsx"] { background: #61dafb; color: #000; }
-    .lang-badge[data-lang="py"] { background: #3776ab; }
-    .lang-badge[data-lang="html"] { background: #e34c26; }
-    .lang-badge[data-lang="css"] { background: #1572b6; }
-    .lang-badge[data-lang="json"] { background: #a8a8a8; color: #000; }
-    .lang-badge[data-lang="md"] { background: #6a737d; }
-    .lang-badge[data-lang="sh"] { background: #89e051; color: #000; }
-    .lang-badge[data-lang="go"] { background: #00add8; }
-    .lang-badge[data-lang="rs"] { background: #dea584; color: #000; }
-    .lang-badge[data-lang="swift"] { background: #f05138; }
-    .lang-badge[data-lang="vue"] { background: #41b883; color: #000; }
-    .lang-badge[data-lang="svelte"] { background: #ff3e00; }
+    .lang-badge[data-lang="ts"], .lang-badge[data-lang="tsx"] { color: #4da0e3; }
+    .lang-badge[data-lang="js"] { color: #e8a855; }
+    .lang-badge[data-lang="jsx"] { color: #61dafb; }
+    .lang-badge[data-lang="py"] { color: #5b9bd5; }
+    .lang-badge[data-lang="html"] { color: #e06c47; }
+    .lang-badge[data-lang="css"] { color: #5b9bd5; }
+    .lang-badge[data-lang="json"] { color: #9da5b0; }
+    .lang-badge[data-lang="md"] { color: #9da5b0; }
+    .lang-badge[data-lang="sh"] { color: #89e051; }
+    .lang-badge[data-lang="go"] { color: #00add8; }
+    .lang-badge[data-lang="rs"] { color: #dea584; }
+    .lang-badge[data-lang="swift"] { color: #f05138; }
+    .lang-badge[data-lang="vue"] { color: #41b883; }
+    .lang-badge[data-lang="svelte"] { color: #ff3e00; }
+    .lang-badge[data-lang="yml"], .lang-badge[data-lang="yaml"] { color: #cb171e; }
+    .lang-badge[data-lang="toml"] { color: #9c4221; }
+    .lang-badge[data-lang="rb"] { color: #cc342d; }
+    .lang-badge[data-lang="java"] { color: #b07219; }
+    .lang-badge[data-lang="c"], .lang-badge[data-lang="cpp"], .lang-badge[data-lang="h"] { color: #6295cb; }
+    .lang-badge[data-lang="kt"] { color: #a97bff; }
+    .lang-badge[data-lang="dart"] { color: #00b4ab; }
     .text-green-500 { color: #22c55e !important; font-weight: 600; }
     .text-red-500 { color: #ef4444 !important; font-weight: 600; }
     .text-secondary-foreground { color: var(--text-muted); }
