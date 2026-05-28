@@ -723,39 +723,32 @@ async function scrapeChatList() {
   try {
     const result = await cdpEvaluate(`
       (function() {
-        // Active chat name from page title
-        const rawTitle = document.title || 'AG';
-        const activeName = rawTitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&').trim();
-
-        // Current conversation ID from URL
-        const currentId = (window.location.pathname.match(/\/c\/([a-f0-9-]+)/) || [])[1] || '';
-
-        // Conversation pills: span[data-testid="convo-pill-{UUID}"]
-        const convLinks = [...document.querySelectorAll('[data-testid^="convo-pill-"]')]
-          .map(el => {
-            const testid = el.getAttribute('data-testid') || '';
-            const id = testid.replace('convo-pill-', '');
-            const text = (el.textContent || '').trim().replace(/\n+/g, ' ').slice(0, 70);
-            const isActive = id === currentId;
-            const container = el.closest('[class]') || el.parentElement;
-            const hasSpinner = !!(container && container.querySelector('svg[class*="spin"], [class*="generating"]'));
-            let project = '';
-            let parent = el.parentElement;
-            for (let i = 0; i < 8 && parent; i++) {
-              const h = parent.querySelector && parent.querySelector('h2, h3');
-              if (h && h !== el) { project = (h.textContent || '').trim().slice(0, 30); break; }
-              parent = parent.parentElement;
+        try {
+          var rawTitle = document.title || 'AG';
+          var activeName = rawTitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&').trim();
+          var currentId = (window.location.pathname.match(/\\/c\\/([a-f0-9-]+)/) || [])[1] || '';
+          var pills = document.querySelectorAll('[data-testid^="convo-pill-"]');
+          var convLinks = [];
+          for (var i = 0; i < pills.length && i < 30; i++) {
+            var el = pills[i];
+            var testid = el.getAttribute('data-testid') || '';
+            var id = testid.replace('convo-pill-', '');
+            var text = (el.textContent || '').trim().replace(/\\n+/g, ' ').slice(0, 70);
+            var isActive = id === currentId;
+            if (id && text) {
+              convLinks.push({ id: id.slice(0, 36), text: text, isActive: isActive, hasSpinner: false, time: '', project: '' });
             }
-            return { id: id.slice(0, 36), text, isActive, hasSpinner, time: '', project };
-          })
-          .filter(c => c.text && c.id)
-          .slice(0, 30);
-
-        return { activeName, currentId: currentId.slice(0, 8), convLinks };
+          }
+          return { activeName: activeName, currentId: currentId.slice(0, 8), convLinks: convLinks };
+        } catch(e) {
+          return { activeName: 'AG-err', currentId: '', convLinks: [], error: e.message };
+        }
       })()
     `);
+    if (result && result.error) log('[scrapeChatList] CDP error:', result.error);
     return result || { activeName: 'AG', currentId: '', convLinks: [] };
-  } catch {
+  } catch(e) {
+    log('[scrapeChatList] JS error:', e.message);
     return { activeName: 'AG', currentId: '', convLinks: [] };
   }
 }
@@ -764,6 +757,7 @@ async function broadcastState() {
   const [chatDump, actions, chatList, cssVars] = await Promise.all([
     scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(),
   ]);
+  log(`[broadcastState] convLinks=${chatList.convLinks?.length || 0} chatName=${chatList.activeName}`);
   _lastActions = actions;  // cache for use in HTTP handlers
   if (actions.length > 0) {
     log('⚠️  actions detected:', JSON.stringify(actions.map(a => ({type:a.type, text:(a.text||'').slice(0,50), opts:a.options?.length}))));
