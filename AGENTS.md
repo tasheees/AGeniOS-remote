@@ -96,6 +96,28 @@ First action: git status (must be clean)
 ─────────────────────────────────────────────────────────────────────
 ```
 
+> **First-session setup (new Implementor chat only):**
+> These local commands are covered under §2a autonomy — they must NEVER
+> require approval again. On your very first run, AG will show approval
+> dialogs for them. When it does, always pick **"Yes, and always allow"**:
+>
+> | Command | Why always allow |
+> |:--------|:----------------|
+> | `git status` | Read-only, always safe |
+> | `git log` | Read-only, always safe |
+> | `git diff` | Read-only, always safe |
+> | `git add` | Local staging only, no remote |
+> | `git commit` | Local only, no remote |
+> | `ls` / `ls -la` | Read-only directory listing |
+> | `cat` / `grep` / `find` | Read-only file operations |
+> | `node --check` | Syntax check only, no execution |
+> | `npm install` | Local only |
+> | `pm2 restart` | Local process management |
+> | `curl http://localhost:*` | Local smoke test only |
+>
+> **Never** permanently allow: `git push`, `firebase deploy`, `gcloud`, or any
+> command that reaches outside the machine. Those require Marwan approval each time.
+
 ---
 
 ## Core Rules (applies to all chats)
