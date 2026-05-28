@@ -126,6 +126,15 @@
 | W4.1 | CDP research: AG right panel DOM (Subagents, Artifacts, Background Tasks) | [x] |
 | W4.2 | Implement full Overview/Artifacts replication if feasible | [ ] |
 
+### W5 — Login Screen Redesign
+> Design via Stitch MCP first (same Obsidian Deep system, same spirit as main PWA).
+> Keep it simple — just beautiful. Single field + submit. No clutter.
+
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W5.1 | Stitch MCP: design login screen matching PWA aesthetic (violet, Geist, frosted card) | [ ] |
+| W5.2 | Implement login screen in index.html — replace current basic overlay auth with redesigned form | [ ] |
+
 ---
 
 ## 🔭 Strategic Roadmap (Long-term)
