@@ -166,36 +166,66 @@
 | S2.9 | Deprecate `ag-bridge.js` + `_dialog_scraper.js` | [x] DONE — ag-bridge.js restored as primary. ag-bridge.py specialized as sidecar. |
 | S2.10 | Update Telegram daemon to consume new Python bridge events | [x] N/A — Telegram daemon stays on ag-bridge.js events. Sidecar architecture finalized. |
 | S2.14 | Port conflict: ag-bridge.js owns :9100 — ag-bridge.py must run on :9101 (or configurable via env) | [ ] NEXT |
+| S2.15a | CDP WebSocket frame interception — intercept `Network.webSocketFrameReceived` on port 9222 to get native `STATE_WAITING_FOR_USER`, token streams, tool call events without SDK | [ ] NEXT (after W1-W4) |
+| S2.15b | `.pb` log file watcher — AG Desktop writes `.pb` payloads to `.system_generated/logs/`; tail + decode via SDK protobuf schemas for read-only token streaming | [ ] FUTURE |
+| S2.15c | `agy` CLI investigation — DeepMind released `agy` CLI with Session Export (terminal→Desktop); assess for headless bridge use cases | [ ] FUTURE |
 | S2.11 | Add `Triggers` support: scheduled check-ins via `every()` | [ ] FUTURE |
 | S2.12 | Add `PreToolCallDecideHook` → Telegram approval for headless approvals | [ ] FUTURE |
 | S2.13 | Swap `LocalAgentConfig` → `RemoteAgentConfig` when GA (zero code change) | [ ] FUTURE |
 
-> **Architecture finalized 2026-05-28:** SDK cannot attach to AG Desktop sessions
-> (different storage: .pb trajectories vs .sqlite). ag-bridge.py runs as Sidecar per
-> Google's documented Sidecar pattern. ag-bridge.js remains sole GUI/CDP bridge permanently.
-> S3 scope confirmed: RemoteAgentConfig will govern cloud sidecar sessions.
+> **Architecture finalized 2026-05-28:** SDK cannot attach to AG Desktop sessions.
+> Incompatibility is fundamental and intentional (Desktop=SQLite for relational UI,
+> SDK=.pb for headless ML workflows). No CLI flag exists to change this. Confirmed by
+> two independent deep research passes (Gemini + secondary AI). See `agenios_bridge_research.html`.
+>
+> **S2.15a is the prize:** CDP `Network.webSocketFrameReceived` on port 9222 intercepts
+> the internal JSON-RPC between AG's Electron UI and its compiled harness binary.
+> This gives native `STATE_WAITING_FOR_USER`, token streams, tool call events —
+> everything the SDK hooks promised, via our existing CDP connection. Zero Python needed.
+>
+> **ag-bridge.py remains valid** as sidecar for headless/cloud sessions (S3 future).
+> ag-bridge.js remains sole GUI/CDP bridge permanently.
 
 **Finalized hybrid architecture:**
 ```
 AG 2.0 Desktop (GUI) ──── CDP :9222 ──── ag-bridge.js (PRIMARY — permanent)
-                                            ├── PWA serve :9100 + WebSocket /ws
-                                            ├── Telegram daemon events
-                                            ├── Approval relay (DOM scraping)
-                                            └── ngrok/cloudflare tunnel
+                            │                ├── PWA serve :9100 + WebSocket /ws
+                            │                ├── Telegram daemon events
+                            │                ├── Approval relay (DOM scraping)
+                            │                └── ngrok/cloudflare tunnel
+                            │
+                            └── S2.15a (future): Network.webSocketFrameReceived
+                                 → native approval events + token streaming
 
-ag-bridge.py (SIDECAR — permanent, SDK headless)
-  ├── OnInteractionHook  → future: phone approval for headless agents
-  ├── PostTurnHook       → future: stream SDK agent responses
+ag-bridge.py (SIDECAR — headless/cloud only)
+  ├── OnInteractionHook  → future: headless agent approvals
+  ├── PostTurnHook       → future: SDK agent response streaming
   ├── PreToolCallDecide  → future: policy gate
-  ├── HTTP :9100 (when standalone) + WebSocket /ws
-  └── Future: swap to RemoteAgentConfig (S3)
+  └── Future: swap to RemoteAgentConfig (S3 cloud)
+
+Research artifacts (in repo root):
+  agenios_bridge_research.html   — CDP shadowing deep research
+  agenios_sdk_knowledge_brief.html — SDK capability mapping
+  sdk_research.md                — SDK install + source inspection
+  Antigravity SDK Deep Dive.pdf  — original deep dive
 ```
 
-### S3 — Standalone Cloud Mode (No AG 2.0 Required)
-> **FUTURE — no budget/resource allocated now. Keep open.**
+### S3 — Distribution, Onboarding & Monetization
+> **FUTURE — strategy decided 2026-05-28. No implementation yet.**
 > SDK supports `LocalAgentConfig(api_key=USER_KEY)` → fully isolated headless agent.
 > Multi-tenant: each user gets their own sandboxed SQLite + WebSocket loop.
 > When `RemoteAgentConfig` lands → scale to cloud with zero code changes.
+>
+> **⚠️ PRIVATE — remove this section before any public open-source release.**
+
+**Monetization strategy (decided 2026-05-28):**
+- Model: value-based, no artificial limits. Product earns donations/subscriptions by being genuinely useful.
+- Local version: free forever, open source (MIT or AGPL). Strongest privacy guarantee: local-first = data never leaves user's machine.
+- Donation nudge: tasteful banner after 30min active use. "☕ Support AGenIOS — $1". Dismiss immediately. Reappears once/day. No blocking.
+- AGenIOS Cloud (premium service): you run the bridge/tunnel infrastructure. Stable URL, zero setup, multi-device. Can't be bypassed — it's a service. Target $1-5/month or one-time donation.
+- Premium add-ons: permanent tunnel URL (ngrok/Cloudflare partnership), push notifications, multi-device sync.
+- Reference models: WinRAR honor system, Ko-fi/GitHub Sponsors, open-core (Linear, GitLab).
+- Privacy pitch: "AGenIOS cannot steal your data — the bridge runs on your machine. Your code never leaves your computer."
 
 | ID | Task | Status |
 |:---|:-----|:-------|
@@ -203,7 +233,10 @@ ag-bridge.py (SIDECAR — permanent, SDK headless)
 | S3.2 | Design multi-tenant architecture | [ ] FUTURE |
 | S3.3 | Implement user-specific `api_key` + isolated agent instances | [ ] FUTURE |
 | S3.4 | Swap `LocalAgentConfig` → `RemoteAgentConfig` (cloud harness) | [ ] FUTURE |
-| S3.5 | Native app (Capacitor.js) for push notifications | [ ] FUTURE |
+| S3.5 | AGenIOS Cloud infrastructure (stable URL, managed tunnel, billing) | [ ] FUTURE |
+| S3.6 | Donation nudge UI (tasteful banner, Ko-fi/GitHub Sponsors integration) | [ ] FUTURE |
+| S3.7 | Native app (Capacitor.js) for push notifications + App Store | [ ] FUTURE |
+| S3.8 | npx agenios zero-install package + interactive first-run wizard | [ ] FUTURE |
 
 ---
 
@@ -299,8 +332,12 @@ Task: M5 above.
 
 ---
 
-*Last updated: 2026-05-28T15:00+03:00 by AGenIOS Studio 23aba18b*
+*Last updated: 2026-05-28T16:23+03:00 by AGenIOS Studio 23aba18b*
 
-*Changes: Correction sent to Impl — S2 (one-liner pattern). Rule 6 proposed for GEMINI.md §5. S2.3-S2.8 marked done by Impl.*
-
-*Changes this session: S2.3-S2.8 complete. ag-bridge.py written (Starlette+uvicorn, SDK hooks, backward-compat WS events). ecosystem.config.js updated with ag-bridge-py. Pending: S2.9 (deprecate ag-bridge.js) and S2.10 (Telegram daemon compat) after live smoke test.*
+*Changes this session (2026-05-28 afternoon):*
+- *SDK/CDP deep research complete — SDK attach to Desktop confirmed impossible (architectural, not a bug). See agenios_bridge_research.html.*
+- *S2.15a/b/c registered: CDP WebSocket frame interception is the path to native hooks.*
+- *agy CLI (DeepMind) discovered — Session Export feature noted for S3.*
+- *S3 expanded: distribution + monetization strategy decided (value-based, no artificial limits, AGenIOS Cloud as premium service).*
+- *W1-W4 refactor spec finalized: Opus 986-line spec + 5 corrections + 4 Stitch screens.*
+- *Flash implementor dispatched for W1-W4 execution. Awaiting Sovereign Report.*
