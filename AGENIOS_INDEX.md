@@ -135,6 +135,18 @@
 | W5.1 | Stitch MCP: design login screen matching PWA aesthetic (violet, Geist, frosted card) | [ ] |
 | W5.2 | Implement login screen in index.html — replace current basic overlay auth with redesigned form | [ ] |
 
+### W6 — Onboarding & Gesture Hints
+> First-run transparent overlay that teaches gesture navigation professionally.
+> Show once, persist dismissal in localStorage. Non-blocking — tap anywhere to skip.
+> Style: frosted glass cards with animated arrows, same dark/violet palette.
+
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W6.1 | Stitch MCP: design onboarding hint overlay (animated gesture arrows, frosted cards, skip button) | [ ] |
+| W6.2 | Implement first-run onboarding: 3-step coach marks — left swipe hint, right swipe hint, tab pill hint | [ ] |
+| W6.3 | Animated drawer-tab pulse (draws attention on first load, fades after first tap) | [ ] |
+| W6.4 | Persistent localStorage flag — `ag_onboarded=true` — never show again after first dismiss | [ ] |
+
 ---
 
 ## 🔭 Strategic Roadmap (Long-term)
