@@ -77,6 +77,7 @@
 | `2a86ede` | Telegram poll: exponential backoff on ECONNRESET (2s→30s max) — fixes bulk-delayed replies |
 | `pending` | **Bug fix:** `↩️ Handled in AG` notification now respects mute/notify state — was bypassing suppression entirely. Force-sends only when action originated from Telegram. |
 | `pending` | SDK Deep Research complete — `google-antigravity==0.1.0` fully mapped. `sdk_research.md` + `Antigravity SDK Deep Dive.pdf` added to repo. Architecture validated for S2. |
+| `pending` | **S2.3-S2.8** — `ag-bridge.py` written (Starlette+uvicorn, SDK hooks, backward-compat WS schema). `ecosystem.config.js` updated with `ag-bridge-py` process. Syntax ✅ imports ✅. |
 
 ---
 
@@ -156,14 +157,14 @@
 |:---|:-----|:-------|
 | S2.1 | Research AG SDK existence and capabilities | [x] DONE |
 | S2.2 | Install `google-antigravity` and inspect source | [x] DONE 2026-05-28 |
-| S2.3 | Write `ag-bridge.py` (FastAPI + WebSocket, Python) | [ ] NEXT |
-| S2.4 | Implement `OnInteractionHook` → PWA approval relay | [ ] NEXT |
-| S2.5 | Implement `PostTurnHook` + token streaming → PWA | [ ] NEXT |
-| S2.6 | Implement `PreToolCallDecideHook` → policy gate | [ ] NEXT |
-| S2.7 | Emit same WS event schema as current `ag-bridge.js` | [ ] NEXT |
-| S2.8 | Update `ecosystem.config.js` → run `ag-bridge.py` via PM2 | [ ] NEXT |
-| S2.9 | Deprecate `ag-bridge.js` + `_dialog_scraper.js` | [ ] NEXT |
-| S2.10 | Update Telegram daemon to consume new Python bridge events | [ ] NEXT |
+| S2.3 | Write `ag-bridge.py` (FastAPI + WebSocket, Python) | [x] DONE 2026-05-28 · Starlette+uvicorn+websockets |
+| S2.4 | Implement `OnInteractionHook` → PWA approval relay | [x] DONE 2026-05-28 · asyncio.Future suspend/resume |
+| S2.5 | Implement `PostTurnHook` + token streaming → PWA | [x] DONE 2026-05-28 · async for token in response |
+| S2.6 | Implement `PreToolCallDecideHook` → policy gate | [x] DONE 2026-05-28 · auto-allow + broadcast |
+| S2.7 | Emit same WS event schema as current `ag-bridge.js` | [x] DONE 2026-05-28 · backward-compat + new SDK events |
+| S2.8 | Update `ecosystem.config.js` → run `ag-bridge.py` via PM2 | [x] DONE 2026-05-28 · ag-bridge-py added, ag-bridge kept for safety |
+| S2.9 | Deprecate `ag-bridge.js` + `_dialog_scraper.js` | [ ] NEXT — after live smoke test |
+| S2.10 | Update Telegram daemon to consume new Python bridge events | [ ] NEXT — HTTP endpoints compatible, /cmd handled |
 | S2.11 | Add `Triggers` support: scheduled check-ins via `every()` | [ ] FUTURE |
 | S2.12 | Add `PreToolCallDecideHook` → Telegram approval for headless approvals | [ ] FUTURE |
 | S2.13 | Swap `LocalAgentConfig` → `RemoteAgentConfig` when GA (zero code change) | [ ] FUTURE |
@@ -265,6 +266,6 @@ Task: M5 above.
 
 ---
 
-*Last updated: 2026-05-28T14:38+03:00 by AGenIOS Studio 23aba18b*
+*Last updated: 2026-05-28T12:49+03:00 by Impl — S2 · Python SDK Bridge*
 
-*Changes this session: SDK Deep Research complete (S2.1-S2.2 done), W1-W4 + S2 approved for execution, mute-bypass bug fixed in `broadcastActionResolved` + background watcher.*
+*Changes this session: S2.3-S2.8 complete. ag-bridge.py written (Starlette+uvicorn, SDK hooks, backward-compat WS events). ecosystem.config.js updated with ag-bridge-py. Pending: S2.9 (deprecate ag-bridge.js) and S2.10 (Telegram daemon compat) after live smoke test.*

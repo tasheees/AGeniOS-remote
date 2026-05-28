@@ -1,5 +1,22 @@
 module.exports = {
   apps: [
+    // ── Python SDK Bridge (S2) ── replaces ag-bridge.js once verified ──────────
+    {
+      name: 'ag-bridge-py',
+      script: 'ag-bridge.py',
+      interpreter: '/opt/homebrew/bin/python3',
+      cwd: '/Users/marwantzenios/projects/AGenIOS',
+      restart_delay: 5000,
+      max_restarts: 10,
+      out_file:   './logs/ag-bridge-py-out.log',
+      error_file: './logs/ag-bridge-py-err.log',
+      // NOTE: ag-bridge-py serves on port 9100 — stop ag-bridge first
+      //       pm2 stop ag-bridge && pm2 start ag-bridge-py
+      autorestart: true,
+    },
+    // ── Node.js CDP Bridge (DEPRECATED after S2 verified) ────────────────────
+    // DEPRECATED — 2026-05-28: kept for parallel safety during S2 validation.
+    // Remove after ag-bridge-py smoke test passes. ag-bridge.js marked deprecated.
     {
       name: 'ag-bridge',
       script: 'ag-bridge.js',
