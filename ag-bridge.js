@@ -818,19 +818,25 @@ async function scrapeRightPanel() {
               e.removeAttribute('style');
               e.removeAttribute('tabindex');
             });
-            // Replace img with file-icon spans for PWA badge rendering
+            // Replace file-icon imgs with badge spans; keep other images for base64 embedding
             clone.querySelectorAll('img').forEach(function(img) {
               var src = img.getAttribute('src') || '';
               var alt = (img.getAttribute('alt') || '').trim();
-              var sp = document.createElement('span');
-              sp.textContent = alt || '';
               var idx = src.lastIndexOf('/files/');
               if (idx >= 0) {
+                // File icon — replace with badge span
+                var sp = document.createElement('span');
+                sp.textContent = alt || '';
                 var after = src.substring(idx + 7);
                 var dot = after.indexOf('.');
                 if (dot > 0) sp.setAttribute('data-file-icon', after.substring(0, dot).toLowerCase());
+                img.replaceWith(sp);
+              } else if (src && !src.startsWith('data:')) {
+                // Real image — mark for server-side base64 embedding
+                img.setAttribute('data-local-src', src);
+                img.removeAttribute('src');
+                img.setAttribute('alt', alt || 'image');
               }
-              img.replaceWith(sp);
             });
             contentHTML = clone.innerHTML.slice(0, 30000);
           }
@@ -862,6 +868,10 @@ async function broadcastState() {
   if (actions.length > 0) {
     log('⚠️  actions detected:', JSON.stringify(actions.map(a => ({type:a.type, text:(a.text||'').slice(0,50), opts:a.options?.length}))));
   }
+  // Embed local images as base64 data URIs in right panel content
+  if (rightPanel.content) {
+    rightPanel.content = embedLocalImages(rightPanel.content);
+  }
   broadcast('state', {
     chatDump,          // full AG HTML dump
     cssVars,           // AG CSS custom properties for theming
@@ -870,6 +880,27 @@ async function broadcastState() {
     chatName: chatList.activeName,
     conversations: chatList.convLinks,
     rightPanel,        // right panel tabs + active content HTML
+  });
+}
+
+// Convert data-local-src attributes to base64 data URIs
+function embedLocalImages(html) {
+  const MIME = { '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg',
+                 '.gif':'image/gif', '.webp':'image/webp', '.svg':'image/svg+xml' };
+  const MAX_SIZE = 2 * 1024 * 1024; // 2MB limit
+  return html.replace(/data-local-src="([^"]+)"/g, (match, filePath) => {
+    try {
+      const resolved = filePath.startsWith('file://') ? filePath.replace('file://', '') : filePath;
+      const stat = fs.statSync(resolved);
+      if (stat.size > MAX_SIZE) return 'alt="[image too large]"';
+      const ext = path.extname(resolved).toLowerCase();
+      const mime = MIME[ext];
+      if (!mime) return 'alt="[unsupported format]"';
+      const data = fs.readFileSync(resolved).toString('base64');
+      return `src="data:${mime};base64,${data}"`;
+    } catch(e) {
+      return 'alt="📄"';
+    }
   });
 }
 
