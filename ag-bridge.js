@@ -268,7 +268,7 @@ function scheduleIdleDigest(lastSnippet) {
     _digestPending = false;
     if (wsClients.size > 0) return;      // PWA open — skip
     if (isTelegramSuppressedInfo()) return;  // Mac active or muted — no digest needed
-    if (actions.length > 0 || _lastActionCount > 0) return; // dialog pending — don't interrupt
+    if ((_lastActions || []).length > 0 || _lastActionCount > 0) return; // dialog pending — don't interrupt
     try {
       const { exec } = require('child_process');
       exec(
