@@ -730,27 +730,23 @@ async function scrapeChatList() {
         // Current conversation ID from URL
         const currentId = (window.location.pathname.match(/\/c\/([a-f0-9-]+)/) || [])[1] || '';
 
-        // Conversation links
-        const convLinks = [...document.querySelectorAll('a[href*="/c/"]')]
-          .map(a => {
-            const href = a.href || '';
-            const id = (href.match(/\/c\/([a-f0-9-]+)/) || [])[1] || '';
-            const text = (a.innerText || a.textContent || '').trim().replace(/\n+/g, ' ').slice(0, 70);
+        // Conversation pills: span[data-testid="convo-pill-{UUID}"]
+        const convLinks = [...document.querySelectorAll('[data-testid^="convo-pill-"]')]
+          .map(el => {
+            const testid = el.getAttribute('data-testid') || '';
+            const id = testid.replace('convo-pill-', '');
+            const text = (el.textContent || '').trim().replace(/\n+/g, ' ').slice(0, 70);
             const isActive = id === currentId;
-            // Detect spinner: SVG with animation, or class with spin/load
-            const hasSpinner = !!a.querySelector('svg[class*="spin"], [class*="spin"], [class*="load"], [class*="generating"]');
-            // Timestamp
-            const timeEl = a.querySelector('time, [class*="time"], [class*="date"], [class*="ago"]');
-            const time = timeEl ? (timeEl.innerText || '').trim().slice(0, 12) : '';
-            // Project/workspace label (walk up to find group heading)
+            const container = el.closest('[class]') || el.parentElement;
+            const hasSpinner = !!(container && container.querySelector('svg[class*="spin"], [class*="generating"]'));
             let project = '';
-            let el = a.parentElement;
-            for (let i = 0; i < 8 && el; i++) {
-              const h = el.querySelector?.('h2, h3, [class*="project"], [class*="group"], [class*="workspace"]');
-              if (h && h !== a) { project = (h.innerText || '').trim().slice(0, 30); break; }
-              el = el.parentElement;
+            let parent = el.parentElement;
+            for (let i = 0; i < 8 && parent; i++) {
+              const h = parent.querySelector && parent.querySelector('h2, h3');
+              if (h && h !== el) { project = (h.textContent || '').trim().slice(0, 30); break; }
+              parent = parent.parentElement;
             }
-            return { id: id.slice(0, 36), text, isActive, hasSpinner, time, project };
+            return { id: id.slice(0, 36), text, isActive, hasSpinner, time: '', project };
           })
           .filter(c => c.text && c.id)
           .slice(0, 30);
