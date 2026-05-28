@@ -2781,8 +2781,10 @@ function renderConversations() {
         archiveBtn.textContent = 'Archive';
         archiveBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          sendCommand('/archive ' + conv.id);
-          toast('📁 Archiving conversation...');
+          if (confirm('Archive this conversation?')) {
+            sendCommand('/archive ' + conv.id);
+            toast('📁 Archiving conversation...');
+          }
           row.style.transform = '';
         });
 
@@ -2861,7 +2863,7 @@ function renderConversations() {
           if (!isSwiping) return;
           isSwiping = false;
           row.style.transition = 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)';
-          if (currentX < -60) {
+          if (currentX < -100) {
             row.style.transform = 'translateX(-120px)';
           } else {
             row.style.transform = '';
