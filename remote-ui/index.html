@@ -1379,6 +1379,22 @@
       flex-shrink: 0;
     }
 
+    /* ─── Right Panel Content ──────────────────────────────────── */
+    #right-panel-content h1 { font-size: 18px; font-weight: 700; margin: 16px 0 8px; color: var(--text); }
+    #right-panel-content h2 { font-size: 15px; font-weight: 600; margin: 14px 0 6px; color: var(--text); }
+    #right-panel-content h3 { font-size: 13px; font-weight: 600; margin: 10px 0 4px; color: var(--text); }
+    #right-panel-content p { margin: 6px 0; color: var(--text); }
+    #right-panel-content ul, #right-panel-content ol { padding-left: 18px; margin: 6px 0; }
+    #right-panel-content li { margin: 3px 0; color: var(--text); }
+    #right-panel-content pre { background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; overflow-x: auto; font-size: 11px; margin: 8px 0; }
+    #right-panel-content code { font-family: 'SF Mono', monospace; font-size: 11px; background: rgba(0,0,0,0.2); padding: 1px 4px; border-radius: 3px; }
+    #right-panel-content pre code { background: none; padding: 0; }
+    #right-panel-content table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+    #right-panel-content th, #right-panel-content td { padding: 4px 8px; border: 1px solid var(--border); text-align: left; }
+    #right-panel-content th { background: rgba(255,255,255,0.05); font-weight: 600; }
+    #right-panel-content blockquote { border-left: 3px solid var(--primary, #7c3aed); padding: 4px 12px; margin: 8px 0; color: var(--text-muted); }
+    #right-panel-content a { color: #818cf8; text-decoration: none; }
+
     /* ─── Settings Modal Bottom Sheet ────────────────────────── */
     #settings-modal {
       position: fixed;
@@ -1881,17 +1897,16 @@
     <span class="drawer-title">Artifacts & Actions</span>
     <button class="drawer-close" onclick="closeDrawer('right')">✕</button>
   </div>
-  <div class="drawer-body">
-    <!-- Actions Section -->
-    <div id="drawer-actions-container" style="padding: 10px 14px;"></div>
+     <!-- Right Panel Content (scraped from AG) -->
+    <div id="right-panel-tabs" style="display:flex;gap:2px;padding:6px 10px;overflow-x:auto;border-bottom:1px solid var(--border);"></div>
+    <div id="right-panel-content" class="drawer-body" style="flex:1;overflow-y:auto;padding:12px 14px;font-size:13px;line-height:1.6;"></div>
     
-    <!-- Artifacts Section -->
-    <div class="drawer-empty" id="artifacts-placeholder" style="padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 14px;">
-      <div style="font-size: 36px; margin-bottom: 8px;">📁</div>
-      <p>Artifacts will appear here</p>
+    <!-- Fallback when panel is closed in AG -->
+    <div id="artifacts-placeholder" style="padding:40px 20px;text-align:center;color:var(--text-muted);font-size:14px;">
+      <div style="font-size:36px;margin-bottom:8px;">📁</div>
+      <p>Open an artifact in AG to see it here</p>
     </div>
   </div>
-</div>
 
 <!-- Settings Bottom Sheet -->
 <div id="settings-modal" onclick="if(event.target===this) closeSettings()">
@@ -2072,6 +2087,7 @@ function connect() {
         conversations = msg.data.conversations || [];
         renderActions();
         renderConversations();
+        if (msg.data.rightPanel) renderRightPanel(msg.data.rightPanel);
         // Update breadcrumb with real names
         // Prefer the active conversation's text (full title) over document.title fallback
         const activeConv = conversations.find(c => c.isActive);
@@ -2893,6 +2909,48 @@ function navigateToConv(convId, rowEl) {
   if (nameEl) nameEl.textContent = '⟳ Switching…';
   ws.send(JSON.stringify({ type: 'navigate_conversation', id: convId }));
   setTimeout(() => closeDrawer('left'), 400);
+}
+// ─── Render Right Panel (Artifacts) ──────────────────────────────────────────
+
+function renderRightPanel(data) {
+  const tabsEl = document.getElementById('right-panel-tabs');
+  const contentEl = document.getElementById('right-panel-content');
+  const placeholder = document.getElementById('artifacts-placeholder');
+  if (!tabsEl || !contentEl || !placeholder) return;
+
+  if (!data.open) {
+    tabsEl.style.display = 'none';
+    contentEl.style.display = 'none';
+    placeholder.style.display = 'block';
+    return;
+  }
+
+  // Show content, hide placeholder
+  tabsEl.style.display = 'flex';
+  contentEl.style.display = 'block';
+  placeholder.style.display = 'none';
+
+  // Render tabs
+  tabsEl.innerHTML = '';
+  for (const tab of data.tabs || []) {
+    const btn = document.createElement('button');
+    btn.textContent = tab.name;
+    btn.style.cssText = `
+      padding: 4px 10px; border-radius: 6px; border: none; font-size: 11px;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      background: ${tab.active ? 'var(--bg-hover)' : 'transparent'};
+      color: ${tab.active ? 'var(--text)' : 'var(--text-muted)'};
+      font-weight: ${tab.active ? '600' : '400'};
+    `;
+    tabsEl.appendChild(btn);
+  }
+
+  // Render content — update title
+  const drawerTitle = document.querySelector('#right-drawer .drawer-title');
+  if (drawerTitle) drawerTitle.textContent = data.activeTabName || 'Artifacts';
+
+  // Set content HTML
+  contentEl.innerHTML = data.content || '<div style="color:var(--text-muted);text-align:center;padding:20px;">No content</div>';
 }
 
 // ─── Render Actions ─────────────────────────────────────────────────────────────────

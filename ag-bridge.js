@@ -776,11 +776,74 @@ async function scrapeChatList() {
   }
 }
 
+
+async function scrapeRightPanel() {
+  try {
+    const result = await cdpEvaluate(`
+      (function() {
+        try {
+          var main = document.querySelector('[style*="flex-grow: 1"]');
+          var rp = main && main.children[0] && main.children[0].children[1];
+          if (!rp || rp.offsetWidth < 10) return { open: false, tabs: [], content: '' };
+          
+          var inner = rp.querySelector('.h-full.w-full.flex.flex-col');
+          if (!inner) return { open: false, tabs: [], content: '' };
+          
+          var tabBar = inner.children[0];
+          var contentArea = inner.children[1];
+          
+          // Scrape tabs
+          var tabs = [];
+          var tabBtns = tabBar ? tabBar.querySelectorAll('[data-tab-id]') : [];
+          for (var i = 0; i < tabBtns.length; i++) {
+            tabs.push({
+              id: tabBtns[i].dataset.tabId || '',
+              name: tabBtns[i].textContent.trim().slice(0, 50),
+              active: tabBtns[i].className.indexOf('bg-secondary') >= 0
+            });
+          }
+          
+          // Scrape active content — strip classes/styles for clean HTML
+          var contentHTML = '';
+          if (contentArea) {
+            var clone = contentArea.cloneNode(true);
+            clone.querySelectorAll('style, script, svg, button').forEach(function(e) { e.remove(); });
+            // Strip class and style attributes
+            clone.querySelectorAll('*').forEach(function(e) {
+              e.removeAttribute('class');
+              e.removeAttribute('style');
+              e.removeAttribute('tabindex');
+            });
+            // Replace img src with placeholder
+            clone.querySelectorAll('img').forEach(function(e) {
+              e.replaceWith(document.createTextNode('[image]'));
+            });
+            contentHTML = clone.innerHTML.slice(0, 30000);
+          }
+          
+          var activeTab = tabs.find(function(t) { return t.active; });
+          return {
+            open: true,
+            tabs: tabs,
+            activeTabName: activeTab ? activeTab.name : '',
+            content: contentHTML
+          };
+        } catch(e) {
+          return { open: false, tabs: [], content: '', error: e.message };
+        }
+      })()
+    `);
+    return result || { open: false, tabs: [], content: '' };
+  } catch(e) {
+    return { open: false, tabs: [], content: '' };
+  }
+}
+
 async function broadcastState() {
-  const [chatDump, actions, chatList, cssVars] = await Promise.all([
-    scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(),
+  const [chatDump, actions, chatList, cssVars, rightPanel] = await Promise.all([
+    scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(), scrapeRightPanel(),
   ]);
-  log(`[broadcastState] convLinks=${chatList.convLinks?.length || 0} chatName=${chatList.activeName}`);
+  log(`[broadcastState] convLinks=${chatList.convLinks?.length || 0} chatName=${chatList.activeName} rightPanel=${rightPanel.open ? rightPanel.activeTabName : 'closed'}`);
   _lastActions = actions;  // cache for use in HTTP handlers
   if (actions.length > 0) {
     log('⚠️  actions detected:', JSON.stringify(actions.map(a => ({type:a.type, text:(a.text||'').slice(0,50), opts:a.options?.length}))));
@@ -792,6 +855,7 @@ async function broadcastState() {
     cdpConnected,
     chatName: chatList.activeName,
     conversations: chatList.convLinks,
+    rightPanel,        // right panel tabs + active content HTML
   });
 }
 
