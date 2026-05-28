@@ -3214,19 +3214,28 @@ function renderRightPanel(data) {
     }
   });
 
-  // ─── Path truncation: truncate from LEFT like AG ──────────────────────────
-  // Find text nodes/elements that look like file paths and style them
+  // ─── Merge file entries: icon + filename + path on ONE line like AG ────────
   contentEl.querySelectorAll('div, span, p').forEach(el => {
     const text = (el.textContent || '').trim();
-    // Match absolute paths like /Users/... or ~/...
     if ((text.startsWith('/') || text.startsWith('~')) && text.indexOf('/') > -1 && el.children.length === 0) {
-      el.style.direction = 'rtl';
-      el.style.textOverflow = 'ellipsis';
-      el.style.overflow = 'hidden';
-      el.style.whiteSpace = 'nowrap';
-      el.style.unicodeBidi = 'plaintext';
-      el.style.color = 'var(--text-muted)';
-      el.style.fontSize = '12px';
+      const prev = el.previousElementSibling;
+      // If previous element contains a lang-badge (file entry), merge into one line
+      if (prev && prev.querySelector && prev.querySelector('.lang-badge')) {
+        // Create a flex wrapper
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display:flex;align-items:baseline;gap:4px;overflow:hidden;white-space:nowrap;';
+        // Move previous element content into wrapper
+        prev.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0;white-space:nowrap;';
+        // Style the path element
+        el.style.cssText = 'direction:rtl;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;unicode-bidi:plaintext;color:var(--text-muted);font-size:12px;flex:1;min-width:0;';
+        // Wrap them together
+        prev.parentNode.insertBefore(wrapper, prev);
+        wrapper.appendChild(prev);
+        wrapper.appendChild(el);
+      } else {
+        // Standalone path — just truncate from left
+        el.style.cssText = 'direction:rtl;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;unicode-bidi:plaintext;color:var(--text-muted);font-size:12px;';
+      }
     }
   });
 }
