@@ -2725,6 +2725,18 @@ function postProcessDump(panel) {
     });
   });
 
+  // ─── Convert data-file-icon spans into language badges ─────────────────────
+  const LANG_SET = new Set('ts,tsx,js,jsx,py,html,css,json,md,sh,yml,yaml,toml,rs,go,rb,java,c,cpp,h,swift,kt,dart,vue,svelte'.split(','));
+  panel.querySelectorAll('[data-file-icon]').forEach(el => {
+    let icon = el.dataset.fileIcon;
+    if (icon.startsWith('code-')) icon = 'js';
+    if (LANG_SET.has(icon)) {
+      el.textContent = icon.toUpperCase();
+      el.className = 'lang-badge';
+      el.setAttribute('data-lang', icon);
+    }
+  });
+
   // ─── Style inline tool action lines (Edited JS ag-bridge.js +13 -5) ───────
   const TOOL_ACTION_RE = /^(Edited|Created|Viewed|Ran|Analyzed|Deleted|Renamed)\s/i;
   [...panel.querySelectorAll('div, span')].forEach(el => {
