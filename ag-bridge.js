@@ -536,13 +536,21 @@ async function scrapeChat() {
          var _langColors = {ts:'#3178c6',tsx:'#3178c6',js:'#f7df1e',jsx:'#61dafb',py:'#3776ab',html:'#e34c26',css:'#1572b6',json:'#a8a8a8',md:'#6a737d',sh:'#89e051',yml:'#cb171e',yaml:'#cb171e',toml:'#9c4221',rs:'#dea584',go:'#00add8',rb:'#cc342d',java:'#b07219',c:'#555555',cpp:'#f34b7d',h:'#555555',swift:'#f05138',kt:'#a97bff',dart:'#00b4ab',vue:'#41b883',svelte:'#ff3e00'};
          var _langTextColors = {js:'#000',json:'#000'};
          Array.from(clone.querySelectorAll('img')).forEach(function(img){
-           var src = (img.getAttribute('src') || '').toLowerCase();
+           var src = (img.getAttribute('src') || '');
            var alt = (img.getAttribute('alt') || '').trim();
-           // Detect language from src path (e.g. /icons/ts.svg) or alt text
+           // Detect language from src path: /icons/files/ts.svg or /files/code-orange.svg
            var lang = '';
-           var extMatch = src.match(/[/]([a-z]+)\.(svg|png)/);
-           if (extMatch && _langColors[extMatch[1]]) lang = extMatch[1];
-           if (!lang && alt.length <= 5) lang = alt.toLowerCase();
+           var srcLower = src.toLowerCase();
+           // Match /files/LANG.svg pattern
+           var fileMatch = srcLower.match(/\/files\/([a-z]+)\.(svg|png)/);
+           if (fileMatch && _langColors[fileMatch[1]]) lang = fileMatch[1];
+           // Match /files/code-LANG.svg pattern (AG uses code-orange for JS etc.)
+           if (!lang) {
+             var codeMatch = srcLower.match(/\/files\/code-([a-z]+)\.(svg|png)/);
+             if (codeMatch) lang = 'js'; // code-orange = generic code icon, treat as JS
+           }
+           // Fallback: try alt text
+           if (!lang && alt.length > 0 && alt.length <= 5) lang = alt.toLowerCase();
            if (lang && _langColors[lang]) {
              var badge = document.createElement('span');
              badge.className = 'lang-badge';
