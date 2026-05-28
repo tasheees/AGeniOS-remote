@@ -23,8 +23,9 @@ Governance is intentionally lean. One active chat handles everything.
 > 3–4 heavy sessions (context too large). Spin a fresh one with the same area name + v2.
 > Example: `Impl — S2` → retire → `Impl — S2 v2` for remaining tasks.
 
-> **Naming convention:** `Impl — [Area ID]` matching the AGENIOS_INDEX.md section.
-> Examples: `Impl — S2`, `Impl — W1-W4`, `Impl — M4`.
+> **Naming convention:** `Impl — [Area ID] · [Short readable description]`
+> Examples: `Impl — S2 · Python SDK Bridge`, `Impl — W1-W4 · PWA Refactor`, `Impl — M4 · Approval Relay`.
+
 
 ---
 
