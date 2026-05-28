@@ -1802,7 +1802,7 @@ wss.on('connection', (ws, req) => {
         // Simulate AG keyboard shortcuts to toggle panels
         // sidebar: ⌘B, auxiliary: ⇧⌘B
         const isAux = msg.panel === 'right';
-        const modifiers = isAux ? 9 : 8; // 8=Meta, 9=Meta+Shift
+        const modifiers = isAux ? 12 : 4; // 4=Meta (⌘B), 12=Meta+Shift (⇧⌘B)
         try {
           await cdpSend('Input.dispatchKeyEvent', {
             type: 'keyDown', key: 'b', code: 'KeyB',
