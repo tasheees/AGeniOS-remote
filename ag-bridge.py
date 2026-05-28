@@ -103,10 +103,18 @@ telegram_force_unmute: bool = False
 tunnel_mode: str = 'cloudflare'  # 'cloudflare' or 'ngrok'
 active_tunnel_provider: Optional[str] = None
 
-# SDK state
+# SDK bridge session state
+# The SDK bridge does NOT attach to existing AG desktop conversations (different
+# storage format: desktop uses SQLite .db, SDK uses .pb trajectory files).
+# Instead it runs as a sidecar: an independent SDK agent session that shares
+# the same localharness binary and app_data_dir.
+# The bridge conversation_id is the SDK session id, NOT the AG desktop chat id.
 sdk_connected: bool = False
-current_conversation_id: Optional[str] = None
+current_conversation_id: Optional[str] = None  # SDK-created session ID
 agent_instance: Optional[Agent] = None
+
+# SDK persistent save dir (shared with AG for trajectory discovery)
+SDK_SAVE_DIR = str(CONVERSATIONS_DIR)
 
 # Approval relay: pending approval asyncio.Future keyed by request id
 _pending_approval: Optional[asyncio.Future] = None
@@ -119,7 +127,7 @@ _last_ag_state: str = 'unknown'
 # ─── Settings persistence ──────────────────────────────────────────────────────
 
 def load_settings():
-    global telegram_muted, telegram_force_unmute, tunnel_mode, auth_tokens
+    global telegram_muted, telegram_force_unmute, tunnel_mode, auth_tokens, current_conversation_id
     try:
         data = json.loads(SETTINGS_FILE.read_text())
         telegram_muted = data.get('telegramMuted', False)
@@ -128,7 +136,9 @@ def load_settings():
         saved_tokens = data.get('authTokens', [])
         for t in saved_tokens:
             auth_tokens.add(t)
-        log.info(f'Settings loaded: muted={telegram_muted}, tokens={len(auth_tokens)}')
+        # Restore SDK conversation ID (persist across bridge restarts)
+        current_conversation_id = data.get('sdkConversationId', None)
+        log.info(f'Settings loaded: muted={telegram_muted}, tokens={len(auth_tokens)}, sdk_conv={current_conversation_id}')
     except Exception:
         pass
 
@@ -140,6 +150,7 @@ def save_settings():
             'telegramForceUnmute': telegram_force_unmute,
             'tunnelMode': tunnel_mode,
             'authTokens': list(auth_tokens),
+            'sdkConversationId': current_conversation_id,  # persist SDK session ID
         }))
     except Exception as e:
         log.warning(f'save_settings error: {e}')
@@ -214,16 +225,19 @@ def schedule_telegram_notify(text: str):
 
 # ─── SDK conversation discovery ───────────────────────────────────────────────
 
-def get_active_conversation_id() -> Optional[str]:
-    """Return the conversation_id of the most recently modified .db file."""
+def get_latest_sdk_conversation_id() -> Optional[str]:
+    """
+    Return the most recently modified SDK conversation ID (.pb files).
+    These are the SDK-format conversations (not AG desktop .db files).
+    """
     try:
-        db_files = list(CONVERSATIONS_DIR.glob('*.db'))
-        if not db_files:
+        pb_files = list(CONVERSATIONS_DIR.glob('*.pb'))
+        if not pb_files:
             return None
-        newest = max(db_files, key=lambda p: p.stat().st_mtime)
-        return newest.stem  # filename without .db extension
+        newest = max(pb_files, key=lambda p: p.stat().st_mtime)
+        return newest.stem  # UUID without extension
     except Exception as e:
-        log.warning(f'Could not find active conversation: {e}')
+        log.warning(f'Could not find SDK conversation: {e}')
         return None
 
 
@@ -769,52 +783,63 @@ app = Starlette(routes=routes)
 
 async def run_sdk_session():
     """
-    Attach to the active AG 2.0 session via SDK and run the hook loop.
-    Auto-detects the newest conversation .db file.
+    Run the SDK bridge as a sidecar session.
+
+    Architecture clarification (2026-05-28):
+    - AG desktop conversations use SQLite (.db files) — SDK CANNOT attach to these
+    - SDK sessions use Protobuf trajectory (.pb files) in the same conversations dir
+    - The bridge runs its OWN SDK conversation (sidecar mode)
+    - If a previous SDK session exists (saved conversation_id), it resumes that
+    - Otherwise a new session is created
+    - The bridge relays state via hooks to PWA in real-time
     """
     global agent_instance, current_conversation_id, sdk_connected
 
+    log.info('Starting SDK sidecar session...')
+    log.info(f'  save_dir: {SDK_SAVE_DIR}')
+    log.info(f'  resume_id: {current_conversation_id or "new session"}')
+
     while True:
-        conv_id = get_active_conversation_id()
-        if not conv_id:
-            log.warning('No active AG conversation found. Retrying in 10s…')
-            await asyncio.sleep(10)
-            continue
-
-        if conv_id != current_conversation_id:
-            log.info(f'Attaching to conversation: {conv_id}')
-            current_conversation_id = conv_id
-
-        config = LocalAgentConfig(
-            conversation_id=conv_id,
-            hooks=[
-                handle_session_start,
-                handle_post_turn,
-                handle_pre_tool_call,
-                handle_post_tool_call,
-                handle_on_interaction,
-            ],
-        )
-
         try:
+            config = LocalAgentConfig(
+                conversation_id=current_conversation_id,  # None = new session; saved ID = resume
+                save_dir=SDK_SAVE_DIR,                    # Store .pb trajectories in conversations dir
+                app_data_dir=str(pathlib.Path.home() / '.gemini' / 'antigravity'),
+                hooks=[
+                    handle_session_start,
+                    handle_post_turn,
+                    handle_pre_tool_call,
+                    handle_post_tool_call,
+                    handle_on_interaction,
+                ],
+            )
+
             async with Agent(config) as agent:
                 agent_instance = agent
+                # Capture the SDK-assigned conversation ID
+                try:
+                    assigned_id = agent.conversation_id
+                    if assigned_id and assigned_id != current_conversation_id:
+                        current_conversation_id = assigned_id
+                        log.info(f'SDK session ID: {current_conversation_id}')
+                        save_settings()  # persist so bridge restarts resume same session
+                except Exception:
+                    pass
+
                 log.info('✅ SDK Agent session active — waiting for turns…')
-                # The agent loop runs via hooks; we just keep the context alive
-                # until the conversation changes or an error occurs.
+                # Keep context alive; hooks drive all activity
                 while True:
-                    await asyncio.sleep(5)
-                    # Check if a newer conversation exists
-                    newest = get_active_conversation_id()
-                    if newest and newest != current_conversation_id:
-                        log.info(f'Conversation changed: {current_conversation_id} → {newest}')
-                        break
+                    await asyncio.sleep(10)
         except Exception as e:
             sdk_connected = False
             agent_instance = None
             log.error(f'SDK session error: {e}. Retrying in 15s…')
-            await asyncio.get_event_loop().create_task(broadcast_status())
+            try:
+                await broadcast_status()
+            except Exception:
+                pass
             await asyncio.sleep(15)
+
 
 
 # ─── Main ──────────────────────────────────────────────────────────────────────
