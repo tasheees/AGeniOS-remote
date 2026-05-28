@@ -1449,7 +1449,7 @@ const httpServer = http.createServer(async (req, res) => {
     } else {
       // Dismiss locally
       _lastActions = _lastActions.filter(a => a.occurrenceIndex !== Number(idx));
-      broadcast('actions', { actions });
+      broadcast('actions', { actions: _lastActions });
       if (!isTelegramSuppressed()) telegramNotifyInline(`❌ *Dismissed* — AG skips this action`, []);
       res.writeHead(200); res.end(JSON.stringify({ ok: true }));
     }
