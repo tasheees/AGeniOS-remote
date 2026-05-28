@@ -46,8 +46,36 @@ The Studio is responsible for:
 > If Marwan asks the Studio to implement something that belongs in an Implementor,
 > the Studio must say so and name the chat before any work begins.
 
+---
+
+## Studio Pre-Task Routing Check (mandatory)
+
+**Before starting ANY task**, the Studio must answer these 3 questions out loud:
+
+```
+1. Will this require reading >3 files?
+2. Will this require >50 lines of code changes across multiple files?
+3. Is this part of a registered area (S2, W1-W4) with 5+ sub-tasks remaining?
+```
+
+**If YES to any one → stop. Do not start. Say:**
+> "This belongs in `Impl — [Area]`. Create that chat first."
+
+**If NO to all three → proceed directly in the Studio.**
+
+**Hard triggers (always Implementor, no assessment needed):**
+- Any task tagged S2.x (Python bridge rewrite)
+- Any task tagged W1.x–W4.x (PWA refactor)
+- Any task requiring installing new dependencies + multi-file refactor
+
+> This check is NOT optional. A Studio that skips it and dives into heavy work
+> is burning context it cannot recover. By the time context is heavy, it is too
+> late — the Studio cannot spawn its own successor.
+> **The check costs 10 seconds. A bloated Studio costs a full chat restart.**
 
 ---
+
+
 
 ## Session Start
 
