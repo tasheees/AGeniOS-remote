@@ -102,61 +102,56 @@
       padding-top: max(14px, env(safe-area-inset-top));
     }
 
-    /* ─── Header: flat typographic layout, no pill bubbles ───── */
+    /* ─── Header: AG-native single-row breadcrumb ───────────── */
     .breadcrumb {
       flex: 1;
       display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 1px;
+      align-items: center;
+      gap: 0;
       overflow: hidden;
       cursor: pointer;
       user-select: none;
-      padding: 3px 6px;
-      border-radius: 6px;
       min-width: 0;
-      transition: background 0.15s;
+      padding: 2px 0;
     }
-    .breadcrumb:active { background: rgba(255,255,255,0.07); }
-    .bc-top-row {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .bc-menu-icon {
-      font-size: 13px;
-      flex-shrink: 0;
-      color: var(--accent-light, #a78bfa);
-      opacity: 0.85;
-      line-height: 1;
-    }
+    .breadcrumb:active .bc-chat-chip { background: rgba(255,255,255,0.12); }
     .bc-project {
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 500;
       color: var(--text-muted);
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      letter-spacing: 0.01em;
+      flex-shrink: 0;
     }
-    .bc-bottom-row {
+    .bc-sep {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin: 0 7px;
+      flex-shrink: 0;
+    }
+    .bc-chat-chip {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
       overflow: hidden;
+      min-width: 0;
+      transition: background 0.15s;
     }
     .bc-segment {
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       color: var(--text);
     }
     .bc-chevron {
+      font-size: 9px;
       color: var(--text-muted);
       flex-shrink: 0;
-      margin-left: 1px;
       transition: transform 0.2s;
     }
     body.drawer-left-open .bc-chevron { transform: rotate(180deg); }
