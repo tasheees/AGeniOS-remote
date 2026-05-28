@@ -1749,6 +1749,31 @@ wss.on('connection', (ws, req) => {
           await broadcastState();
         }
         break;
+
+      case 'toggle_ag_panel': {
+        // Simulate AG keyboard shortcuts to toggle panels
+        // sidebar: ⌘B, auxiliary: ⇧⌘B
+        const isAux = msg.panel === 'right';
+        const modifiers = isAux ? 9 : 8; // 8=Meta, 9=Meta+Shift
+        try {
+          await cdpSend('Input.dispatchKeyEvent', {
+            type: 'keyDown', key: 'b', code: 'KeyB',
+            windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66,
+            modifiers
+          });
+          await cdpSend('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'b', code: 'KeyB',
+            windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66,
+            modifiers
+          });
+          log(`[toggle_ag_panel] sent ${isAux ? '⇧⌘B' : '⌘B'} to AG`);
+          await new Promise(r => setTimeout(r, 500));
+          await broadcastState();
+        } catch(e) {
+          log(`[toggle_ag_panel] error: ${e.message}`);
+        }
+        break;
+      }
     }
   });
 

@@ -178,6 +178,25 @@
       gap: 8px;
       flex-shrink: 0;
     }
+
+    /* Toggle panel buttons — AG-style sidebar/auxiliary toggle */
+    .panel-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+      font-size: 15px;
+    }
+    .panel-toggle:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+    .panel-toggle:active { background: rgba(255,255,255,0.14); }
     /* ─── Status dot ──────────────────────────────────────── */
     #status-dot {
       width: 10px;
@@ -1469,30 +1488,31 @@
       flex-shrink: 0;
       font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
       background: transparent;
-      color: #e8a855;
+      color: #e8a855 !important;
       vertical-align: middle;
+      margin-right: 4px;
     }
-    .lang-badge[data-lang="ts"], .lang-badge[data-lang="tsx"] { color: #4da0e3; }
-    .lang-badge[data-lang="js"] { color: #e8a855; }
-    .lang-badge[data-lang="jsx"] { color: #61dafb; }
-    .lang-badge[data-lang="py"] { color: #5b9bd5; }
-    .lang-badge[data-lang="html"] { color: #e8734a; }
-    .lang-badge[data-lang="css"] { color: #5b9bd5; }
-    .lang-badge[data-lang="json"] { color: #9da5b0; }
-    .lang-badge[data-lang="md"] { color: #6cb6ff; }
-    .lang-badge[data-lang="sh"] { color: #89e051; }
-    .lang-badge[data-lang="go"] { color: #00add8; }
-    .lang-badge[data-lang="rs"] { color: #dea584; }
-    .lang-badge[data-lang="swift"] { color: #f05138; }
-    .lang-badge[data-lang="vue"] { color: #41b883; }
-    .lang-badge[data-lang="svelte"] { color: #ff3e00; }
-    .lang-badge[data-lang="yml"], .lang-badge[data-lang="yaml"] { color: #cb171e; }
-    .lang-badge[data-lang="toml"] { color: #9c4221; }
-    .lang-badge[data-lang="rb"] { color: #cc342d; }
-    .lang-badge[data-lang="java"] { color: #b07219; }
-    .lang-badge[data-lang="c"], .lang-badge[data-lang="cpp"], .lang-badge[data-lang="h"] { color: #6295cb; }
-    .lang-badge[data-lang="kt"] { color: #a97bff; }
-    .lang-badge[data-lang="dart"] { color: #00b4ab; }
+    .lang-badge[data-lang="ts"], .lang-badge[data-lang="tsx"] { color: #4da0e3 !important; }
+    .lang-badge[data-lang="js"] { color: #e8a855 !important; }
+    .lang-badge[data-lang="jsx"] { color: #61dafb !important; }
+    .lang-badge[data-lang="py"] { color: #5b9bd5 !important; }
+    .lang-badge[data-lang="html"] { color: #e8734a !important; }
+    .lang-badge[data-lang="css"] { color: #5b9bd5 !important; }
+    .lang-badge[data-lang="json"] { color: #9da5b0 !important; }
+    .lang-badge[data-lang="md"] { color: #6cb6ff !important; }
+    .lang-badge[data-lang="sh"] { color: #89e051 !important; }
+    .lang-badge[data-lang="go"] { color: #00add8 !important; }
+    .lang-badge[data-lang="rs"] { color: #dea584 !important; }
+    .lang-badge[data-lang="swift"] { color: #f05138 !important; }
+    .lang-badge[data-lang="vue"] { color: #41b883 !important; }
+    .lang-badge[data-lang="svelte"] { color: #ff3e00 !important; }
+    .lang-badge[data-lang="yml"], .lang-badge[data-lang="yaml"] { color: #cb171e !important; }
+    .lang-badge[data-lang="toml"] { color: #9c4221 !important; }
+    .lang-badge[data-lang="rb"] { color: #cc342d !important; }
+    .lang-badge[data-lang="java"] { color: #b07219 !important; }
+    .lang-badge[data-lang="c"], .lang-badge[data-lang="cpp"], .lang-badge[data-lang="h"] { color: #6295cb !important; }
+    .lang-badge[data-lang="kt"] { color: #a97bff !important; }
+    .lang-badge[data-lang="dart"] { color: #00b4ab !important; }
     .text-green-500 { color: #22c55e !important; font-weight: 600; }
     .text-red-500 { color: #ef4444 !important; font-weight: 600; }
     .text-secondary-foreground { color: var(--text-muted); }
@@ -1940,6 +1960,13 @@
   <div id="main-content">
     <!-- Header -->
     <div id="header">
+      <!-- Toggle Sidebar — left side -->
+      <button class="panel-toggle" id="toggle-sidebar-btn" onclick="toggleAGPanel('left')" title="Toggle Sidebar ⌘B">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/>
+          <line x1="5.5" y1="2.5" x2="5.5" y2="13.5"/>
+        </svg>
+      </button>
       <!-- AG-native breadcrumb: Project / [Chat Title ▾] -->
       <div class="breadcrumb" onclick="openDrawer('left')" title="Open conversations">
         <span id="project-name" class="bc-project">AGenIOS</span>
@@ -1956,6 +1983,13 @@
           <span class="btn-icon">&#128193;</span>
           <span class="btn-label">Artifacts</span>
           <span id="actions-badge" class="tab-badge"></span>
+        </button>
+        <!-- Toggle Auxiliary Pane — right side -->
+        <button class="panel-toggle" id="toggle-aux-btn" onclick="toggleAGPanel('right')" title="Toggle Auxiliary Pane ⇧⌘B">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+            <rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/>
+            <line x1="10.5" y1="2.5" x2="10.5" y2="13.5"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -3534,6 +3568,23 @@ function openDrawer(side) {
   if (side === 'right') {
     document.getElementById('right-drawer').classList.add('open');
     renderActions();
+  }
+}
+
+// Toggle AG panels via CDP keyboard shortcuts + open/close local drawer
+function toggleAGPanel(side) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'toggle_ag_panel', panel: side }));
+  }
+  // Also toggle local drawer
+  if (side === 'left') {
+    document.body.classList.toggle('drawer-left-open');
+    if (document.body.classList.contains('drawer-left-open')) renderConversations();
+  }
+  if (side === 'right') {
+    const rd = document.getElementById('right-drawer');
+    rd.classList.toggle('open');
+    if (rd.classList.contains('open')) renderActions();
   }
 }
 
