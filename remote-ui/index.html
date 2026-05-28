@@ -1410,11 +1410,7 @@
       gap: 8px;
       transition: background 0.15s;
     }
-    .files-changed-header::before {
-      content: '📄';
-      font-size: 15px;
-      flex-shrink: 0;
-    }
+    .files-changed-header::before { content: none; }
     .files-changed-header:active { background: rgba(255,255,255,0.08); }
     .files-changed-header svg {
       width: 14px; height: 14px;
@@ -1422,6 +1418,38 @@
       color: var(--text-muted);
       stroke: currentColor;
     }
+
+    /* Language badges (TS, JS, PY etc.) — replaces AG's SVG icons */
+    .lang-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 18px;
+      padding: 0 4px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      background: #6a737d;
+      color: #fff;
+    }
+    .lang-badge[data-lang="ts"], .lang-badge[data-lang="tsx"] { background: #3178c6; }
+    .lang-badge[data-lang="js"] { background: #f7df1e; color: #000; }
+    .lang-badge[data-lang="jsx"] { background: #61dafb; color: #000; }
+    .lang-badge[data-lang="py"] { background: #3776ab; }
+    .lang-badge[data-lang="html"] { background: #e34c26; }
+    .lang-badge[data-lang="css"] { background: #1572b6; }
+    .lang-badge[data-lang="json"] { background: #a8a8a8; color: #000; }
+    .lang-badge[data-lang="md"] { background: #6a737d; }
+    .lang-badge[data-lang="sh"] { background: #89e051; color: #000; }
+    .lang-badge[data-lang="go"] { background: #00add8; }
+    .lang-badge[data-lang="rs"] { background: #dea584; color: #000; }
+    .lang-badge[data-lang="swift"] { background: #f05138; }
+    .lang-badge[data-lang="vue"] { background: #41b883; color: #000; }
+    .lang-badge[data-lang="svelte"] { background: #ff3e00; }
     .text-green-500 { color: #22c55e !important; font-weight: 600; }
     .text-red-500 { color: #ef4444 !important; font-weight: 600; }
     .text-secondary-foreground { color: var(--text-muted); }
