@@ -163,22 +163,31 @@
 | S2.6 | Implement `PreToolCallDecideHook` → policy gate | [x] DONE 2026-05-28 · auto-allow + broadcast |
 | S2.7 | Emit same WS event schema as current `ag-bridge.js` | [x] DONE 2026-05-28 · backward-compat + new SDK events |
 | S2.8 | Update `ecosystem.config.js` → run `ag-bridge.py` via PM2 | [x] DONE 2026-05-28 · ag-bridge-py added, ag-bridge kept for safety |
-| S2.9 | Deprecate `ag-bridge.js` + `_dialog_scraper.js` | [ ] NEXT — after live smoke test |
-| S2.10 | Update Telegram daemon to consume new Python bridge events | [ ] NEXT — HTTP endpoints compatible, /cmd handled |
+| S2.9 | Deprecate `ag-bridge.js` + `_dialog_scraper.js` | [x] DONE — ag-bridge.js restored as primary. ag-bridge.py specialized as sidecar. |
+| S2.10 | Update Telegram daemon to consume new Python bridge events | [x] N/A — Telegram daemon stays on ag-bridge.js events. Sidecar architecture finalized. |
 | S2.11 | Add `Triggers` support: scheduled check-ins via `every()` | [ ] FUTURE |
 | S2.12 | Add `PreToolCallDecideHook` → Telegram approval for headless approvals | [ ] FUTURE |
 | S2.13 | Swap `LocalAgentConfig` → `RemoteAgentConfig` when GA (zero code change) | [ ] FUTURE |
 
-**New architecture (after S2):**
+> **Architecture finalized 2026-05-28:** SDK cannot attach to AG Desktop sessions
+> (different storage: .pb trajectories vs .sqlite). ag-bridge.py runs as Sidecar per
+> Google's documented Sidecar pattern. ag-bridge.js remains sole GUI/CDP bridge permanently.
+> S3 scope confirmed: RemoteAgentConfig will govern cloud sidecar sessions.
+
+**Finalized hybrid architecture:**
 ```
-AG 2.0 Desktop ──── same SQLite DB ──── ag-bridge.py (Python SDK)
-                   ~/.gemini/antigravity/    ├── OnInteractionHook  → PWA approval WS
-                   conversations/<id>.db     ├── PostTurnHook       → content streaming
-                                             ├── PreToolCallDecide  → policy gate
-                                             ├── PostToolCallHook   → tool log
-                                             ├── FastAPI HTTP :9100 → serves PWA
-                                             ├── WebSocket /ws      → real-time events
-                                             └── ngrok tunnel       → mobile
+AG 2.0 Desktop (GUI) ──── CDP :9222 ──── ag-bridge.js (PRIMARY — permanent)
+                                            ├── PWA serve :9100 + WebSocket /ws
+                                            ├── Telegram daemon events
+                                            ├── Approval relay (DOM scraping)
+                                            └── ngrok/cloudflare tunnel
+
+ag-bridge.py (SIDECAR — permanent, SDK headless)
+  ├── OnInteractionHook  → future: phone approval for headless agents
+  ├── PostTurnHook       → future: stream SDK agent responses
+  ├── PreToolCallDecide  → future: policy gate
+  ├── HTTP :9100 (when standalone) + WebSocket /ws
+  └── Future: swap to RemoteAgentConfig (S3)
 ```
 
 ### S3 — Standalone Cloud Mode (No AG 2.0 Required)
