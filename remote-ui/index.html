@@ -2775,19 +2775,18 @@ function postProcessDump(panel) {
   const ICON_ALIAS = {markdown:'md','code-orange':'js','code-blue':'ts','code-green':'py','code-red':'html','code':'js'};
   panel.querySelectorAll('[data-file-icon]').forEach(el => {
     let icon = el.dataset.fileIcon;
-    // Resolve aliases (AG icon names → standard extensions)
-    if (ICON_ALIAS[icon]) icon = ICON_ALIAS[icon];
-    if (icon.startsWith('code-')) icon = 'js';
-    // If still unknown, try to detect from sibling filename text
-    if (!LANG_SET.has(icon)) {
-      const parentText = (el.parentElement?.textContent || '').trim();
-      const extMatch = parentText.match(/\.([a-z]{1,6})(?:\s|$)/i);
-      if (extMatch && LANG_SET.has(extMatch[1].toLowerCase())) {
-        icon = extMatch[1].toLowerCase();
-      }
+    // FIRST: try to detect from sibling filename text (most reliable)
+    const parentText = (el.parentElement?.textContent || '').trim();
+    const extMatch = parentText.match(/\.([a-z]{1,6})(?:\s|$)/i);
+    if (extMatch && LANG_SET.has(extMatch[1].toLowerCase())) {
+      icon = extMatch[1].toLowerCase();
+    } else {
+      // FALLBACK: resolve AG icon aliases
+      if (ICON_ALIAS[icon]) icon = ICON_ALIAS[icon];
+      if (icon.startsWith('code-')) icon = 'js';
     }
     if (LANG_SET.has(icon)) {
-      el.textContent = icon === 'md' ? 'M\u2193' : icon === 'html' ? '\u003C/\u003E' : icon.toUpperCase();
+      el.textContent = icon === 'md' ? 'M\u2193' : icon === 'html' ? '</>' : icon.toUpperCase();
       el.className = 'lang-badge';
       el.setAttribute('data-lang', icon);
     }
@@ -3166,17 +3165,16 @@ function renderRightPanel(data) {
   const RP_ALIAS = {markdown:'md','code-orange':'js','code-blue':'ts','code-green':'py','code-red':'html','code':'js'};
   contentEl.querySelectorAll('[data-file-icon]').forEach(el => {
     let icon = el.dataset.fileIcon;
-    if (RP_ALIAS[icon]) icon = RP_ALIAS[icon];
-    if (icon.startsWith('code-')) icon = 'js';
-    if (!RP_LANG_SET.has(icon)) {
-      const parentText = (el.parentElement?.textContent || '').trim();
-      const extMatch = parentText.match(/\.([a-z]{1,6})(?:\s|$)/i);
-      if (extMatch && RP_LANG_SET.has(extMatch[1].toLowerCase())) {
-        icon = extMatch[1].toLowerCase();
-      }
+    const parentText = (el.parentElement?.textContent || '').trim();
+    const extMatch = parentText.match(/\.([a-z]{1,6})(?:\s|$)/i);
+    if (extMatch && RP_LANG_SET.has(extMatch[1].toLowerCase())) {
+      icon = extMatch[1].toLowerCase();
+    } else {
+      if (RP_ALIAS[icon]) icon = RP_ALIAS[icon];
+      if (icon.startsWith('code-')) icon = 'js';
     }
     if (RP_LANG_SET.has(icon)) {
-      el.textContent = icon === 'md' ? 'M\u2193' : icon === 'html' ? '\u003C/\u003E' : icon.toUpperCase();
+      el.textContent = icon === 'md' ? 'M\u2193' : icon === 'html' ? '</>' : icon.toUpperCase();
       el.className = 'lang-badge';
       el.setAttribute('data-lang', icon);
     }
