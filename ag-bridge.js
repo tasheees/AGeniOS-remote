@@ -532,41 +532,23 @@ async function scrapeChat() {
           kept.forEach(function(c){ e.classList.add(c); });
         });
         Array.from(clone.querySelectorAll('[style]')).forEach(function(e){ e.removeAttribute('style'); });
-         // Replace images with language badges or emoji — img.src paths are local, never load in PWA
-         var _langColors = {ts:'#3178c6',tsx:'#3178c6',js:'#f7df1e',jsx:'#61dafb',py:'#3776ab',html:'#e34c26',css:'#1572b6',json:'#a8a8a8',md:'#6a737d',sh:'#89e051',yml:'#cb171e',yaml:'#cb171e',toml:'#9c4221',rs:'#dea584',go:'#00add8',rb:'#cc342d',java:'#b07219',c:'#555555',cpp:'#f34b7d',h:'#555555',swift:'#f05138',kt:'#a97bff',dart:'#00b4ab',vue:'#41b883',svelte:'#ff3e00'};
-         var _langTextColors = {js:'#000',json:'#000'};
          Array.from(clone.querySelectorAll('img')).forEach(function(img){
-           var src = (img.getAttribute('src') || '');
+           var src = img.getAttribute('src') || '';
            var alt = (img.getAttribute('alt') || '').trim();
-           // Detect language from src path: /icons/files/ts.svg or /files/code-orange.svg
-           var lang = '';
-           var srcLower = src.toLowerCase();
-           // Match /files/LANG.svg pattern
-           var fileMatch = srcLower.match(/\/files\/([a-z]+)\.(svg|png)/);
-           if (fileMatch && _langColors[fileMatch[1]]) lang = fileMatch[1];
-           // Match /files/code-LANG.svg pattern (AG uses code-orange for JS etc.)
-           if (!lang) {
-             var codeMatch = srcLower.match(/\/files\/code-([a-z]+)\.(svg|png)/);
-             if (codeMatch) lang = 'js'; // code-orange = generic code icon, treat as JS
+           var sp = document.createElement('span');
+           sp.textContent = alt || '\uD83D\uDCC4';
+           var idx = src.lastIndexOf('/files/');
+           if (idx >= 0) {
+             var after = src.substring(idx + 7);
+             var dot = after.indexOf('.');
+             if (dot > 0) sp.setAttribute('data-file-icon', after.substring(0, dot).toLowerCase());
            }
-           // Fallback: try alt text
-           if (!lang && alt.length > 0 && alt.length <= 5) lang = alt.toLowerCase();
-           if (lang && _langColors[lang]) {
-             var badge = document.createElement('span');
-             badge.className = 'lang-badge';
-             badge.textContent = lang.toUpperCase();
-             badge.setAttribute('data-lang', lang);
-             img.parentNode.replaceChild(badge, img);
-           } else {
-             var sp = document.createElement('span');
-             sp.textContent = alt || '\uD83D\uDCC4';
-             img.parentNode.replaceChild(sp, img);
-           }
+           img.parentNode.replaceChild(sp, img);
          });
          // Strip data-* but PRESERVE data-state (open/closed collapsible state)
          Array.from(clone.querySelectorAll('*')).forEach(function(n){
            Array.from(n.attributes).filter(function(a){
-             return a.name.startsWith('data-') && a.name !== 'data-state';
+             return a.name.startsWith('data-') && a.name !== 'data-state' && a.name !== 'data-file-icon';
            }).forEach(function(a){ n.removeAttribute(a.name); });
          });
         return {dump: clone.innerHTML, count: c.children.length};
