@@ -416,3 +416,24 @@ Task: M5 above.
 
 *Changes this session (2026-05-29):*
 - *Commit 1 (in progress): ag-bridge.js — scrapeInputBar() with confirmed selectors (button[aria-label^="Select model"], button[aria-label="Add context"], data-testid="settings-button"); seeAllCounts via group/section ancestor walk; broadcastState() now emits tasks + currentModel + seeAllCounts; WS handlers: select_model, stop_task, open_context_menu, open_ag_settings.*
+
+### W-Panel — Right Panel UI Fidelity
+
+| ID | Task | Status | Notes |
+|:---|:-----|:-------|:------|
+| W-Panel.1 | Right panel tab bar redesign — AG-style pills, hover brighten, colored file-type badges (M↓/JS/TS/</>), □ close btn, no separate drawer-header | [x] DONE (this commit) |
+| W-Panel.2 | Review sub-toolbar — "Review Changes" header + ⊞ Split / ⇕ Expand / 🔍 Search icons, live search highlight | [x] DONE (this commit) |
+| W-Panel.3 | Review toolbar JS — `_rtbToggle` + `_rtbSearch` wired to toolbar buttons | [x] DONE (this commit) |
+
+### W5 — Command Palette + Menu Bar (Power Actions)
+
+| ID | Task | Status | Notes |
+|:---|:-----|:-------|:------|
+| W5.1 | Mobile: Command Palette — ⌘ button in header → bottom-sheet overlay, searchable, grouped actions | [ ] |
+| W5.2 | Desktop: Menu Bar — File · View · Window dropdowns in header (AG-style), keyboard shortcuts shown | [ ] |
+| W5.3 | CDP backend: ag-bridge.js WS handlers for reload, force-reload, zoom-in/out/actual, new-window, close-window, switch-window | [ ] |
+| W5.4 | About AGenIOS section — version, bridge status, GitHub link | [ ] |
+| W5.5 | Close Window: confirmation dialog before executing | [ ] |
+| W5.6 | Index + governance update on completion | [ ] |
+
+*Last updated: 2026-05-29T17:15+03:00 by AG Studio*
