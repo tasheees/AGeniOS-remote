@@ -3729,25 +3729,32 @@ function connect() {
             if (msg.data.rightPanel.open) openRightDrawer();
             else closeRightDrawer();
           }
-          // Desktop: continuously mirror AG's right panel width (±10px tolerance)
-          if (window.matchMedia('(min-width: 600px)').matches) {
-            const rpW = msg.data.rightPanel.width;
-            if (rd && rpW > 10 && Math.abs(rd.offsetWidth - rpW) > 10) {
-              rd.style.width = rpW + 'px';
-              if (msg.data.rightPanel.open) {
-                document.getElementById('app').style.marginRight = rpW + 'px';
-              }
+          // Desktop: mirror AG's right panel width ONLY when AG actually resizes it.
+          if (window.matchMedia('(min-width: 600px)').matches && msg.data.rightPanel.open) {
+            const newRpW = msg.data.rightPanel.width;
+            if (!window._lastAgRightW) window._lastAgRightW = 0;
+            if (newRpW > 10 && Math.abs(newRpW - window._lastAgRightW) > 10) {
+              if (rd) rd.style.width = newRpW + 'px';
+              const appEl = document.getElementById('app');
+              if (appEl) appEl.style.marginRight = newRpW + 'px';
             }
+            window._lastAgRightW = newRpW;
           }
         }
-        // Desktop: continuously mirror AG's left panel width (only when drawer is open, ±10px tolerance)
+        // Desktop: mirror AG's left panel width ONLY when AG actually resizes it.
+        // Track last known AG width — only update PWA when the AG side changes.
+        // This lets the user resize the PWA drawer freely without snap-back.
         if (window.matchMedia('(min-width: 600px)').matches &&
             msg.data.leftPanelWidth > 50 &&
             document.body.classList.contains('drawer-left-open')) {
-          const ld = document.getElementById('left-drawer');
-          if (ld && Math.abs(ld.offsetWidth - msg.data.leftPanelWidth) > 10) {
-            ld.style.width = msg.data.leftPanelWidth + 'px';
+          const newAgW = msg.data.leftPanelWidth;
+          if (!window._lastAgLeftW) window._lastAgLeftW = 0;
+          if (Math.abs(newAgW - window._lastAgLeftW) > 10) {
+            // AG actually changed its width — push to PWA
+            const ld = document.getElementById('left-drawer');
+            if (ld) ld.style.width = newAgW + 'px';
           }
+          window._lastAgLeftW = newAgW;
         }
         // Update breadcrumb with real names
         // Prefer the active conversation's text (full title) over document.title fallback
