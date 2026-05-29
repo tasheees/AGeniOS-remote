@@ -63,7 +63,20 @@ const ALLOWED_CHAT_ID = String(process.env.TELEGRAM_CHAT_ID || '');
 const REMOTE_PASSWORD = process.env.REMOTE_PASSWORD || randomPassword();
 const BRIDGE_PORT     = parseInt(process.env.BRIDGE_PORT || '9100', 10);
 const CDP_HOST        = 'localhost';
-const CDP_PORT        = 9222;
+// CDP_PORT: AG_CDP_PORT env var → DevToolsActivePort auto-detect → fallback 9222
+function detectCdpPort() {
+  if (process.env.AG_CDP_PORT) return parseInt(process.env.AG_CDP_PORT, 10);
+  try {
+    const devToolsFile = require('path').join(
+      require('os').homedir(),
+      'Library/Application Support/Antigravity/DevToolsActivePort'
+    );
+    const port = parseInt(require('fs').readFileSync(devToolsFile, 'utf8').split('\n')[0].trim(), 10);
+    if (port > 0) { log(`[cdp] Auto-detected port ${port} from DevToolsActivePort`); return port; }
+  } catch { /* not on macOS or file missing */ }
+  return 9222;
+}
+let CDP_PORT = detectCdpPort();
 const EOD_TIME        = process.env.EOD_TIME || '';  // e.g. "18:00" — auto EOD summary
 // Seconds of Mac keyboard/mouse inactivity before treating user as "away"
 // Below threshold → macActive=true → Telegram suppressed.
@@ -1469,6 +1482,7 @@ async function clickSend() {
 // ─── CDP connection ───────────────────────────────────────────────────────────
 
 function getCdpPageList() {
+  CDP_PORT = detectCdpPort(); // re-detect every attempt in case AG restarted
   return new Promise((resolve, reject) => {
     const req = http.get(`http://${CDP_HOST}:${CDP_PORT}/json`, (res) => {
       let data = '';
