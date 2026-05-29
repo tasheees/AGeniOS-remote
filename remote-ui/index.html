@@ -5757,6 +5757,16 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     permSubmit();
   }
+  // ⌘K / Ctrl+K — open command palette from any context (desktop power users)
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    openCmdPalette();
+  }
+  // Escape — close palette or any open menu dropdown
+  if (e.key === 'Escape') {
+    closeCmdPalette();
+    closeAllMenuTabs();
+  }
 });
 
 // ─── Image attachment ────────────────────────────────────────────────────────
