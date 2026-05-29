@@ -791,17 +791,57 @@ async function scrapeChatList() {
               convLinks.push({ id: id.slice(0, 36), text: text, isActive: isActive, hasSpinner: hasSpinner, time: time, project: project, hasUnread: hasUnread });
             }
           }
-          return { activeName: activeName, currentId: currentId.slice(0, 8), convLinks: convLinks };
+
+          // seeAllCounts: scan all "See all (N)" buttons and map each to nearest project name.
+          // Confirmed via DOM: walk up from button to ancestor with className including 'group/section'
+          // (2 children: header row + convs list) → header child[0] textContent = project name.
+          var seeAllCounts = {};
+          try {
+            var allBtns = Array.from(document.querySelectorAll('button'));
+            var seeAllBtns = allBtns.filter(function(b) {
+              return /^See all \(\d+\)$/.test((b.innerText || b.textContent || '').trim());
+            });
+            for (var sa = 0; sa < seeAllBtns.length; sa++) {
+              var sab = seeAllBtns[sa];
+              var saText = (sab.innerText || sab.textContent || '').trim();
+              var numMatch = saText.match(/\((\d+)\)/);
+              if (!numMatch) continue;
+              var count = parseInt(numMatch[1], 10);
+              // Walk up to group/section ancestor
+              var saEl = sab;
+              var projName = '';
+              for (var sd = 0; sd < 20; sd++) {
+                saEl = saEl.parentElement;
+                if (!saEl) break;
+                if (saEl.children.length === 2 && (saEl.className || '').toString().includes('group/section')) {
+                  var hdr = saEl.children[0];
+                  var hdrAll = Array.from(hdr.querySelectorAll('*'));
+                  var nameEl = hdrAll.find(function(h) {
+                    var cls = (h.className || '').toString();
+                    var ht = (h.textContent || '').trim();
+                    return ht.length > 0 && ht.length < 60 &&
+                      (cls.includes('font-semibold') || cls.includes('font-medium') || cls.includes('truncate')) &&
+                      !/(see all|new|add|settings)/i.test(ht);
+                  });
+                  if (nameEl) { projName = nameEl.textContent.trim(); }
+                  break;
+                }
+              }
+              if (projName) seeAllCounts[projName] = count;
+            }
+          } catch(e2) { /* silent — seeAllCounts is best-effort */ }
+
+          return { activeName: activeName, currentId: currentId.slice(0, 8), convLinks: convLinks, seeAllCounts: seeAllCounts };
         } catch(e) {
-          return { activeName: 'AG-err', currentId: '', convLinks: [], error: e.message };
+          return { activeName: 'AG-err', currentId: '', convLinks: [], seeAllCounts: {}, error: e.message };
         }
       })()
     `);
     if (result && result.error) log('[scrapeChatList] CDP error:', result.error);
-    return result || { activeName: 'AG', currentId: '', convLinks: [] };
+    return result || { activeName: 'AG', currentId: '', convLinks: [], seeAllCounts: {} };
   } catch(e) {
     log('[scrapeChatList] JS error:', e.message);
-    return { activeName: 'AG', currentId: '', convLinks: [] };
+    return { activeName: 'AG', currentId: '', convLinks: [], seeAllCounts: {} };
   }
 }
 
@@ -900,11 +940,74 @@ async function scrapeLeftPanel() {
   }
 }
 
+// Scrape AG input bar state: running tasks + current model.
+// Selectors confirmed via live CDP probe 2026-05-29.
+async function scrapeInputBar() {
+  try {
+    const result = await cdpEvaluate(`
+      (function() {
+        try {
+          // ── Tasks ──────────────────────────────────────────────────────
+          // AG shows a "N task(s) running" banner above the input box when tools run.
+          // We search all elements for text matching /\d+ tasks? running/i
+          // and collect task labels from sibling/child elements.
+          var tasks = [];
+          var count = 0;
+          var all = Array.from(document.querySelectorAll('*'));
+          for (var i = 0; i < all.length; i++) {
+            var el = all[i];
+            var t = (el.innerText || '').trim();
+            if (/^\\d+ tasks? running$/i.test(t) && el.children.length < 15) {
+              var m = t.match(/^(\\d+)/);
+              if (m) {
+                count = parseInt(m[1], 10);
+                // Collect task labels from sibling rows (look for monospace-looking lines)
+                var parent = el.parentElement;
+                if (parent) {
+                  var rows = Array.from(parent.querySelectorAll('*')).filter(function(r) {
+                    var rt = (r.innerText || '').trim();
+                    return rt.length > 3 && rt.length < 120 &&
+                           r.children.length === 0 &&
+                           !/^\\d+ tasks? running/i.test(rt);
+                  });
+                  tasks = rows.slice(0, 10).map(function(r) {
+                    return { label: (r.innerText || '').trim().slice(0, 100) };
+                  });
+                }
+              }
+              break;
+            }
+          }
+
+          // ── Current model ──────────────────────────────────────────────
+          // Confirmed selector: button[aria-label^="Select model"]
+          var modelBtn = document.querySelector('button[aria-label^="Select model"]');
+          var currentModel = modelBtn ? (modelBtn.innerText || modelBtn.textContent || '').trim() : '';
+          // Fallback: the no-focus-agent-input div contains the model name
+          if (!currentModel) {
+            var nfDiv = document.querySelector('.no-focus-agent-input');
+            if (nfDiv) currentModel = (nfDiv.innerText || nfDiv.textContent || '').trim().slice(0, 60);
+          }
+
+          return { count: count, tasks: tasks, currentModel: currentModel };
+        } catch(e) {
+          return { count: 0, tasks: [], currentModel: '', error: e.message };
+        }
+      })()
+    `);
+    if (result && result.error) log('[scrapeInputBar] error:', result.error);
+    return result || { count: 0, tasks: [], currentModel: '' };
+  } catch(e) {
+    log('[scrapeInputBar] JS error:', e.message);
+    return { count: 0, tasks: [], currentModel: '' };
+  }
+}
+
 async function broadcastState() {
-  const [chatDump, actions, chatList, cssVars, rightPanel, leftPanel] = await Promise.all([
-    scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(), scrapeRightPanel(), scrapeLeftPanel(),
+  const [chatDump, actions, chatList, cssVars, rightPanel, leftPanel, inputBar] = await Promise.all([
+    scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(), scrapeRightPanel(), scrapeLeftPanel(), scrapeInputBar(),
   ]);
-  log(`[broadcastState] convLinks=${chatList.convLinks?.length || 0} chatName=${chatList.activeName} rightPanel=${rightPanel.open ? rightPanel.activeTabName : 'closed'}`);
+  log(`[broadcastState] convLinks=${chatList.convLinks?.length || 0} chatName=${chatList.activeName} rightPanel=${rightPanel.open ? rightPanel.activeTabName : 'closed'} tasks=${inputBar.count} model=${inputBar.currentModel}`);
   _lastActions = actions;  // cache for use in HTTP handlers
   if (actions.length > 0) {
     log('⚠️  actions detected:', JSON.stringify(actions.map(a => ({type:a.type, text:(a.text||'').slice(0,50), opts:a.options?.length}))));
@@ -914,14 +1017,17 @@ async function broadcastState() {
     rightPanel.content = embedLocalImages(rightPanel.content);
   }
   broadcast('state', {
-    chatDump,          // full AG HTML dump
-    cssVars,           // AG CSS custom properties for theming
+    chatDump,              // full AG HTML dump
+    cssVars,               // AG CSS custom properties for theming
     actions,
     cdpConnected,
     chatName: chatList.activeName,
     conversations: chatList.convLinks,
-    leftPanelOpen: leftPanel.open,   // AG left sidebar open/closed
-    rightPanel,        // right panel tabs + active content HTML
+    seeAllCounts: chatList.seeAllCounts || {},  // { 'AGenIOS': 7, 'genios': 22, ... }
+    leftPanelOpen: leftPanel.open,             // AG left sidebar open/closed
+    rightPanel,            // right panel tabs + active content HTML
+    tasks: { count: inputBar.count, tasks: inputBar.tasks },  // running tasks
+    currentModel: inputBar.currentModel,       // e.g. "Claude Sonnet 4.6 (Thinking)"
   });
 }
 
@@ -1915,6 +2021,145 @@ wss.on('connection', (ws, req) => {
           await broadcastState();
         } catch(e) {
           log(`[toggle_ag_panel] error: ${e.message}`);
+        }
+        break;
+      }
+
+      case 'select_model': {
+        // Click AG model selector button, wait for dropdown, then click target model
+        const targetModel = (msg.model || '').trim();
+        if (!targetModel) break;
+        log(`[select_model] switching to: ${targetModel}`);
+        try {
+          // Step 1: click model selector to open dropdown
+          await cdpEvaluate(`
+            (function() {
+              var btn = document.querySelector('button[aria-label^="Select model"]');
+              if (btn) btn.click();
+            })()
+          `);
+          await new Promise(r => setTimeout(r, 600));
+          // Step 2: find and click the target model in the dropdown
+          const clicked = await cdpEvaluate(`
+            (function() {
+              var items = Array.from(document.querySelectorAll('[role="option"], [role="menuitem"], [role="listitem"], button'));
+              var target = items.find(function(el) {
+                return (el.innerText || el.textContent || '').trim().includes(${JSON.stringify(targetModel)});
+              });
+              if (target) { target.click(); return true; }
+              return false;
+            })()
+          `);
+          log(`[select_model] clicked=${clicked}`);
+          await new Promise(r => setTimeout(r, 400));
+          await broadcastState();
+        } catch(e) {
+          log('[select_model] error:', e.message);
+        }
+        break;
+      }
+
+      case 'stop_task': {
+        // Click stop on a running task (if taskId provided, match by label)
+        const taskId = (msg.taskId || '').trim();
+        log(`[stop_task] taskId: ${taskId || '(any)'}`);
+        try {
+          await cdpEvaluate(`
+            (function(label) {
+              // Find stop buttons near running task rows
+              var allBtns = Array.from(document.querySelectorAll('button'));
+              var stopBtns = allBtns.filter(function(b) {
+                var al = (b.getAttribute('aria-label') || '').toLowerCase();
+                var t = (b.innerText || b.textContent || '').trim().toLowerCase();
+                return al.includes('stop') || al.includes('cancel') || t === 'stop' || t === 'cancel';
+              });
+              if (label) {
+                // Try to click stop button near the matching task label
+                var found = stopBtns.find(function(b) {
+                  var parent = b.parentElement;
+                  for (var d = 0; d < 5; d++) {
+                    if (!parent) break;
+                    if ((parent.innerText || '').includes(label)) { return true; }
+                    parent = parent.parentElement;
+                  }
+                  return false;
+                });
+                if (found) { found.click(); return; }
+              }
+              // Fallback: click first stop button found
+              if (stopBtns[0]) stopBtns[0].click();
+            })(${JSON.stringify(taskId)})
+          `);
+          await new Promise(r => setTimeout(r, 500));
+          await broadcastState();
+        } catch(e) {
+          log('[stop_task] error:', e.message);
+        }
+        break;
+      }
+
+      case 'open_context_menu': {
+        // Click AG's + (Add context) button, then click the matching menu item
+        // action: 'media' | 'mentions' | 'actions' | 'browser'
+        const ACTION_MAP = {
+          'media':    /media|photo|image|file/i,
+          'mentions': /mention|@/i,
+          'actions':  /action|☑/i,
+          'browser':  /browser|🌐|web/i,
+        };
+        const action = (msg.action || '').toLowerCase();
+        const actionRe = ACTION_MAP[action];
+        log(`[open_context_menu] action: ${action}`);
+        if (!actionRe) break;
+        try {
+          // Step 1: click Add context button
+          await cdpEvaluate(`
+            (function() {
+              var btn = document.querySelector('button[aria-label="Add context"]');
+              if (btn) btn.click();
+            })()
+          `);
+          await new Promise(r => setTimeout(r, 500));
+          // Step 2: click matching menu item
+          const clicked = await cdpEvaluate(`
+            (function(re) {
+              var items = Array.from(document.querySelectorAll('[role="menuitem"], [role="option"], [role="listitem"], button'));
+              var target = items.find(function(el) {
+                return re.test((el.innerText || el.textContent || '').trim());
+              });
+              if (target) { target.click(); return true; }
+              return false;
+            })(/${actionRe.source}/${actionRe.flags})
+          `);
+          log(`[open_context_menu] clicked=${clicked}`);
+          await new Promise(r => setTimeout(r, 300));
+          await broadcastState();
+        } catch(e) {
+          log('[open_context_menu] error:', e.message);
+        }
+        break;
+      }
+
+      case 'open_ag_settings': {
+        // CDP-click AG's settings gear by data-testid
+        log('[open_ag_settings] clicking settings gear');
+        try {
+          const clicked = await cdpEvaluate(`
+            (function() {
+              var el = document.querySelector('[data-testid="settings-button"]');
+              if (el) { el.click(); return true; }
+              // Fallback: find by aria-label
+              var byLabel = Array.from(document.querySelectorAll('button, [role="button"], a'))
+                .find(function(b) { return /settings/i.test(b.getAttribute('aria-label') || ''); });
+              if (byLabel) { byLabel.click(); return 'label'; }
+              return false;
+            })()
+          `);
+          log('[open_ag_settings] clicked:', clicked);
+          await new Promise(r => setTimeout(r, 400));
+          await broadcastState();
+        } catch(e) {
+          log('[open_ag_settings] error:', e.message);
         }
         break;
       }

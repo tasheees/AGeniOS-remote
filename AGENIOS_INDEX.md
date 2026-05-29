@@ -400,13 +400,15 @@ Task: M5 above.
 
 ---
 
-*Last updated: 2026-05-29T09:15+03:00 by Impl — W1-W4 · Sidebar Interactions*
+### W-Input — Input Bar & Settings
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W-Input.1 | Bridge: scrapeInputBar() + seeAllCounts + 4 WS handlers | [/] IN PROGRESS |
+| W-Input.2 | PWA: Tasks panel + Add Context menu + seeAllCounts render | [ ] |
+| W-Input.3 | PWA: Model drop-up selector | [ ] |
+| W-Input.4 | PWA + Bridge: Settings dual-icon (PWA Settings + AG Settings) | [ ] |
+
+*Last updated: 2026-05-29T10:17+03:00 by Impl — W-Input · Input Bar & Settings*
 
 *Changes this session (2026-05-29):*
-- *SDK/CDP deep research complete — SDK attach to Desktop confirmed impossible (architectural, not a bug). See agenios_bridge_research.html.*
-- *S2.15a/b/c registered: CDP WebSocket frame interception is the path to native hooks.*
-- *agy CLI (DeepMind) discovered — Session Export feature noted for S3.*
-- *S3 expanded: distribution + monetization strategy decided (value-based, no artificial limits, AGenIOS Cloud as premium service).*
-- *W1-W4 refactor spec finalized: Opus 986-line spec + 5 corrections + 4 Stitch screens.*
-- *Flash implementor dispatched for W1-W4 execution. Awaiting Sovereign Report.*
-- *W3.6-W3.9 Sidebar Interactions complete: AG-style project grouping, desktop hover actions, 6-chat limit, mobile bottom sheets + swipe strip. remote-ui/index.html only.*
+- *Commit 1 (in progress): ag-bridge.js — scrapeInputBar() with confirmed selectors (button[aria-label^="Select model"], button[aria-label="Add context"], data-testid="settings-button"); seeAllCounts via group/section ancestor walk; broadcastState() now emits tasks + currentModel + seeAllCounts; WS handlers: select_model, stop_task, open_context_menu, open_ag_settings.*
