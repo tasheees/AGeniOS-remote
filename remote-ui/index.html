@@ -390,6 +390,10 @@
     @media (max-width: 600px) {
       #right-drawer { width: 82%; max-width: none; }
     }
+    /* Desktop: resize handles hidden — panel widths are synced from AG */
+    @media (min-width: 600px) {
+      .resize-handle-left, .resize-handle-right { display: none; }
+    }
 
     /* ─── Right Panel Tab Bar — AG-style ────────────────────────── */
     #right-panel-tabs {
@@ -3717,6 +3721,23 @@ function connect() {
           if (rd) {
             if (msg.data.rightPanel.open) openRightDrawer();
             else closeRightDrawer();
+          }
+          // Desktop: mirror AG's right panel width (±10px tolerance avoids micro-jitter)
+          if (window.matchMedia('(min-width: 600px)').matches) {
+            const rpW = msg.data.rightPanel.width;
+            if (rd && rpW > 10 && Math.abs(rd.offsetWidth - rpW) > 10) {
+              rd.style.width = rpW + 'px';
+              if (msg.data.rightPanel.open) {
+                document.getElementById('app').style.marginRight = rpW + 'px';
+              }
+            }
+          }
+        }
+        // Desktop: mirror AG's left panel width (±10px tolerance)
+        if (window.matchMedia('(min-width: 600px)').matches && msg.data.leftPanelWidth > 50) {
+          const ld = document.getElementById('left-drawer');
+          if (ld && Math.abs(ld.offsetWidth - msg.data.leftPanelWidth) > 10) {
+            ld.style.width = msg.data.leftPanelWidth + 'px';
           }
         }
         // Update breadcrumb with real names

@@ -1138,6 +1138,7 @@ async function broadcastState() {
     conversations: chatList.convLinks,
     seeAllCounts: chatList.seeAllCounts || {},  // { 'AGenIOS': 7, 'genios': 22, ... }
     leftPanelOpen: leftPanel.open,             // AG left sidebar open/closed
+    leftPanelWidth: leftPanel.width,            // AG left sidebar width in px
     rightPanel,            // right panel tabs + active content HTML
     tasks: { count: inputBar.count, tasks: inputBar.tasks },  // running tasks
     currentModel: inputBar.currentModel,       // e.g. "Claude Sonnet 4.6 (Thinking)"
