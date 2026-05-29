@@ -3274,7 +3274,8 @@ function connect() {
         if (msg.data.chatDump) applyDump(msg.data.chatDump);
         actions       = msg.data.actions       || [];
         conversations = msg.data.conversations || [];
-        window.conversations = conversations; // expose for @ picker (let vars don't attach to window)
+        window.conversations = conversations; // expose for @ picker
+        if (msg.data.mentionSuggestions) window._mentionSuggestions = msg.data.mentionSuggestions;
         seeAllCounts  = msg.data.seeAllCounts  || {};
         if (msg.data.currentModel) {
           currentModel = msg.data.currentModel;
@@ -5710,14 +5711,45 @@ function _pickerOpen(type, filter) {
   if (!overlay) return;
 
   let items = [];
+  let sections = []; // [{header, icon, items}]
+
   if (type === 'slash') {
     const q = filter.toLowerCase();
     items = SLASH_COMMANDS.filter(c => c.name.startsWith(q) || c.name.includes(q));
   } else if (type === 'mention') {
     const q = filter.toLowerCase();
-    items = (window.conversations || []).filter(c =>
-      c.text && c.text.toLowerCase().includes(q)
-    ).map(c => ({ name: c.text, desc: c.id || '', icon: '💬', id: c.id }));
+    const ms = window._mentionSuggestions || {};
+
+    // ── Rules section ──────────────────────────────────────────────
+    const ruleItems = (ms.rules || []).filter(r =>
+      !q || r.name.toLowerCase().includes(q)
+    ).map(r => ({ name: r.name, icon: '📋', insertText: r.name }));
+
+    // ── Media / Conversation section ───────────────────────────────
+    const mediaItems = (ms.media || []).filter(m =>
+      !q || m.name.toLowerCase().includes(q)
+    ).map(m => {
+      const d = new Date(m.mtime);
+      const label = m.name.replace(/^media_[a-f0-9-]+_\d+/, 'Media ' + m.convId.slice(0,8));
+      const timeStr = d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+      return { name: label, desc: timeStr, icon: '🖼️', insertText: m.name };
+    });
+
+    // Flatten for keyboard navigation — track sections for rendering
+    sections = [
+      { header: 'Rules',        icon: '📋', items: ruleItems  },
+      { header: 'Conversation', icon: '💬', items: mediaItems },
+    ].filter(s => s.items.length > 0);
+
+    // Also include conversations if no media/rules match
+    if (sections.length === 0) {
+      const convItems = (window.conversations || []).filter(c =>
+        c.text && (!q || c.text.toLowerCase().includes(q))
+      ).map(c => ({ name: c.text, icon: '💬', insertText: c.text }));
+      sections = [{ header: 'Conversations', icon: '💬', items: convItems }];
+    }
+
+    items = sections.flatMap(s => s.items);
   }
 
   _pickerRows = items;
@@ -5787,7 +5819,7 @@ function _pickerSelect(idx) {
   if (triggerPos < 0) { _pickerClose(); return; }
 
   const prefix = _pickerType === 'slash' ? '/' : '@';
-  const insertion = prefix + item.name + ' ';
+  const insertion = prefix + (item.insertText || item.name) + ' ';
   textarea.value = val.slice(0, triggerPos) + insertion + val.slice(pos);
   const newPos = triggerPos + insertion.length;
   textarea.selectionStart = textarea.selectionEnd = newPos;

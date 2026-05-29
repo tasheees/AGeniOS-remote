@@ -1007,10 +1007,71 @@ async function scrapeInputBar() {
   }
 }
 
+// ─── Mention Suggestions (@ picker) — pure filesystem reads, no CDP ───────────
+let _mentionCache = null;
+let _mentionCacheAt = 0;
+const MENTION_CACHE_TTL = 30000; // 30s
+
+async function scrapeMentionSuggestions(currentId8) {
+  const now = Date.now();
+  if (_mentionCache && now - _mentionCacheAt < MENTION_CACHE_TTL) return _mentionCache;
+
+  const fs  = require('fs');
+  const path = require('path');
+  const HOME = process.env.HOME || '/Users/marwantzenios';
+  const BRAIN = path.join(HOME, '.gemini', 'antigravity', 'brain');
+
+  // ── Rules: scan known rule file names in common project dirs ──────────────
+  const RULE_NAMES = ['CONTEXT.md', 'AGENTS.md', 'GEMINI.md', 'CLAUDE.md', '.cursorrules', 'RULES.md'];
+  const SCAN_DIRS  = [
+    path.join(HOME, 'projects', 'AGenIOS'),
+    path.join(HOME, 'projects'),
+    HOME,
+  ];
+  const rules = [];
+  for (const dir of SCAN_DIRS) {
+    try {
+      for (const name of RULE_NAMES) {
+        const full = path.join(dir, name);
+        if (fs.existsSync(full)) rules.push({ name, path: full });
+      }
+    } catch(e) { /* skip inaccessible dirs */ }
+  }
+
+  // ── Media: find current conversation dir, list .tempmediaStorage ──────────
+  const media = [];
+  try {
+    const brainDirs = fs.readdirSync(BRAIN);
+    // Match 8-char prefix to full conversation ID dir
+    const convDir = brainDirs.find(d => currentId8 && d.startsWith(currentId8) && !d.startsWith('.'));
+    if (convDir) {
+      const mediaDir = path.join(BRAIN, convDir, '.tempmediaStorage');
+      if (fs.existsSync(mediaDir)) {
+        const files = fs.readdirSync(mediaDir);
+        for (const f of files) {
+          const ext = path.extname(f).toLowerCase();
+          if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf', '.mp4', '.mov'].includes(ext)) {
+            const stat = fs.statSync(path.join(mediaDir, f));
+            media.push({ name: f, convId: convDir, mtime: stat.mtimeMs });
+          }
+        }
+        // Sort newest first, cap at 20
+        media.sort((a, b) => b.mtime - a.mtime);
+        media.splice(20);
+      }
+    }
+  } catch(e) { log('[scrapeMentionSuggestions] media error:', e.message); }
+
+  _mentionCache = { rules, media };
+  _mentionCacheAt = now;
+  return _mentionCache;
+}
+
 async function broadcastState() {
   const [chatDump, actions, chatList, cssVars, rightPanel, leftPanel, inputBar] = await Promise.all([
     scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(), scrapeRightPanel(), scrapeLeftPanel(), scrapeInputBar(),
   ]);
+  const mentionSuggestions = await scrapeMentionSuggestions(chatList.currentId);
   log(`[broadcastState] convLinks=${chatList.convLinks?.length || 0} chatName=${chatList.activeName} rightPanel=${rightPanel.open ? rightPanel.activeTabName : 'closed'} tasks=${inputBar.count} model=${inputBar.currentModel}`);
   _lastActions = actions;  // cache for use in HTTP handlers
   if (actions.length > 0) {
@@ -1032,6 +1093,7 @@ async function broadcastState() {
     rightPanel,            // right panel tabs + active content HTML
     tasks: { count: inputBar.count, tasks: inputBar.tasks },  // running tasks
     currentModel: inputBar.currentModel,       // e.g. "Claude Sonnet 4.6 (Thinking)"
+    mentionSuggestions,                        // { rules: [{name,path}], media: [{name,convId,mtime}] }
   });
 }
 
