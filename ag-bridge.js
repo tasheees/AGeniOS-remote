@@ -946,10 +946,15 @@ async function scrapeLeftPanel() {
   try {
     const result = await cdpEvaluate(`
       (function() {
-        // AG sidebar: no <nav> tag — use bg-sidebar class (confirmed via CDP 2026-05-29)
+        // AG sidebar: use getBoundingClientRect — offsetWidth stays non-zero even when
+        // sidebar is hidden via transform (translateX). rect.right <= 0 means it's off-screen.
         var sidebar = document.querySelector('[class*="bg-sidebar"]');
-        var w = sidebar ? sidebar.offsetWidth : 0;
-        return { open: w > 50, width: w };
+        if (!sidebar) return { open: false, width: 0 };
+        var rect = sidebar.getBoundingClientRect();
+        var w = rect.width;
+        // Sidebar is "open" only if it's actually on-screen (right edge > 0)
+        var open = w > 30 && rect.right > 30;
+        return { open: open, width: open ? w : 0 };
       })()
     `);
     return result || { open: true, width: 260 };

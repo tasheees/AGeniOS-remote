@@ -3681,20 +3681,24 @@ function connect() {
           const isDesktop = window.innerWidth > 768;
           const agOpen = msg.data.leftPanelOpen;
           window._agLeftPanelOpen = agOpen;  // track for bidirectional toggle
-          const pwaOpen = document.body.classList.contains('drawer-left-open');
-          // Only apply if state differs — avoid re-triggering transitions on every tick
-          if (agOpen !== pwaOpen) {
-            if (agOpen) {
-              document.body.classList.add('drawer-left-open');
-              if (isDesktop && msg.data.leftPanelWidth && msg.data.leftPanelWidth > 50) {
-                const ld = document.getElementById('left-drawer');
-                if (ld) ld.style.width = msg.data.leftPanelWidth + 'px';
+          // Skip sync for 3s after user clicked toggle — prevents re-open race condition
+          const toggleLocked = window._leftPanelToggleLock && (Date.now() - window._leftPanelToggleLock < 3000);
+          if (!toggleLocked) {
+            const pwaOpen = document.body.classList.contains('drawer-left-open');
+            // Only apply if state differs — avoid re-triggering transitions on every tick
+            if (agOpen !== pwaOpen) {
+              if (agOpen) {
+                document.body.classList.add('drawer-left-open');
+                if (isDesktop && msg.data.leftPanelWidth && msg.data.leftPanelWidth > 50) {
+                  const ld = document.getElementById('left-drawer');
+                  if (ld) ld.style.width = msg.data.leftPanelWidth + 'px';
+                }
+              } else {
+                document.body.classList.remove('drawer-left-open');
               }
-            } else {
-              document.body.classList.remove('drawer-left-open');
+              // Persist so next refresh starts correct before first WS message
+              try { localStorage.setItem('ag_left_panel_open', agOpen ? '1' : '0'); } catch(e) {}
             }
-            // Persist so next refresh starts correct before first WS message
-            try { localStorage.setItem('ag_left_panel_open', agOpen ? '1' : '0'); } catch(e) {}
           }
         }
 
@@ -6014,6 +6018,8 @@ function toggleAGPanel(side) {
   if (side === 'left') {
     document.body.classList.toggle('drawer-left-open');
     if (document.body.classList.contains('drawer-left-open')) renderConversations();
+    // Lock: prevent leftPanelOpen broadcast from re-opening before AG processes the toggle
+    window._leftPanelToggleLock = Date.now();
   }
   // For 'right', we let the WS state broadcast handle adding/removing 'open'
   // via renderRightPanel to prevent out-of-sync states and flashes.
