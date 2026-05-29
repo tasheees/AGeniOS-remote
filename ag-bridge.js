@@ -946,36 +946,13 @@ async function scrapeLeftPanel() {
   try {
     const result = await cdpEvaluate(`
       (function() {
-        // Dump body classes so we can identify the sidebar-hidden class
-        var bodyClasses = Array.from(document.body.classList).join(' ');
-        // VS Code / Electron apps hide sidebar by adding a class to body
-        // Common patterns: 'nosidebar', 'sidebar-hidden', 'activitybar-hidden'
-        var sidebarHidden = /nosidebar|sidebar.hidden|sidebar-hidden/i.test(bodyClasses);
-        if (sidebarHidden) return { open: false, width: 0, _bodyClasses: bodyClasses };
-        // Look for the sidebar panel with specific AG structure
-        // Try multiple selectors for the resizable sidebar container
-        var sidebarPanel = document.querySelector('[data-panel-id="sidebar"]') ||
-          document.querySelector('[class*="sidebar"][class*="part"]') ||
-          document.querySelector('.sidebar');
-        if (sidebarPanel) {
-          var cs = window.getComputedStyle(sidebarPanel);
-          var w = parseFloat(cs.width) || sidebarPanel.offsetWidth;
-          var open = cs.display !== 'none' && cs.visibility !== 'hidden' && w > 50;
-          return { open: open, width: open ? w : 0, _bodyClasses: bodyClasses };
-        }
-        // Fallback: bg-sidebar
+        // Original working approach: offsetWidth returns 0 when AG hides the sidebar
+        // via display:none, and the real width when open. Simple and confirmed working.
         var sidebar = document.querySelector('[class*="bg-sidebar"]');
-        if (sidebar) {
-          var cs2 = window.getComputedStyle(sidebar);
-          var w2 = parseFloat(cs2.width) || 0;
-          return { open: w2 > 50, width: w2 > 50 ? w2 : 0, _bodyClasses: bodyClasses };
-        }
-        return { open: false, width: 0, _bodyClasses: bodyClasses };
+        var w = sidebar ? sidebar.offsetWidth : 0;
+        return { open: w > 50, width: w };
       })()
     `);
-    if (result && result._bodyClasses !== undefined) {
-      log(`[scrapeLeftPanel] bodyClasses: ${result._bodyClasses.slice(0, 200)}`);
-    }
     return result || { open: true, width: 260 };
   } catch(e) {
     return { open: true, width: 260 };
