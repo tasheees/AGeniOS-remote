@@ -407,9 +407,9 @@ Task: M5 above.
 | W-Input.2 | PWA: Tasks panel + Add Context menu + seeAllCounts render | [x] DONE (7ab866a + bridge fix) |
 | W-Input.3 | PWA: Model drop-up selector | [x] DONE + bug fix (exact match + correct IDs) |
 | W-Input.4 | PWA + Bridge: Settings dual-icon (PWA Settings + AG Settings) | [x] DONE (this commit) |
-| W-Input.5 | PWA textarea: typing `/` should open command picker overlay, typing `@` should open mention picker — both currently do nothing in PWA | [ ] FUTURE |
+| W-Input.5 | PWA textarea: typing `/` → slash command picker overlay; typing `@` → mention picker with conversation list — both with filter, arrow nav, Enter select, Escape close | [x] DONE (pending commit) |
 
-*Last updated: 2026-05-29T10:17+03:00 by Impl — W-Input · Input Bar & Settings*
+*Last updated: 2026-05-29T11:31+03:00 by Impl — W-Input.5 · Slash & Mention Pickers*
 
 *Changes this session (2026-05-29):*
 - *Commit 1 (in progress): ag-bridge.js — scrapeInputBar() with confirmed selectors (button[aria-label^="Select model"], button[aria-label="Add context"], data-testid="settings-button"); seeAllCounts via group/section ancestor walk; broadcastState() now emits tasks + currentModel + seeAllCounts; WS handlers: select_model, stop_task, open_context_menu, open_ag_settings.*
