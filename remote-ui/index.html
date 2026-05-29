@@ -1401,8 +1401,9 @@
       position: relative;
       overflow: hidden;
       margin-bottom: 1px;
+      width: 100%;
     }
-    /* Swipe-reveal action strip (mobile) */
+    /* Swipe-reveal action strip (mobile) — hidden at rest, revealed by .swiping */
     .conv-row-actions {
       position: absolute;
       top: 0;
@@ -1411,7 +1412,9 @@
       display: flex;
       align-items: stretch;
       z-index: 1;
+      visibility: hidden;  /* hidden at rest — JS adds .swiping to show */
     }
+    .conv-row-container.swiping .conv-row-actions { visibility: visible; }
     .conv-row-action-btn {
       border: none;
       color: white;
@@ -1437,6 +1440,7 @@
     .conv-row {
       position: relative;
       z-index: 2;
+      width: 100%;
       background: var(--surface-1, #18181b);
       display: flex;
       align-items: center;
@@ -2791,6 +2795,21 @@ function connect() {
           injectAgCssVars(msg.data.cssVars);
           window._agVarsInjected = true;
         }
+        // ── Mirror AG panel states on first message ──────────────────────
+        if (!window._drawersInitialized && typeof msg.data.leftPanelOpen !== 'undefined') {
+          window._drawersInitialized = true;
+          const isDesktop = window.innerWidth > 768;
+          if (msg.data.leftPanelOpen) {
+            document.body.classList.add('drawer-left-open');
+            // Match AG's left sidebar width on desktop
+            if (isDesktop && msg.data.leftPanelWidth && msg.data.leftPanelWidth > 50) {
+              const ld = document.getElementById('left-drawer');
+              if (ld) ld.style.width = msg.data.leftPanelWidth + 'px';
+            }
+          } else {
+            document.body.classList.remove('drawer-left-open');
+          }
+        }
         if (msg.data.chatDump) applyDump(msg.data.chatDump);
         actions       = msg.data.actions       || [];
         conversations = msg.data.conversations || [];
@@ -2799,6 +2818,12 @@ function connect() {
         if (msg.data.rightPanel) {
           rightPanelState = msg.data.rightPanel;
           renderRightPanel(msg.data.rightPanel);
+          // Sync right drawer open/closed to match AG
+          const rd = document.getElementById('right-drawer');
+          if (rd) {
+            if (msg.data.rightPanel.open) rd.classList.add('open');
+            else rd.classList.remove('open');
+          }
         }
         // Update breadcrumb with real names
         // Prefer the active conversation's text (full title) over document.title fallback
@@ -3860,6 +3885,7 @@ function _buildConvRow(conv) {
       else { swipeDir = 'v'; isSwiping = false; }
     }
     if (swipeDir === 'h' && dx < 0 && dx > -ACTION_STRIP_W) {
+      container.classList.add('swiping'); // reveal action strip
       row.style.transform = `translateX(${dx}px)`;
       currentX = dx;
     }
@@ -3874,12 +3900,13 @@ function _buildConvRow(conv) {
       row.style.transform = `translateX(-${ACTION_STRIP_W}px)`;
       setTimeout(() => {
         if (confirm('Delete?')) { sendCommand('/delete ' + conv.id); toast('🗑 Deleting…'); }
-        else row.style.transform = '';
+        else { row.style.transform = ''; container.classList.remove('swiping'); }
       }, 150);
     } else if (currentX < -(ACTION_STRIP_W * 0.25)) {
       row.style.transform = `translateX(-${ACTION_STRIP_W}px)`;
     } else {
       row.style.transform = '';
+      container.classList.remove('swiping'); // hide strip again
     }
     currentX = 0;
   }, { passive: true });

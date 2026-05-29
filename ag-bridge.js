@@ -788,7 +788,7 @@ async function scrapeRightPanel() {
         try {
           var main = document.querySelector('[style*="flex-grow: 1"]');
           var rp = main && main.children[0] && main.children[0].children[1];
-          if (!rp || rp.offsetWidth < 10) return { open: false, tabs: [], content: '' };
+          if (!rp || rp.offsetWidth < 10) return { open: false, width: 0, tabs: [], content: '' };
           
           var inner = rp.querySelector('.h-full.w-full.flex.flex-col');
           if (!inner) return { open: false, tabs: [], content: '' };
@@ -844,6 +844,7 @@ async function scrapeRightPanel() {
           var activeTab = tabs.find(function(t) { return t.active; });
           return {
             open: true,
+            width: rp.offsetWidth,
             tabs: tabs,
             activeTabName: activeTab ? activeTab.name : '',
             content: contentHTML
@@ -859,9 +860,24 @@ async function scrapeRightPanel() {
   }
 }
 
+async function scrapeLeftPanel() {
+  try {
+    const result = await cdpEvaluate(`
+      (function() {
+        var nav = document.querySelector('nav');
+        var w = nav ? nav.offsetWidth : 0;
+        return { open: w > 50, width: w };
+      })()
+    `);
+    return result || { open: true, width: 260 };
+  } catch(e) {
+    return { open: true, width: 260 };
+  }
+}
+
 async function broadcastState() {
-  const [chatDump, actions, chatList, cssVars, rightPanel] = await Promise.all([
-    scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(), scrapeRightPanel(),
+  const [chatDump, actions, chatList, cssVars, rightPanel, leftPanel] = await Promise.all([
+    scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(), scrapeRightPanel(), scrapeLeftPanel(),
   ]);
   log(`[broadcastState] convLinks=${chatList.convLinks?.length || 0} chatName=${chatList.activeName} rightPanel=${rightPanel.open ? rightPanel.activeTabName : 'closed'}`);
   _lastActions = actions;  // cache for use in HTTP handlers
@@ -879,6 +895,7 @@ async function broadcastState() {
     cdpConnected,
     chatName: chatList.activeName,
     conversations: chatList.convLinks,
+    leftPanelOpen: leftPanel.open,   // AG left sidebar open/closed
     rightPanel,        // right panel tabs + active content HTML
   });
 }
