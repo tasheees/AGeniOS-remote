@@ -5726,12 +5726,17 @@ function _pickerOpen(type, filter) {
     ).map(r => ({ name: r.name, icon: '📋', insertText: r.name }));
 
     // ── 2. Conversations (sidebar chat list) ───────────────────────────
-    const convItems = (window.conversations || []).filter(c =>
+    const convListItems = (window.conversations || []).filter(c =>
       c.text && (!q || c.text.toLowerCase().includes(q))
     ).map(c => ({ name: c.text, icon: '💬', insertText: c.text }));
 
-    // ── 3. Overview (current conversation artifacts + media) ───────────
-    const overviewItems = (ms.media || []).filter(m =>
+    // ── 3. Task (task.md + planning artifacts from brain dir) ──────────
+    const taskItems = (ms.media || []).filter(m =>
+      m.isDoc && /task/i.test(m.name) && (!q || m.name.toLowerCase().includes(q))
+    ).map(m => ({ name: m.name, icon: '✅', insertText: m.rawFile || m.name }));
+
+    // ── 4. Conversation (all artifacts + media from current conv) ──────
+    const artifactItems = (ms.media || []).filter(m =>
       !q || m.name.toLowerCase().includes(q)
     ).map(m => {
       const d       = new Date(m.mtime);
@@ -5742,13 +5747,15 @@ function _pickerOpen(type, filter) {
     });
 
     sections = [
-      { header: 'Rules',         icon: '📋', items: ruleItems     },
-      { header: 'Conversations', icon: '💬', items: convItems     },
-      { header: 'Overview',      icon: '🗂️', items: overviewItems },
+      { header: 'Rules',         icon: '📋', items: ruleItems       },
+      { header: 'Conversations', icon: '💬', items: convListItems   },
+      { header: 'Task',          icon: '✅', items: taskItems       },
+      { header: 'Conversation',  icon: '📄', items: artifactItems   },
     ].filter(s => s.items.length > 0);
 
     items = sections.flatMap(s => s.items);
   }
+
 
 
   _pickerRows = items;
