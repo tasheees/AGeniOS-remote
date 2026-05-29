@@ -3274,6 +3274,7 @@ function connect() {
         if (msg.data.chatDump) applyDump(msg.data.chatDump);
         actions       = msg.data.actions       || [];
         conversations = msg.data.conversations || [];
+        window.conversations = conversations; // expose for @ picker (let vars don't attach to window)
         seeAllCounts  = msg.data.seeAllCounts  || {};
         if (msg.data.currentModel) {
           currentModel = msg.data.currentModel;
