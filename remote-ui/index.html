@@ -4530,23 +4530,24 @@ function ctxMenuAction(action) {
   toast(`Opening ${action}…`);
 }
 
-// ─── Model Selector (Commit 3: Full PWA Bottom-Sheet) ─────────────────────────
+// Model IDs must match EXACTLY the text returned by button[aria-label^="Select model"].innerText
+// Confirmed via CDP eval 2026-05-29: "Claude Sonnet 4.6 (Thinking)"
 const KNOWN_MODELS = [
   {
     group: 'Claude',
     models: [
-      { id: 'Claude Sonnet 4.6 (Thinking)', name: 'Claude Sonnet 4.6', desc: 'Balanced reasoning + speed', badge: 'thinking', icon: '🧠', iconClass: 'claude' },
-      { id: 'Claude Sonnet 4.6',            name: 'Claude Sonnet 4.6', desc: 'Fast, smart, everyday tasks', badge: 'fast',     icon: '⚡', iconClass: 'claude' },
-      { id: 'Claude Opus 4.6 (Thinking)',   name: 'Claude Opus 4.6',   desc: 'Most capable, deep reasoning', badge: 'thinking', icon: '✨', iconClass: 'claude' },
-      { id: 'Claude Opus 4.6',              name: 'Claude Opus 4.6',   desc: 'Most capable Claude model',   badge: 'pro',      icon: '✨', iconClass: 'claude' },
+      { id: 'Claude Sonnet 4.6 (Thinking)', name: 'Claude Sonnet 4.6', desc: 'Balanced reasoning + speed',    badge: 'thinking', icon: '🧠', iconClass: 'claude' },
+      { id: 'Claude Sonnet 4.6',            name: 'Claude Sonnet 4.6', desc: 'Fast, smart, everyday tasks',   badge: 'fast',     icon: '⚡',   iconClass: 'claude' },
+      { id: 'Claude Opus 4.6 (Thinking)',   name: 'Claude Opus 4.6',   desc: 'Most capable, deep reasoning', badge: 'thinking', icon: '✨',   iconClass: 'claude' },
+      { id: 'Claude Opus 4.6',              name: 'Claude Opus 4.6',   desc: 'Most capable Claude model',    badge: 'pro',      icon: '✨',   iconClass: 'claude' },
     ]
   },
   {
     group: 'Gemini',
     models: [
-      { id: 'Gemini 2.5 Flash (High)',      name: 'Gemini 2.5 Flash',  desc: 'Fast, high-quality generation', badge: 'fast',  icon: '🔷', iconClass: 'gemini' },
-      { id: 'Gemini 2.5 Flash',             name: 'Gemini 2.5 Flash',  desc: 'Balanced and efficient',        badge: 'fast',  icon: '🔷', iconClass: 'gemini' },
-      { id: 'Gemini 2.5 Pro',               name: 'Gemini 2.5 Pro',    desc: 'Flagship Gemini model',        badge: 'pro',   icon: '💎', iconClass: 'gemini' },
+      { id: 'Gemini 2.5 Flash',             name: 'Gemini 2.5 Flash',  desc: 'Fast, high-quality generation', badge: 'fast', icon: '🔷', iconClass: 'gemini' },
+      { id: 'Gemini 2.5 Flash (High)',      name: 'Gemini 2.5 Flash',  desc: 'Balanced and efficient',        badge: 'fast', icon: '🔷', iconClass: 'gemini' },
+      { id: 'Gemini 2.5 Pro',               name: 'Gemini 2.5 Pro',    desc: 'Flagship Gemini model',         badge: 'pro',  icon: '💎', iconClass: 'gemini' },
     ]
   },
 ];
@@ -4568,7 +4569,7 @@ function renderModelPicker() {
   if (!list) return;
   list.innerHTML = '';
 
-  const normalizedCurrent = (currentModel || '').toLowerCase().trim();
+  const normalizedCurrent = (currentModel || '').trim();
 
   KNOWN_MODELS.forEach(group => {
     const groupLabel = document.createElement('div');
@@ -4577,7 +4578,8 @@ function renderModelPicker() {
     list.appendChild(groupLabel);
 
     group.models.forEach(m => {
-      const isActive = normalizedCurrent && normalizedCurrent.includes(m.id.toLowerCase());
+      // Bug 2 fix: exact string match only — no .includes() which caused double-highlight
+      const isActive = normalizedCurrent !== '' && m.id === normalizedCurrent;
       const btn = document.createElement('button');
       btn.className = 'model-row' + (isActive ? ' active' : '');
       btn.onclick = () => selectModel(m.id);
