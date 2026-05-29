@@ -477,6 +477,64 @@
       box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
     }
     #cmd-palette-modal.open #cmd-palette-card { transform: translateY(0); }
+    /* Desktop: centered overlay instead of bottom sheet */
+    @media (min-width: 600px) {
+      #cmd-palette-modal { align-items: center; padding: 0 16px; }
+      #cmd-palette-card {
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        border-radius: 14px;
+        padding: 0;
+        transform: scale(0.96) translateY(-6px);
+        transition: transform 0.22s cubic-bezier(.32,1.01,.56,1), opacity 0.18s;
+        opacity: 0;
+        max-height: 72vh;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+      }
+      #cmd-palette-modal.open #cmd-palette-card { transform: scale(1) translateY(0); opacity: 1; }
+      #cmd-palette-handle { display: none; }
+    }
+    /* About Modal */
+    #about-modal {
+      position: fixed; inset: 0; z-index: 1200;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.18s;
+    }
+    #about-modal.open { opacity: 1; pointer-events: all; }
+    #about-card {
+      background: rgba(22,22,35,0.98);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 28px 28px 22px;
+      max-width: 340px; width: 90%;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+      transform: scale(0.94); opacity: 0;
+      transition: transform 0.2s cubic-bezier(.32,1,.56,1), opacity 0.18s;
+      text-align: center;
+    }
+    #about-modal.open #about-card { transform: scale(1); opacity: 1; }
+    #about-icon { font-size: 42px; margin-bottom: 10px; }
+    #about-name { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    #about-version { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+    #about-desc {
+      font-size: 13px; color: var(--text-muted); line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    #about-links { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; }
+    .about-link {
+      font-size: 12px; color: var(--primary);
+      text-decoration: none; padding: 5px 12px;
+      border: 1px solid var(--primary); border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .about-link:hover { background: rgba(139,92,246,0.15); }
+    #about-close {
+      background: rgba(255,255,255,0.07); border: 1px solid var(--border);
+      color: var(--text-muted); border-radius: 8px; padding: 7px 20px;
+      font-size: 13px; cursor: pointer; width: 100%;
+      transition: background 0.15s;
+    }
+    #about-close:hover { background: rgba(255,255,255,0.12); color: var(--text); }
     #cmd-palette-handle {
       width: 36px; height: 4px; border-radius: 2px;
       background: rgba(255,255,255,0.18);
@@ -3306,7 +3364,25 @@
   </div>
 </div>
 
-<!-- W5: Command Palette Bottom Sheet (mobile) -->
+<!-- About AGenIOS Remote Modal -->
+<div id="about-modal" onclick="if(event.target===this) closeAboutModal()">
+  <div id="about-card">
+    <div id="about-icon">🛰</div>
+    <div id="about-name">AGenIOS Remote</div>
+    <div id="about-version">v<span id="about-ver-num">1.5.0</span> · Bridge</div>
+    <div id="about-desc">
+      A premium remote control for Google Antigravity.<br>
+      Control your AI from anywhere, on any device.
+    </div>
+    <div id="about-links">
+      <a class="about-link" href="https://github.com/tasheees/AGeniOS-remote" target="_blank">GitHub ↗</a>
+      <a class="about-link" href="https://github.com/tasheees/AGeniOS-remote/releases" target="_blank">Releases ↗</a>
+    </div>
+    <button id="about-close" onclick="closeAboutModal()">Close</button>
+  </div>
+</div>
+
+<!-- W5: Command Palette Bottom Sheet (mobile) / Centered overlay (desktop) -->
 <div id="cmd-palette-modal" onclick="if(event.target===this) closeCmdPalette()">
   <div id="cmd-palette-card">
     <div id="cmd-palette-handle"></div>
@@ -5762,10 +5838,11 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     openCmdPalette();
   }
-  // Escape — close palette or any open menu dropdown
+  // Escape — close palette, menus, or About modal
   if (e.key === 'Escape') {
     closeCmdPalette();
     closeAllMenuTabs();
+    closeAboutModal();
   }
 });
 
@@ -6520,20 +6597,26 @@ async function fetchBridgeVersion() {
     const r = await fetch('/status');
     if (!r.ok) return;
     const data = await r.json();
+    // Update palette footer
     const el = document.getElementById('cmd-about-version');
     if (el && data.version) el.textContent = 'v' + data.version;
+    // Update About modal
+    const verEl = document.getElementById('about-ver-num');
+    if (verEl && data.version) verEl.textContent = data.version;
   } catch { /* ignore */ }
 }
 
 function openAboutModal() {
   closeAllMenuTabs();
+  closeCmdPalette();
   fetchBridgeVersion();
-  openCmdPalette();
-  // Scroll to bottom of palette to show About row
-  setTimeout(() => {
-    const list = document.getElementById('cmd-palette-list');
-    if (list) list.scrollTop = list.scrollHeight;
-  }, 50);
+  const modal = document.getElementById('about-modal');
+  if (modal) modal.classList.add('open');
+}
+
+function closeAboutModal() {
+  const modal = document.getElementById('about-modal');
+  if (modal) modal.classList.remove('open');
 }
 
 // ─── W5: Desktop Menu Bar ─────────────────────────────────────────────────────
