@@ -133,6 +133,7 @@
 | W3.7 | Desktop hover actions: ⚙️+new on project row; archive/pin/⋯ on chat row | [x] DONE 2026-05-29 |
 | W3.8 | 6-chat limit per project + See all(N) / See less (bold, accent-violet hover) | [x] DONE 2026-05-29 |
 | W3.9 | Mobile long-press → frosted bottom sheet (conv: unread/rename/pin/archive/delete; project: settings/new/rename) | [x] DONE 2026-05-29 |
+| W3.10 | Project row gear icon: settings/rename/new conversation context menu for project-level actions | [ ] FUTURE |
 
 ### W4 — Right Panel Expansion (research phase)
 | ID | Task | Status |
