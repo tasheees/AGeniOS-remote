@@ -3660,6 +3660,7 @@ function connect() {
   ws.onopen = () => {
     connected = true;
     hasEverConnected = true;
+    window._agPanelWidthSynced = false; // reset: sync AG widths once on first state broadcast
     document.getElementById('overlay').classList.remove('visible');
     showReconnectBanner(false);
     setStatus('connected', 'AG connected');
@@ -3712,6 +3713,8 @@ function connect() {
         }
         renderActions();
         renderConversations();
+        // Grace period: if user manually resized a PWA drawer in last 8s, skip AG→PWA width sync
+        const _agSyncBlocked = window._agPanelWidthSynced; // one-shot: only sync on first broadcast after connect
         if (msg.data.rightPanel) {
           rightPanelState = msg.data.rightPanel;
           renderRightPanel(msg.data.rightPanel);
@@ -3721,8 +3724,8 @@ function connect() {
             if (msg.data.rightPanel.open) openRightDrawer();
             else closeRightDrawer();
           }
-          // Desktop: mirror AG's right panel width (±10px tolerance avoids micro-jitter)
-          if (window.matchMedia('(min-width: 600px)').matches) {
+          // Desktop: mirror AG's right panel width (±10px tolerance)
+          if (!_agSyncBlocked && window.matchMedia('(min-width: 600px)').matches) {
             const rpW = msg.data.rightPanel.width;
             if (rd && rpW > 10 && Math.abs(rd.offsetWidth - rpW) > 10) {
               rd.style.width = rpW + 'px';
@@ -3733,12 +3736,13 @@ function connect() {
           }
         }
         // Desktop: mirror AG's left panel width (±10px tolerance)
-        if (window.matchMedia('(min-width: 600px)').matches && msg.data.leftPanelWidth > 50) {
+        if (!_agSyncBlocked && window.matchMedia('(min-width: 600px)').matches && msg.data.leftPanelWidth > 50) {
           const ld = document.getElementById('left-drawer');
           if (ld && Math.abs(ld.offsetWidth - msg.data.leftPanelWidth) > 10) {
             ld.style.width = msg.data.leftPanelWidth + 'px';
           }
         }
+        if (!_agSyncBlocked) window._agPanelWidthSynced = true; // mark done after first sync
         // Update breadcrumb with real names
         // Prefer the active conversation's text (full title) over document.title fallback
         const activeConv = conversations.find(c => c.isActive);
