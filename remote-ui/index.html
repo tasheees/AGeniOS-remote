@@ -1437,7 +1437,7 @@
     .conv-row {
       position: relative;
       z-index: 2;
-      background: transparent;
+      background: var(--surface-1, #18181b);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -2444,7 +2444,7 @@
       <button class="drawer-close" onclick="closeDrawer('left')">✕</button>
     </div>
     <div class="drawer-body">
-      <button class="drawer-section-btn" onclick="sendCommand('/new')">
+      <button class="drawer-section-btn" onclick="if(ws&&ws.readyState===WebSocket.OPEN){ws.send(JSON.stringify({type:'new_conversation'}));}else{toast('Not connected');}">
         <span>＋</span> New Conversation
       </button>
       <button class="drawer-section-btn" onclick="sendCommand('/history')">
@@ -3625,7 +3625,7 @@ function _initBottomSheets() {
       closeProjSheet();
     });
     projSheet.querySelector('[data-action="new-conv"]')?.addEventListener('click', () => {
-      sendCommand('/new'); closeProjSheet();
+      if(ws&&ws.readyState===WebSocket.OPEN){ws.send(JSON.stringify({type:'new_conversation'}));}else{toast('Not connected');} closeProjSheet();
     });
     projSheet.querySelector('[data-action="rename-proj"]')?.addEventListener('click', () => {
       if (_activeSheetProj) {
@@ -3952,7 +3952,7 @@ function renderConversations() {
     addBtn.style.cssText = 'font-size:17px;font-weight:300;';
     addBtn.addEventListener('click', e => {
       e.stopPropagation();
-      sendCommand('/new');
+      if(ws&&ws.readyState===WebSocket.OPEN){ws.send(JSON.stringify({type:'new_conversation'}));}else{toast('Not connected');}
     });
 
     hoverActions.appendChild(gearBtn);

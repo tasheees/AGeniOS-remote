@@ -1849,6 +1849,33 @@ wss.on('connection', (ws, req) => {
         }
         break;
       }
+
+      case 'new_conversation': {
+        // Click AG's New Conversation button via CDP
+        try {
+          const clicked = await cdpEvaluate(`(function() {
+            // Try sidebar New Conversation link / button by aria-label or text
+            var candidates = Array.from(document.querySelectorAll('a, button'));
+            var btn = candidates.find(el => {
+              var label = (el.getAttribute('aria-label') || '').toLowerCase();
+              var text  = (el.textContent || '').trim().toLowerCase();
+              return label.includes('new conversation') || text === 'new conversation';
+            });
+            if (btn) { btn.click(); return true; }
+            return false;
+          })()`);
+          if (clicked) {
+            log('[new_conversation] clicked New Conversation button via CDP');
+            await new Promise(r => setTimeout(r, 400));
+            await broadcastState();
+          } else {
+            log('[new_conversation] New Conversation button not found in DOM');
+          }
+        } catch(e) {
+          log('[new_conversation] error:', e.message);
+        }
+        break;
+      }
     }
   });
 
