@@ -1551,7 +1551,34 @@ const httpServer = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST /cdp-eval — localhost-only CDP evaluation for Implementor inspection
+  // Usage: curl -s -X POST http://localhost:9100/cdp-eval \
+  //          -H 'Content-Type: application/json' \
+  //          -d '{"expr":"document.title"}' | jq
+  // NO auth required — localhost only. Never exposed via ngrok (ngrok uses auth).
+  if (req.method === 'POST' && url.pathname === '/cdp-eval') {
+    const isLocal = req.socket.remoteAddress === '127.0.0.1' || req.socket.remoteAddress === '::1';
+    if (!isLocal) { res.writeHead(403); res.end(JSON.stringify({ error: 'localhost only' })); return; }
+    const body = await parseBody(req);
+    const expr = String(body.expr || '').trim();
+    if (!expr) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Missing expr' }));
+      return;
+    }
+    try {
+      const result = await cdpEvaluate(`(function(){ try { return JSON.stringify(${expr}); } catch(e) { return JSON.stringify({error: e.message}); } })()`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, result }));
+    } catch(e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+    return;
+  }
+
   // POST /cmd — smart routing
+
 
   // PWA open  → execute locally, return result to PWA WebSocket only
   // PWA closed → execute locally, return result via Telegram
