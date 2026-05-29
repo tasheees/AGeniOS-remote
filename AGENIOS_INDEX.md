@@ -404,9 +404,9 @@ Task: M5 above.
 | ID | Task | Status |
 |:---|:-----|:-------|
 | W-Input.1 | Bridge: scrapeInputBar() + seeAllCounts + 4 WS handlers | [x] DONE (620e2a0) |
-| W-Input.2 | PWA: Tasks panel + Add Context menu + seeAllCounts render | [/] IN PROGRESS |
-| W-Input.3 | PWA: Model drop-up selector | [ ] |
-| W-Input.4 | PWA + Bridge: Settings dual-icon (PWA Settings + AG Settings) | [ ] |
+| W-Input.2 | PWA: Tasks panel + Add Context menu + seeAllCounts render | [x] DONE (7ab866a + bridge fix) |
+| W-Input.3 | PWA: Model drop-up selector | [x] DONE (same commit as W-Input.2) |
+| W-Input.4 | PWA + Bridge: Settings dual-icon (PWA Settings + AG Settings) | [ ] NEXT |
 
 *Last updated: 2026-05-29T10:17+03:00 by Impl — W-Input · Input Bar & Settings*
 

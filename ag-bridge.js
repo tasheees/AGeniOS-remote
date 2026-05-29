@@ -762,22 +762,25 @@ async function scrapeChatList() {
             }
             // Unread dot: pulsing badge
             var hasUnread = !!(row && row.querySelector('[class*="animate-unread"], [class*="bg-primary"][class*="rounded-full"]'));
-            // Project name: walk up ancestors; project section has a direct child DIV
-            // with class "text-sm font-medium truncate m-0" containing the project name.
-            // Confirmed via live DOM inspection 2026-05-29.
+            // Project name: walk up ancestors; project section has a header row as a direct child,
+            // and the name div (class font-medium truncate m-0) is INSIDE that header row.
+            // Fix 2026-05-29: use querySelectorAll within each direct child.
             var project = '';
             var ancestor = el;
             for (var d = 0; d < 15; d++) {
               ancestor = ancestor.parentElement;
               if (!ancestor) break;
-              var kids = Array.from(ancestor.children);
               var header = null;
+              var kids = Array.from(ancestor.children);
               for (var k = 0; k < kids.length; k++) {
-                var kc = (kids[k].className || '').toString();
-                if (kids[k].children.length === 0 &&
-                    kc.includes('font-medium') && kc.includes('truncate') && kc.includes('m-0')) {
-                  header = kids[k]; break;
-                }
+                // Search WITHIN each direct child for the project name element
+                var nameEls = kids[k].querySelectorAll ? Array.from(kids[k].querySelectorAll('div,span')) : [];
+                var found = nameEls.find(function(ne) {
+                  var c = (ne.className || '').toString();
+                  return ne.children.length === 0 &&
+                         c.includes('font-medium') && c.includes('truncate') && c.includes('m-0');
+                });
+                if (found) { header = found; break; }
               }
               if (header) {
                 var pt = header.textContent.trim();

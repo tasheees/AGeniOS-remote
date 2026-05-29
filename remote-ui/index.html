@@ -2270,7 +2270,151 @@
       gap: 16px;
     }
 
-    /* ─── Code Modal Full Screen ─────────────────────────────── */
+    /* ─── Model Picker Bottom Sheet ─────────────────────────────── */
+    #model-picker-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 700;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: max(0px, var(--safe-bottom));
+    }
+    #model-picker-modal.open { display: flex; }
+
+    #model-picker-card {
+      width: 100%;
+      max-width: 520px;
+      background: #141418;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-bottom: none;
+      border-radius: 20px 20px 0 0;
+      padding: 12px 0 max(24px, var(--safe-bottom));
+      max-height: 70vh;
+      overflow-y: auto;
+      animation: slideUp 0.25s cubic-bezier(0.32,0.72,0,1);
+    }
+
+    #model-picker-handle {
+      width: 36px; height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      margin: 0 auto 14px;
+    }
+
+    #model-picker-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 4px;
+    }
+    #model-picker-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    #model-picker-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 6px;
+    }
+
+    .model-group-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 10px 16px 4px;
+    }
+
+    .model-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.1s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-family: var(--font);
+    }
+    .model-row:hover, .model-row:active { background: rgba(255,255,255,0.05); }
+    .model-row.active {
+      background: rgba(124,58,237,0.1);
+    }
+    .model-row.active .model-row-name { color: #a78bfa; }
+
+    .model-row-icon {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .model-row-icon.claude  { background: rgba(253,186,116,0.1); }
+    .model-row-icon.gemini  { background: rgba(99,219,219,0.1); }
+
+    .model-row-info { flex: 1; min-width: 0; }
+    .model-row-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .model-row-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+    .model-row-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      letter-spacing: 0.3px;
+    }
+    .model-row-badge.thinking { background: rgba(167,139,250,0.15); color: #a78bfa; }
+    .model-row-badge.fast     { background: rgba(34,197,94,0.12);   color: #4ade80; }
+    .model-row-badge.pro      { background: rgba(251,191,36,0.12);   color: #fbbf24; }
+    .model-check {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .model-row.active .model-check {
+      background: #7c3aed;
+      border-color: #7c3aed;
+      color: white;
+    }
+
+    .model-row-switching {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    .model-row-switching .model-row-desc::after {
+      content: 'Switching…';
+      color: #a78bfa;
+    }
+
     #code-modal {
       position: fixed;
       inset: 0;
@@ -2780,6 +2924,18 @@
       <p>Open an artifact in AG to see it here</p>
     </div>
   </div>
+
+<!-- Model Picker Bottom Sheet -->
+<div id="model-picker-modal" onclick="if(event.target===this) closeModelPicker()">
+  <div id="model-picker-card">
+    <div id="model-picker-handle"></div>
+    <div id="model-picker-header">
+      <span id="model-picker-title">Select Model</span>
+      <button id="model-picker-close" onclick="closeModelPicker()">✕</button>
+    </div>
+    <div id="model-picker-list"></div>
+  </div>
+</div>
 
 <!-- Settings Bottom Sheet -->
 <div id="settings-modal" onclick="if(event.target===this) closeSettings()">
@@ -4351,15 +4507,107 @@ function ctxMenuAction(action) {
   toast(`Opening ${action}…`);
 }
 
-// ─── Model Selector ───────────────────────────────────────────────────────────
-// Opens AG's native model dropdown via bridge WS message.
-// In Commit 3 this will be replaced with a full PWA drop-up modal.
-function openModelSelector() {
-  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
-  // For now: relay to AG to open its own model picker
-  ws.send(JSON.stringify({ type: 'select_model', model: '__open_picker__' }));
-  toast('Opening model picker in AG…');
+// ─── Model Selector (Commit 3: Full PWA Bottom-Sheet) ─────────────────────────
+const KNOWN_MODELS = [
+  {
+    group: 'Claude',
+    models: [
+      { id: 'Claude Sonnet 4.6 (Thinking)', name: 'Claude Sonnet 4.6', desc: 'Balanced reasoning + speed', badge: 'thinking', icon: '🧠', iconClass: 'claude' },
+      { id: 'Claude Sonnet 4.6',            name: 'Claude Sonnet 4.6', desc: 'Fast, smart, everyday tasks', badge: 'fast',     icon: '⚡', iconClass: 'claude' },
+      { id: 'Claude Opus 4.6 (Thinking)',   name: 'Claude Opus 4.6',   desc: 'Most capable, deep reasoning', badge: 'thinking', icon: '✨', iconClass: 'claude' },
+      { id: 'Claude Opus 4.6',              name: 'Claude Opus 4.6',   desc: 'Most capable Claude model',   badge: 'pro',      icon: '✨', iconClass: 'claude' },
+    ]
+  },
+  {
+    group: 'Gemini',
+    models: [
+      { id: 'Gemini 2.5 Flash (High)',      name: 'Gemini 2.5 Flash',  desc: 'Fast, high-quality generation', badge: 'fast',  icon: '🔷', iconClass: 'gemini' },
+      { id: 'Gemini 2.5 Flash',             name: 'Gemini 2.5 Flash',  desc: 'Balanced and efficient',        badge: 'fast',  icon: '🔷', iconClass: 'gemini' },
+      { id: 'Gemini 2.5 Pro',               name: 'Gemini 2.5 Pro',    desc: 'Flagship Gemini model',        badge: 'pro',   icon: '💎', iconClass: 'gemini' },
+    ]
+  },
+];
+
+function openModelPicker() {
+  const modal = document.getElementById('model-picker-modal');
+  if (!modal) return;
+  renderModelPicker();
+  modal.classList.add('open');
 }
+
+function closeModelPicker() {
+  const modal = document.getElementById('model-picker-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+function renderModelPicker() {
+  const list = document.getElementById('model-picker-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const normalizedCurrent = (currentModel || '').toLowerCase().trim();
+
+  KNOWN_MODELS.forEach(group => {
+    const groupLabel = document.createElement('div');
+    groupLabel.className = 'model-group-label';
+    groupLabel.textContent = group.group;
+    list.appendChild(groupLabel);
+
+    group.models.forEach(m => {
+      const isActive = normalizedCurrent && normalizedCurrent.includes(m.id.toLowerCase());
+      const btn = document.createElement('button');
+      btn.className = 'model-row' + (isActive ? ' active' : '');
+      btn.onclick = () => selectModel(m.id);
+
+      const icon = document.createElement('div');
+      icon.className = `model-row-icon ${m.iconClass}`;
+      icon.textContent = m.icon;
+
+      const info = document.createElement('div');
+      info.className = 'model-row-info';
+
+      const name = document.createElement('div');
+      name.className = 'model-row-name';
+      name.textContent = m.name;
+
+      const desc = document.createElement('div');
+      desc.className = 'model-row-desc';
+      desc.textContent = m.desc;
+
+      info.appendChild(name);
+      info.appendChild(desc);
+
+      const badge = document.createElement('span');
+      badge.className = `model-row-badge ${m.badge}`;
+      badge.textContent = m.badge;
+
+      const check = document.createElement('div');
+      check.className = 'model-check';
+      if (isActive) check.textContent = '✓';
+
+      btn.appendChild(icon);
+      btn.appendChild(info);
+      btn.appendChild(badge);
+      btn.appendChild(check);
+      list.appendChild(btn);
+    });
+  });
+}
+
+function selectModel(modelId) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
+  closeModelPicker();
+  // Optimistic update
+  currentModel = modelId;
+  renderModelBar();
+  ws.send(JSON.stringify({ type: 'select_model', model: modelId }));
+  toast(`Switching to ${modelId.replace(' (Thinking)', '')}…`);
+}
+
+function openModelSelector() {
+  openModelPicker();
+}
+
 
 function navigateToConv(convId, rowEl) {
   if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
