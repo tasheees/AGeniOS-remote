@@ -76,6 +76,8 @@
     body.drawer-left-open #app {
       max-width: 100%;
     }
+    /* Hide chat-header sidebar toggle when drawer is open — toggle lives inside drawer header */
+    body.drawer-left-open #toggle-sidebar-btn { display: none; }
 
     #main-content {
       flex: 1;
@@ -3137,8 +3139,13 @@
   <div id="left-drawer">
     <div class="resize-handle-left" id="resize-left"></div>
     <div class="drawer-header">
+      <button class="panel-toggle" onclick="toggleAGPanel('left')" title="Toggle Sidebar ⌘B" style="margin-right:8px;flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/>
+          <line x1="5.5" y1="2.5" x2="5.5" y2="13.5"/>
+        </svg>
+      </button>
       <span class="drawer-title">Conversations</span>
-      <button class="drawer-close" onclick="closeDrawer('left')">✕</button>
     </div>
     <div class="drawer-body">
       <button class="drawer-section-btn" onclick="if(ws&&ws.readyState===WebSocket.OPEN){ws.send(JSON.stringify({type:'new_conversation'}));}else{toast('Not connected');}">
