@@ -410,9 +410,10 @@ Task: M5 above.
 | W-Input.5 | PWA textarea: `/` → slash picker + `@` → mention picker (Rules + Media from filesystem — no CDP) | [x] DONE (6b5757c + f26db63 + f1babf3) |
 | W-Input.5a | PWA `@` picker: fix section headers — Rules + Conversation separate (not single CONVERSATIONS header) | [x] DONE (f1babf3) |
 | W-Input.5b | Left panel bidirectional sync: bg-sidebar selector fix + every-broadcast mirror + openDrawer/closeDrawer WS toggle | [x] DONE (0a617fd) |
+| W-Input.5c | Left panel toggle regression fix: clear inline style.width on close (was blocking CSS width:0); checkVisibility() for sidebar open detection; 3s toggle lock for race condition | [x] DONE (c54d244) |
 | W-Input.6 | PWA `/` picker: add MCP tools section (read from ~/.gemini/antigravity/mcp/) above slash commands — AG shows 8+ total | [ ] NEXT |
 
-*Last updated: 2026-05-29T13:20+03:00 by AG Studio*
+*Last updated: 2026-05-29T19:19+03:00 by AG Studio*
 
 *Changes this session (2026-05-29):*
 - *Commit 1 (in progress): ag-bridge.js — scrapeInputBar() with confirmed selectors (button[aria-label^="Select model"], button[aria-label="Add context"], data-testid="settings-button"); seeAllCounts via group/section ancestor walk; broadcastState() now emits tasks + currentModel + seeAllCounts; WS handlers: select_model, stop_task, open_context_menu, open_ag_settings.*
