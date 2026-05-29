@@ -1012,16 +1012,24 @@ let _mentionCache = null;
 let _mentionCacheAt = 0;
 const MENTION_CACHE_TTL = 30000; // 30s
 
+// Convert snake_case filename to Title Case display name
+function filenameToTitle(name) {
+  return name
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim();
+}
+
 async function scrapeMentionSuggestions(currentId8) {
   const now = Date.now();
   if (_mentionCache && now - _mentionCacheAt < MENTION_CACHE_TTL) return _mentionCache;
 
-  const fs  = require('fs');
+  const fs   = require('fs');
   const path = require('path');
-  const HOME = process.env.HOME || '/Users/marwantzenios';
+  const HOME  = process.env.HOME || '/Users/marwantzenios';
   const BRAIN = path.join(HOME, '.gemini', 'antigravity', 'brain');
 
-  // ── Rules: scan known rule file names in common project dirs ──────────────
+  // ── Rules: scan known rule file names in project dirs ─────────────────────
   const RULE_NAMES = ['CONTEXT.md', 'AGENTS.md', 'GEMINI.md', 'CLAUDE.md', '.cursorrules', 'RULES.md'];
   const SCAN_DIRS  = [
     path.join(HOME, 'projects', 'AGenIOS'),
@@ -1031,41 +1039,67 @@ async function scrapeMentionSuggestions(currentId8) {
   const rules = [];
   for (const dir of SCAN_DIRS) {
     try {
-      for (const name of RULE_NAMES) {
-        const full = path.join(dir, name);
-        if (fs.existsSync(full)) rules.push({ name, path: full });
+      for (const rname of RULE_NAMES) {
+        const full = path.join(dir, rname);
+        if (fs.existsSync(full)) rules.push({ name: rname, path: full });
       }
-    } catch(e) { /* skip inaccessible dirs */ }
+    } catch(e) { /* skip inaccessible */ }
   }
 
-  // ── Media: find current conversation dir, list .tempmediaStorage ──────────
+  // ── Conversation: read entire brain/<convId>/ dir (docs + images) ─────────
+  const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.mp4', '.mov'];
+  const DOC_EXTS   = ['.md', '.txt', '.pdf'];
   const media = [];
+
   try {
     const brainDirs = fs.readdirSync(BRAIN);
-    // Match 8-char prefix to full conversation ID dir
-    const convDir = brainDirs.find(d => currentId8 && d.startsWith(currentId8) && !d.startsWith('.'));
+    const convDir   = brainDirs.find(d => currentId8 && d.startsWith(currentId8) && !d.startsWith('.'));
     if (convDir) {
-      const mediaDir = path.join(BRAIN, convDir, '.tempmediaStorage');
-      if (fs.existsSync(mediaDir)) {
-        const files = fs.readdirSync(mediaDir);
-        for (const f of files) {
-          const ext = path.extname(f).toLowerCase();
-          if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf', '.mp4', '.mov'].includes(ext)) {
-            const stat = fs.statSync(path.join(mediaDir, f));
-            media.push({ name: f, convId: convDir, mtime: stat.mtimeMs });
-          }
+      const convPath = path.join(BRAIN, convDir);
+
+      // Helper: add files from a directory
+      const addFiles = (dir) => {
+        if (!fs.existsSync(dir)) return;
+        for (const f of fs.readdirSync(dir)) {
+          if (f.startsWith('.')) continue;
+          const ext   = path.extname(f).toLowerCase();
+          const isImg = IMAGE_EXTS.includes(ext);
+          const isDoc = DOC_EXTS.includes(ext);
+          if (!isImg && !isDoc) continue;
+
+          const stat  = fs.statSync(path.join(dir, f));
+          const base  = path.basename(f, ext);
+          const isAnon = /^media[_-]/i.test(base);
+
+          // Anonymous media_ → "Media (May 26 10:36 PM)" — clean timestamp like AG
+          // Named files → "Implementation Plan", "Stitch Approval V2" etc.
+          const displayName = isAnon ? 'Media' : filenameToTitle(base);
+
+          media.push({
+            name: displayName,
+            rawFile: f,
+            convId: convDir,
+            mtime: stat.mtimeMs,
+            isDoc,
+            isAnon,
+          });
         }
-        // Sort newest first, cap at 20
-        media.sort((a, b) => b.mtime - a.mtime);
-        media.splice(20);
-      }
+      };
+
+      addFiles(convPath);                                    // named .md artifacts + named images
+      addFiles(path.join(convPath, '.tempmediaStorage'));    // anonymous media (shown as "Media (timestamp)")
+
     }
   } catch(e) { log('[scrapeMentionSuggestions] media error:', e.message); }
+
+  // Sort newest first — no cap (AG shows all)
+  media.sort((a, b) => b.mtime - a.mtime);
 
   _mentionCache = { rules, media };
   _mentionCacheAt = now;
   return _mentionCache;
 }
+
 
 async function broadcastState() {
   const [chatDump, actions, chatList, cssVars, rightPanel, leftPanel, inputBar] = await Promise.all([

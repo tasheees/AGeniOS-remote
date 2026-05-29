@@ -5720,37 +5720,36 @@ function _pickerOpen(type, filter) {
     const q = filter.toLowerCase();
     const ms = window._mentionSuggestions || {};
 
-    // ── Rules section ──────────────────────────────────────────────
+    // ── 1. Rules ───────────────────────────────────────────────────────
     const ruleItems = (ms.rules || []).filter(r =>
       !q || r.name.toLowerCase().includes(q)
     ).map(r => ({ name: r.name, icon: '📋', insertText: r.name }));
 
-    // ── Media / Conversation section ───────────────────────────────
-    const mediaItems = (ms.media || []).filter(m =>
+    // ── 2. Conversations (sidebar chat list) ───────────────────────────
+    const convItems = (window.conversations || []).filter(c =>
+      c.text && (!q || c.text.toLowerCase().includes(q))
+    ).map(c => ({ name: c.text, icon: '💬', insertText: c.text }));
+
+    // ── 3. Overview (current conversation artifacts + media) ───────────
+    const overviewItems = (ms.media || []).filter(m =>
       !q || m.name.toLowerCase().includes(q)
     ).map(m => {
-      const d = new Date(m.mtime);
-      const label = m.name.replace(/^media_[a-f0-9-]+_\d+/, 'Media ' + m.convId.slice(0,8));
+      const d       = new Date(m.mtime);
       const timeStr = d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
-      return { name: label, desc: timeStr, icon: '🖼️', insertText: m.name };
+      const icon    = m.isDoc ? '📄' : '🖼️';
+      const label   = m.isAnon ? `Media (${timeStr})` : m.name;
+      return { name: label, icon, insertText: m.rawFile || m.name };
     });
 
-    // Flatten for keyboard navigation — track sections for rendering
     sections = [
-      { header: 'Rules',        icon: '📋', items: ruleItems  },
-      { header: 'Conversation', icon: '💬', items: mediaItems },
+      { header: 'Rules',         icon: '📋', items: ruleItems     },
+      { header: 'Conversations', icon: '💬', items: convItems     },
+      { header: 'Overview',      icon: '🗂️', items: overviewItems },
     ].filter(s => s.items.length > 0);
-
-    // Also include conversations if no media/rules match
-    if (sections.length === 0) {
-      const convItems = (window.conversations || []).filter(c =>
-        c.text && (!q || c.text.toLowerCase().includes(q))
-      ).map(c => ({ name: c.text, icon: '💬', insertText: c.text }));
-      sections = [{ header: 'Conversations', icon: '💬', items: convItems }];
-    }
 
     items = sections.flatMap(s => s.items);
   }
+
 
   _pickerRows = items;
   _pickerActive = items.length > 0 ? 0 : -1;

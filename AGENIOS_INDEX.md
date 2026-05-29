@@ -407,9 +407,12 @@ Task: M5 above.
 | W-Input.2 | PWA: Tasks panel + Add Context menu + seeAllCounts render | [x] DONE (7ab866a + bridge fix) |
 | W-Input.3 | PWA: Model drop-up selector | [x] DONE + bug fix (exact match + correct IDs) |
 | W-Input.4 | PWA + Bridge: Settings dual-icon (PWA Settings + AG Settings) | [x] DONE (this commit) |
-| W-Input.5 | PWA textarea: typing `/` → slash command picker overlay; typing `@` → mention picker with conversation list — both with filter, arrow nav, Enter select, Escape close | [x] DONE (6b5757c) |
+| W-Input.5 | PWA textarea: `/` → slash picker + `@` → mention picker (Rules + Media from filesystem — no CDP) | [x] DONE (6b5757c + f26db63 + f1babf3) |
+| W-Input.5a | PWA `@` picker: fix section headers — Rules + Conversation separate (not single CONVERSATIONS header) | [x] DONE (f1babf3) |
+| W-Input.5b | Left panel bidirectional sync: bg-sidebar selector fix + every-broadcast mirror + openDrawer/closeDrawer WS toggle | [x] DONE (0a617fd) |
+| W-Input.6 | PWA `/` picker: add MCP tools section (read from ~/.gemini/antigravity/mcp/) above slash commands — AG shows 8+ total | [ ] NEXT |
 
-*Last updated: 2026-05-29T11:31+03:00 by Impl — W-Input.5 · Slash & Mention Pickers*
+*Last updated: 2026-05-29T13:20+03:00 by AG Studio*
 
 *Changes this session (2026-05-29):*
 - *Commit 1 (in progress): ag-bridge.js — scrapeInputBar() with confirmed selectors (button[aria-label^="Select model"], button[aria-label="Add context"], data-testid="settings-button"); seeAllCounts via group/section ancestor walk; broadcastState() now emits tasks + currentModel + seeAllCounts; WS handlers: select_model, stop_task, open_context_menu, open_ag_settings.*
