@@ -407,7 +407,7 @@ Task: M5 above.
 | W-Input.2 | PWA: Tasks panel + Add Context menu + seeAllCounts render | [x] DONE (7ab866a + bridge fix) |
 | W-Input.3 | PWA: Model drop-up selector | [x] DONE + bug fix (exact match + correct IDs) |
 | W-Input.4 | PWA + Bridge: Settings dual-icon (PWA Settings + AG Settings) | [x] DONE (this commit) |
-| W-Input.5 | PWA textarea: typing `/` → slash command picker overlay; typing `@` → mention picker with conversation list — both with filter, arrow nav, Enter select, Escape close | [x] DONE (pending commit) |
+| W-Input.5 | PWA textarea: typing `/` → slash command picker overlay; typing `@` → mention picker with conversation list — both with filter, arrow nav, Enter select, Escape close | [x] DONE (6b5757c) |
 
 *Last updated: 2026-05-29T11:31+03:00 by Impl — W-Input.5 · Slash & Mention Pickers*
 
