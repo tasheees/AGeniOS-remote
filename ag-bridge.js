@@ -946,11 +946,24 @@ async function scrapeLeftPanel() {
   try {
     const result = await cdpEvaluate(`
       (function() {
-        // Original working approach: offsetWidth returns 0 when AG hides the sidebar
-        // via display:none, and the real width when open. Simple and confirmed working.
+        // Use checkVisibility() on the "New Conversation" button — the most reliable
+        // detector. checkVisibility handles display:none, visibility:hidden, opacity:0,
+        // and parent-level hiding. If the button is visible, the sidebar is open.
+        var allBtns = Array.from(document.querySelectorAll('button'));
+        var newConvBtn = allBtns.find(function(b) {
+          return b.textContent && b.textContent.trim() === 'New Conversation';
+        });
+        if (newConvBtn) {
+          var visible = typeof newConvBtn.checkVisibility === 'function'
+            ? newConvBtn.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
+            : newConvBtn.offsetWidth > 0;
+          var w = visible ? Math.round(newConvBtn.getBoundingClientRect().right) : 0;
+          return { open: visible, width: w };
+        }
+        // Fallback: bg-sidebar offsetWidth (original approach)
         var sidebar = document.querySelector('[class*="bg-sidebar"]');
-        var w = sidebar ? sidebar.offsetWidth : 0;
-        return { open: w > 50, width: w };
+        var w2 = sidebar ? sidebar.offsetWidth : 0;
+        return { open: w2 > 50, width: w2 };
       })()
     `);
     return result || { open: true, width: 260 };

@@ -3695,6 +3695,9 @@ function connect() {
                 }
               } else {
                 document.body.classList.remove('drawer-left-open');
+                // Clear inline width so CSS width:0 can close the drawer
+                const ldClose = document.getElementById('left-drawer');
+                if (ldClose) ldClose.style.width = '';
               }
               // Persist so next refresh starts correct before first WS message
               try { localStorage.setItem('ag_left_panel_open', agOpen ? '1' : '0'); } catch(e) {}
@@ -6017,7 +6020,13 @@ function toggleAGPanel(side) {
   // Also toggle local drawer immediately (AG state will confirm via next broadcast)
   if (side === 'left') {
     document.body.classList.toggle('drawer-left-open');
-    if (document.body.classList.contains('drawer-left-open')) renderConversations();
+    if (document.body.classList.contains('drawer-left-open')) {
+      renderConversations();
+    } else {
+      // Drawer closed — clear inline width so CSS width:0 can take effect
+      const ldT = document.getElementById('left-drawer');
+      if (ldT) ldT.style.width = '';
+    }
     // Lock: prevent leftPanelOpen broadcast from re-opening before AG processes the toggle
     window._leftPanelToggleLock = Date.now();
   }
