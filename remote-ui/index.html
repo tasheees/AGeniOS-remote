@@ -1441,7 +1441,7 @@
       position: relative;
       z-index: 2;
       width: 100%;
-      background: var(--surface-1, #18181b);
+      background: transparent;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -1453,8 +1453,8 @@
       margin: 0 4px;
     }
     .conv-row:hover { background: var(--bg-hover); }
-    .conv-row.active { background: #2a1f3d; } /* solid equiv of rgba(124,58,237,0.18) on #18181b */
-    .conv-row:active:not(.active) { background: #231a30; } /* solid equiv of rgba(124,58,237,0.12) */
+    .conv-row.active { background: rgba(124,58,237,0.18); }
+    .conv-row:active:not(.active) { background: rgba(124,58,237,0.12); }
 
     /* Pinned indicator */
     .conv-row.pinned .conv-name::before {

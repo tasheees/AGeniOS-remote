@@ -762,8 +762,33 @@ async function scrapeChatList() {
             }
             // Unread dot: pulsing badge
             var hasUnread = !!(row && row.querySelector('[class*="animate-unread"], [class*="bg-primary"][class*="rounded-full"]'));
+            // Project name: walk up ancestors; project section has a direct child DIV
+            // with class "text-sm font-medium truncate m-0" containing the project name.
+            // Confirmed via live DOM inspection 2026-05-29.
+            var project = '';
+            var ancestor = el;
+            for (var d = 0; d < 15; d++) {
+              ancestor = ancestor.parentElement;
+              if (!ancestor) break;
+              var kids = Array.from(ancestor.children);
+              var header = null;
+              for (var k = 0; k < kids.length; k++) {
+                var kc = (kids[k].className || '').toString();
+                if (kids[k].children.length === 0 &&
+                    kc.includes('font-medium') && kc.includes('truncate') && kc.includes('m-0')) {
+                  header = kids[k]; break;
+                }
+              }
+              if (header) {
+                var pt = header.textContent.trim();
+                if (pt && pt.length > 0 && pt.length < 50 &&
+                    !/^(Conversations|Projects|Settings|New Conversation|Scheduled|See all|See less)/i.test(pt)) {
+                  project = pt; break;
+                }
+              }
+            }
             if (id && text) {
-              convLinks.push({ id: id.slice(0, 36), text: text, isActive: isActive, hasSpinner: hasSpinner, time: time, project: '', hasUnread: hasUnread });
+              convLinks.push({ id: id.slice(0, 36), text: text, isActive: isActive, hasSpinner: hasSpinner, time: time, project: project, hasUnread: hasUnread });
             }
           }
           return { activeName: activeName, currentId: currentId.slice(0, 8), convLinks: convLinks };
