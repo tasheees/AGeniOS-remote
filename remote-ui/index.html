@@ -1418,6 +1418,27 @@
       opacity: 0.7;
     }
 
+    /* AG settings gear icon — in model bar, opens AG native settings */
+    #ag-settings-btn {
+      width: 26px; height: 26px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      border-radius: 8px;
+      transition: background 0.12s, color 0.12s;
+      margin-left: auto;  /* push to right edge of model-bar */
+    }
+    #ag-settings-btn:hover {
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+    }
+
     /* ─── Add Context Drop-up Menu ────────────────────────────── */
     #context-menu {
       position: absolute;
@@ -2888,6 +2909,8 @@
             <span id="model-btn-name">Claude</span>
             <span id="model-btn-chevron">▲</span>
           </button>
+          <!-- AG settings gear: opens AG native Settings (bottom of AG sidebar) -->
+          <button id="ag-settings-btn" onclick="openAGSettings()" title="AG Settings">⚙️</button>
         </div>
         <div id="input-row-inner">
           <button id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach image">📎</button>
@@ -4606,6 +4629,16 @@ function selectModel(modelId) {
 
 function openModelSelector() {
   openModelPicker();
+}
+
+// ─── AG Settings (dual-icon: left-drawer ⚙️ = PWA Settings; model-bar ⚙️ = AG Settings) ─────────
+// Clicking the ⚙️ in the model-bar opens AG's own Settings screen via CDP click relay.
+function openAGSettings() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
+  ws.send(JSON.stringify({ type: 'open_ag_settings' }));
+  toast('⚙️ Opening AG Settings…');
+  // Close left drawer if open (avoid clutter)
+  document.body.classList.remove('drawer-left-open');
 }
 
 
