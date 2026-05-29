@@ -403,8 +403,8 @@ Task: M5 above.
 ### W-Input — Input Bar & Settings
 | ID | Task | Status |
 |:---|:-----|:-------|
-| W-Input.1 | Bridge: scrapeInputBar() + seeAllCounts + 4 WS handlers | [/] IN PROGRESS |
-| W-Input.2 | PWA: Tasks panel + Add Context menu + seeAllCounts render | [ ] |
+| W-Input.1 | Bridge: scrapeInputBar() + seeAllCounts + 4 WS handlers | [x] DONE (620e2a0) |
+| W-Input.2 | PWA: Tasks panel + Add Context menu + seeAllCounts render | [/] IN PROGRESS |
 | W-Input.3 | PWA: Model drop-up selector | [ ] |
 | W-Input.4 | PWA + Bridge: Settings dual-icon (PWA Settings + AG Settings) | [ ] |
 

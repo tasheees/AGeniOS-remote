@@ -1180,6 +1180,7 @@
       border-top: 1px solid var(--border);
       flex-shrink: 0;
       padding-bottom: max(12px, var(--safe-bottom));
+      position: relative;  /* required for #context-menu absolute positioning */
     }
 
     #quick-actions {
@@ -1307,6 +1308,166 @@
       color: var(--text-dim);
     }
     #attach-btn:hover { opacity: 1; color: var(--text); }
+
+    /* ─── Tasks Panel (above quick-actions) ──────────────────── */
+    #tasks-panel {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 12px 4px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(251,191,36,0.04);
+    }
+    #tasks-panel.has-tasks { display: flex; }
+
+    #tasks-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #f59e0b;
+      letter-spacing: 0.3px;
+    }
+    #tasks-count-label {
+      flex: 1;
+    }
+    #tasks-spinner {
+      width: 12px; height: 12px;
+      border: 2px solid #f59e0b;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .task-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .task-row-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #f59e0b;
+      flex-shrink: 0;
+      animation: pulse-unread 1.5s ease-in-out infinite;
+    }
+
+    /* ─── Model Bar (inside input-row, above input field) ─────── */
+    #model-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 2px;
+    }
+
+    #add-ctx-btn {
+      width: 26px; height: 26px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    #add-ctx-btn:hover, #add-ctx-btn.open {
+      background: rgba(124,58,237,0.12);
+      border-color: rgba(124,58,237,0.4);
+      color: var(--accent-light, #a78bfa);
+    }
+
+    #model-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px 2px 2px;
+      border-radius: 14px;
+      transition: background 0.12s;
+      max-width: calc(100% - 40px);
+      overflow: hidden;
+    }
+    #model-btn:hover { background: var(--bg-hover); }
+    #model-btn-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #model-btn-chevron {
+      font-size: 9px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    /* ─── Add Context Drop-up Menu ────────────────────────────── */
+    #context-menu {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 12px;
+      min-width: 200px;
+      background: #1e1e28;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 6px;
+      z-index: 500;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+      animation: slideUpMenu 0.15s cubic-bezier(0.32,0.72,0,1);
+      display: none;
+    }
+    #context-menu.open { display: block; }
+    @keyframes slideUpMenu {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .ctx-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-family: var(--font);
+      transition: background 0.1s;
+    }
+    .ctx-menu-item:hover, .ctx-menu-item:active { background: rgba(255,255,255,0.07); }
+    .ctx-menu-icon {
+      font-size: 16px;
+      width: 22px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .ctx-menu-label { flex: 1; }
+    .ctx-menu-shortcut {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
 
     /* ─── Conversations Folder Layout (AG-style sidebar) ────────── */
 
@@ -2528,6 +2689,16 @@
 
     <!-- Bottom Bar -->
     <div id="bottom-bar">
+      <!-- Tasks Panel (above quick-actions, hidden when no tasks running) -->
+      <div id="tasks-panel">
+        <div id="tasks-header">
+          <div id="tasks-spinner"></div>
+          <span id="tasks-count-label">0 tasks running</span>
+        </div>
+        <div id="tasks-list"></div>
+      </div>
+
+      <!-- Quick action pills -->
       <div id="quick-actions">
         <button class="quick-btn" onclick="promptAndSend('/ask')">🤖 /ask</button>
         <button class="quick-btn" onclick="sendCommand('/status')">📊 /status</button>
@@ -2542,9 +2713,38 @@
         <button class="quick-btn" onclick="sendCommand('/push')">🚀 /push</button>
         <button class="quick-btn" onclick="sendCommand('/deploy')">☁️ /deploy</button>
       </div>
+
+      <!-- Input row -->
       <div id="input-row">
         <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleFileSelect(event)">
         <div id="img-preview-strip"></div>
+        <!-- Model bar: + (Add context) | model name ▲ -->
+        <div id="model-bar">
+          <!-- Context drop-up menu (positioned relative to #bottom-bar) -->
+          <div id="context-menu">
+            <button class="ctx-menu-item" onclick="ctxMenuAction('media')">
+              <span class="ctx-menu-icon">📎</span>
+              <span class="ctx-menu-label">Attach media</span>
+            </button>
+            <button class="ctx-menu-item" onclick="ctxMenuAction('mentions')">
+              <span class="ctx-menu-icon">@</span>
+              <span class="ctx-menu-label">Mentions</span>
+            </button>
+            <button class="ctx-menu-item" onclick="ctxMenuAction('actions')">
+              <span class="ctx-menu-icon">☑️</span>
+              <span class="ctx-menu-label">Actions</span>
+            </button>
+            <button class="ctx-menu-item" onclick="ctxMenuAction('browser')">
+              <span class="ctx-menu-icon">🌐</span>
+              <span class="ctx-menu-label">Browser</span>
+            </button>
+          </div>
+          <button id="add-ctx-btn" onclick="toggleContextMenu()" title="Add context">＋</button>
+          <button id="model-btn" onclick="openModelSelector()" title="Change model">
+            <span id="model-btn-name">Claude</span>
+            <span id="model-btn-chevron">▲</span>
+          </button>
+        </div>
         <div id="input-row-inner">
           <button id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach image">📎</button>
           <div id="input-field-wrap">
@@ -2556,6 +2756,8 @@
       </div>
     </div>
   </div>
+
+
 
 </div>
 
@@ -2749,6 +2951,8 @@ let connected = false;
 let messages   = [];
 let actions    = [];
 let conversations = [];
+let seeAllCounts  = {};  // { 'ProjectName': N } — from AG scrape
+let currentModel  = '';
 let rightPanelState = null;
 
 // ─── WebSocket ───────────────────────────────────────────────────────────────
@@ -2813,6 +3017,14 @@ function connect() {
         if (msg.data.chatDump) applyDump(msg.data.chatDump);
         actions       = msg.data.actions       || [];
         conversations = msg.data.conversations || [];
+        seeAllCounts  = msg.data.seeAllCounts  || {};
+        if (msg.data.currentModel) {
+          currentModel = msg.data.currentModel;
+          renderModelBar();
+        }
+        if (msg.data.tasks) {
+          renderTasksPanel(msg.data.tasks);
+        }
         renderActions();
         renderConversations();
         if (msg.data.rightPanel) {
@@ -4026,10 +4238,12 @@ function renderConversations() {
       }
 
       // See all / See less
+      // Prefer AG's real count (seeAllCounts[grpName]) over local slice count
+      const agTotalCount = seeAllCounts[grpName] || convs.length;
       if (!showAll && convs.length > CONV_LIMIT) {
         const seeAllBtn = document.createElement('button');
         seeAllBtn.className = 'conv-see-all';
-        seeAllBtn.textContent = `See all (${convs.length})`;
+        seeAllBtn.textContent = `See all (${agTotalCount})`;
         seeAllBtn.addEventListener('click', () => {
           expandedProjects.add(grpName);
           renderConversations();
@@ -4053,11 +4267,104 @@ function renderConversations() {
   panel.scrollTop = scrollTop;
 }
 
+// ─── Tasks Panel ──────────────────────────────────────────────────────────────
+function renderTasksPanel(tasks) {
+  const panel = document.getElementById('tasks-panel');
+  const countLabel = document.getElementById('tasks-count-label');
+  const tasksList  = document.getElementById('tasks-list');
+  if (!panel || !countLabel || !tasksList) return;
 
+  const count = tasks.count || 0;
+  if (count === 0) {
+    panel.classList.remove('has-tasks');
+    return;
+  }
+
+  panel.classList.add('has-tasks');
+  countLabel.textContent = count === 1 ? '1 task running' : `${count} tasks running`;
+
+  tasksList.innerHTML = '';
+  (tasks.tasks || []).forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'task-row';
+    const dot = document.createElement('span');
+    dot.className = 'task-row-dot';
+    const label = document.createElement('span');
+    label.textContent = t.label || '';
+    row.appendChild(dot);
+    row.appendChild(label);
+    tasksList.appendChild(row);
+  });
+}
+
+// ─── Model Bar ─────────────────────────────────────────────────────────────────
+function renderModelBar() {
+  const nameEl = document.getElementById('model-btn-name');
+  if (!nameEl || !currentModel) return;
+  // Shorten: "Claude Sonnet 4.6 (Thinking)" → "Claude Sonnet 4.6"
+  const shortName = currentModel
+    .replace(/\s*\(Thinking\)/i, '')
+    .replace(/\s*\(Extended thinking\)/i, '')
+    .trim();
+  nameEl.textContent = shortName || currentModel.slice(0, 22);
+  nameEl.title = currentModel;  // full name in tooltip
+}
+
+// ─── Context Drop-up Menu ─────────────────────────────────────────────────────
+function toggleContextMenu() {
+  const menu = document.getElementById('context-menu');
+  const btn  = document.getElementById('add-ctx-btn');
+  if (!menu) return;
+  const isOpen = menu.classList.contains('open');
+  if (isOpen) {
+    closeContextMenu();
+  } else {
+    menu.classList.add('open');
+    if (btn) btn.classList.add('open');
+    // Close when clicking anywhere outside
+    setTimeout(() => {
+      document.addEventListener('click', _contextMenuOutsideClick, { once: true, capture: true });
+    }, 0);
+  }
+}
+
+function _contextMenuOutsideClick(e) {
+  const menu = document.getElementById('context-menu');
+  const btn  = document.getElementById('add-ctx-btn');
+  if (menu && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
+    closeContextMenu();
+  }
+}
+
+function closeContextMenu() {
+  const menu = document.getElementById('context-menu');
+  const btn  = document.getElementById('add-ctx-btn');
+  if (menu) menu.classList.remove('open');
+  if (btn)  btn.classList.remove('open');
+  document.removeEventListener('click', _contextMenuOutsideClick, true);
+}
+
+function ctxMenuAction(action) {
+  closeContextMenu();
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
+  ws.send(JSON.stringify({ type: 'open_context_menu', action }));
+  toast(`Opening ${action}…`);
+}
+
+// ─── Model Selector ───────────────────────────────────────────────────────────
+// Opens AG's native model dropdown via bridge WS message.
+// In Commit 3 this will be replaced with a full PWA drop-up modal.
+function openModelSelector() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
+  // For now: relay to AG to open its own model picker
+  ws.send(JSON.stringify({ type: 'select_model', model: '__open_picker__' }));
+  toast('Opening model picker in AG…');
+}
 
 function navigateToConv(convId, rowEl) {
   if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected'); return; }
   rowEl.style.opacity = '0.5';
+
   rowEl.style.pointerEvents = 'none';
   const nameEl = rowEl.querySelector('.conv-name');
   if (nameEl) nameEl.textContent = '⟳ Switching…';
