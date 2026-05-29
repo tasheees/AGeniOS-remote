@@ -75,6 +75,7 @@
 | Commit | What |
 |:-------|:-----|
 | `pending` | **Bug fix:** Synchronized PWA right drawer open/closed state directly with real AG auxiliary pane state to fix out-of-sync placeholder states. |
+| `pending` | **W1-W4 Sidebar Interactions (Phases 1-5):** AG-style project grouping (folder icon right, chevron rotate), desktop hover actions (gear+new-conv on project rows; archive📦/pin📌/⋯ dropdown on chat rows), 6-chat limit + See all(N)/See less (bold, accent-violet hover), mobile long-press → frosted bottom sheets for conv+project, swipe-left → 3-button action strip (Pin/Archive/Delete) with 60%-auto-trigger. All implemented in remote-ui/index.html only. |
 
 ### ✅ DONE TODAY — 2026-05-28
 
@@ -126,8 +127,12 @@
 | W3.1 | CDP research: what AG DOM exposes for projects/conversation list | [x] |
 | W3.2 | Bridge: /api/chats endpoint with project+conversation data | [ ] |
 | W3.3 | Drawer populated dynamically from bridge (not hardcoded) | [x] |
-| W3.4 | Swipe-left on conversation row → quick actions (archive, copy link) | [x] |
+| W3.4 | Swipe-left on conversation row → quick actions (archive, copy link) | [x] Enhanced: now Pin📌 + Archive📦 + Delete🗑 with 60% auto-trigger |
 | W3.5 | Long-press breadcrumb → inline chat picker popup | [x] |
+| W3.6 | AG-style project grouping: folder icon right, chevron rotation, collapse/expand | [x] DONE 2026-05-29 |
+| W3.7 | Desktop hover actions: ⚙️+new on project row; archive/pin/⋯ on chat row | [x] DONE 2026-05-29 |
+| W3.8 | 6-chat limit per project + See all(N) / See less (bold, accent-violet hover) | [x] DONE 2026-05-29 |
+| W3.9 | Mobile long-press → frosted bottom sheet (conv: unread/rename/pin/archive/delete; project: settings/new/rename) | [x] DONE 2026-05-29 |
 
 ### W4 — Right Panel Expansion (research phase)
 | ID | Task | Status |
@@ -394,12 +399,13 @@ Task: M5 above.
 
 ---
 
-*Last updated: 2026-05-28T16:23+03:00 by AGenIOS Studio 23aba18b*
+*Last updated: 2026-05-29T09:15+03:00 by Impl — W1-W4 · Sidebar Interactions*
 
-*Changes this session (2026-05-28 afternoon):*
+*Changes this session (2026-05-29):*
 - *SDK/CDP deep research complete — SDK attach to Desktop confirmed impossible (architectural, not a bug). See agenios_bridge_research.html.*
 - *S2.15a/b/c registered: CDP WebSocket frame interception is the path to native hooks.*
 - *agy CLI (DeepMind) discovered — Session Export feature noted for S3.*
 - *S3 expanded: distribution + monetization strategy decided (value-based, no artificial limits, AGenIOS Cloud as premium service).*
 - *W1-W4 refactor spec finalized: Opus 986-line spec + 5 corrections + 4 Stitch screens.*
 - *Flash implementor dispatched for W1-W4 execution. Awaiting Sovereign Report.*
+- *W3.6-W3.9 Sidebar Interactions complete: AG-style project grouping, desktop hover actions, 6-chat limit, mobile bottom sheets + swipe strip. remote-ui/index.html only.*
