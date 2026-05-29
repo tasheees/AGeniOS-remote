@@ -3178,21 +3178,28 @@ function connect() {
           injectAgCssVars(msg.data.cssVars);
           window._agVarsInjected = true;
         }
-        // ── Mirror AG panel states on first message ──────────────────────
-        if (!window._drawersInitialized && typeof msg.data.leftPanelOpen !== 'undefined') {
-          window._drawersInitialized = true;
+        // ── Mirror AG left panel state on every broadcast ──────────────────
+        if (typeof msg.data.leftPanelOpen !== 'undefined') {
           const isDesktop = window.innerWidth > 768;
-          if (msg.data.leftPanelOpen) {
-            document.body.classList.add('drawer-left-open');
-            // Match AG's left sidebar width on desktop
-            if (isDesktop && msg.data.leftPanelWidth && msg.data.leftPanelWidth > 50) {
-              const ld = document.getElementById('left-drawer');
-              if (ld) ld.style.width = msg.data.leftPanelWidth + 'px';
+          const agOpen = msg.data.leftPanelOpen;
+          window._agLeftPanelOpen = agOpen;  // track for bidirectional toggle
+          const pwaOpen = document.body.classList.contains('drawer-left-open');
+          // Only apply if state differs — avoid re-triggering transitions on every tick
+          if (agOpen !== pwaOpen) {
+            if (agOpen) {
+              document.body.classList.add('drawer-left-open');
+              if (isDesktop && msg.data.leftPanelWidth && msg.data.leftPanelWidth > 50) {
+                const ld = document.getElementById('left-drawer');
+                if (ld) ld.style.width = msg.data.leftPanelWidth + 'px';
+              }
+            } else {
+              document.body.classList.remove('drawer-left-open');
             }
-          } else {
-            document.body.classList.remove('drawer-left-open');
+            // Persist so next refresh starts correct before first WS message
+            try { localStorage.setItem('ag_left_panel_open', agOpen ? '1' : '0'); } catch(e) {}
           }
         }
+
         if (msg.data.chatDump) applyDump(msg.data.chatDump);
         actions       = msg.data.actions       || [];
         conversations = msg.data.conversations || [];
@@ -5328,6 +5335,12 @@ let drawerExpanded = false;
 
 function openDrawer(side) {
   if (side === 'left') {
+    // Tell AG to open its left panel if not already open (bidirectional sync)
+    if (!window._agLeftPanelOpen) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'toggle_ag_panel', panel: 'left' }));
+      }
+    }
     document.body.classList.add('drawer-left-open');
     renderConversations();
   }
@@ -5347,7 +5360,7 @@ function toggleAGPanel(side) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'toggle_ag_panel', panel: side }));
   }
-  // Also toggle local drawer
+  // Also toggle local drawer immediately (AG state will confirm via next broadcast)
   if (side === 'left') {
     document.body.classList.toggle('drawer-left-open');
     if (document.body.classList.contains('drawer-left-open')) renderConversations();
@@ -5358,6 +5371,12 @@ function toggleAGPanel(side) {
 
 function closeDrawer(side) {
   if (side === 'left') {
+    // Tell AG to close its left panel if currently open (bidirectional sync)
+    if (window._agLeftPanelOpen) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'toggle_ag_panel', panel: 'left' }));
+      }
+    }
     document.body.classList.remove('drawer-left-open');
     drawerExpanded = false;
     document.getElementById('left-drawer').style.width = '';

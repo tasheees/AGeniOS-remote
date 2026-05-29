@@ -932,8 +932,9 @@ async function scrapeLeftPanel() {
   try {
     const result = await cdpEvaluate(`
       (function() {
-        var nav = document.querySelector('nav');
-        var w = nav ? nav.offsetWidth : 0;
+        // AG sidebar: no <nav> tag — use bg-sidebar class (confirmed via CDP 2026-05-29)
+        var sidebar = document.querySelector('[class*="bg-sidebar"]');
+        var w = sidebar ? sidebar.offsetWidth : 0;
         return { open: w > 50, width: w };
       })()
     `);
