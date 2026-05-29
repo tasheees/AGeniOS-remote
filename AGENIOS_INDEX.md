@@ -1,6 +1,6 @@
 # AGENIOS_INDEX.md
 > AGenIOS — Task Registry & Source of Truth
-> Last Sync: 2026-05-28T23:38+03:00 · Studio 23aba18b
+> Last Sync: 2026-05-29T08:15+03:00 · Studio 23aba18b
 
 ---
 
@@ -69,6 +69,12 @@
 | `abafb21` | `/wpa` fixed — no-tunnel vs bridge-down distinction; ngrok added to PM2 |
 | `3aea822` | Syntax highlighting — `language-*` classes preserved through bridge class strip |
 | `4e033ed` | Conversations tab — fully wired with tappable navigation to any AG conversation |
+
+### ✅ DONE TODAY — 2026-05-29
+
+| Commit | What |
+|:-------|:-----|
+| `pending` | **Bug fix:** Synchronized PWA right drawer open/closed state directly with real AG auxiliary pane state to fix out-of-sync placeholder states. |
 
 ### ✅ DONE TODAY — 2026-05-28
 

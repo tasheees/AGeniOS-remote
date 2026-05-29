@@ -2447,6 +2447,7 @@ let connected = false;
 let messages   = [];
 let actions    = [];
 let conversations = [];
+let rightPanelState = null;
 
 // ─── WebSocket ───────────────────────────────────────────────────────────────
 function getWsUrl() {
@@ -2497,7 +2498,10 @@ function connect() {
         conversations = msg.data.conversations || [];
         renderActions();
         renderConversations();
-        if (msg.data.rightPanel) renderRightPanel(msg.data.rightPanel);
+        if (msg.data.rightPanel) {
+          rightPanelState = msg.data.rightPanel;
+          renderRightPanel(msg.data.rightPanel);
+        }
         // Update breadcrumb with real names
         // Prefer the active conversation's text (full title) over document.title fallback
         const activeConv = conversations.find(c => c.isActive);
@@ -3406,7 +3410,10 @@ function renderRightPanel(data) {
   const placeholder = document.getElementById('artifacts-placeholder');
   if (!tabsEl || !contentEl || !placeholder) return;
 
+  const rd = document.getElementById('right-drawer');
+
   if (!data.open) {
+    if (rd) rd.classList.remove('open');
     tabsEl.style.display = 'none';
     contentEl.style.display = 'none';
     placeholder.style.display = 'block';
@@ -3414,6 +3421,7 @@ function renderRightPanel(data) {
   }
 
   // Show content, hide placeholder
+  if (rd) rd.classList.add('open');
   tabsEl.style.display = 'flex';
   contentEl.style.display = 'block';
   placeholder.style.display = 'none';
@@ -4072,6 +4080,11 @@ function openDrawer(side) {
     renderConversations();
   }
   if (side === 'right') {
+    if (!rightPanelState || !rightPanelState.open) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'toggle_ag_panel', panel: 'right' }));
+      }
+    }
     document.getElementById('right-drawer').classList.add('open');
     renderActions();
   }
@@ -4087,11 +4100,8 @@ function toggleAGPanel(side) {
     document.body.classList.toggle('drawer-left-open');
     if (document.body.classList.contains('drawer-left-open')) renderConversations();
   }
-  if (side === 'right') {
-    const rd = document.getElementById('right-drawer');
-    rd.classList.toggle('open');
-    if (rd.classList.contains('open')) renderActions();
-  }
+  // For 'right', we let the WS state broadcast handle adding/removing 'open'
+  // via renderRightPanel to prevent out-of-sync states and flashes.
 }
 
 function closeDrawer(side) {
@@ -4102,6 +4112,11 @@ function closeDrawer(side) {
     document.getElementById('main-content').style.width = '';
   }
   if (side === 'right') {
+    if (rightPanelState && rightPanelState.open) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'toggle_ag_panel', panel: 'right' }));
+      }
+    }
     document.getElementById('right-drawer').classList.remove('open');
   }
 }
