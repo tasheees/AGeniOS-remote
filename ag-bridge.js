@@ -57,6 +57,7 @@ const DIALOG_SCRAPER_EXPR = fs.readFileSync(path.join(__dirname, '_dialog_scrape
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+const BRIDGE_VERSION  = '1.5.0'; // W5: Command Palette + Menu Bar
 const BOT_TOKEN       = process.env.TELEGRAM_BOT_TOKEN || '';
 const ALLOWED_CHAT_ID = String(process.env.TELEGRAM_CHAT_ID || '');
 const REMOTE_PASSWORD = process.env.REMOTE_PASSWORD || randomPassword();
@@ -1844,7 +1845,7 @@ const httpServer = http.createServer(async (req, res) => {
   // GET /status — health check
   if (url.pathname === '/status') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, cdpConnected, tunnelUrl, clients: wsClients.size }));
+    res.end(JSON.stringify({ ok: true, version: BRIDGE_VERSION, cdpConnected, tunnelUrl, clients: wsClients.size }));
     return;
   }
 
@@ -2288,6 +2289,97 @@ wss.on('connection', (ws, req) => {
         } catch(e) {
           log('[new_conversation] error:', e.message);
         }
+        break;
+      }
+
+      // ─── W5 Power Actions ────────────────────────────────────────────
+
+      case 'ag_reload': {
+        log('[ag_reload] sending ⌘R to AG');
+        try {
+          await cdpEvaluate('if (document.activeElement) document.activeElement.blur();');
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyDown', key: 'r', code: 'KeyR', windowsVirtualKeyCode: 82, nativeVirtualKeyCode: 82, modifiers: 4 });
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyUp',   key: 'r', code: 'KeyR', windowsVirtualKeyCode: 82, nativeVirtualKeyCode: 82, modifiers: 4 });
+        } catch(e) { log('[ag_reload] error:', e.message); }
+        break;
+      }
+
+      case 'ag_force_reload': {
+        log('[ag_force_reload] sending ⇧⌘R to AG');
+        try {
+          await cdpEvaluate('if (document.activeElement) document.activeElement.blur();');
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyDown', key: 'r', code: 'KeyR', windowsVirtualKeyCode: 82, nativeVirtualKeyCode: 82, modifiers: 12 });
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyUp',   key: 'r', code: 'KeyR', windowsVirtualKeyCode: 82, nativeVirtualKeyCode: 82, modifiers: 12 });
+        } catch(e) { log('[ag_force_reload] error:', e.message); }
+        break;
+      }
+
+      case 'ag_zoom_in': {
+        log('[ag_zoom_in] sending ⌘= to AG');
+        try {
+          await cdpEvaluate('if (document.activeElement) document.activeElement.blur();');
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyDown', key: '=', code: 'Equal', windowsVirtualKeyCode: 187, nativeVirtualKeyCode: 187, modifiers: 4 });
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyUp',   key: '=', code: 'Equal', windowsVirtualKeyCode: 187, nativeVirtualKeyCode: 187, modifiers: 4 });
+        } catch(e) { log('[ag_zoom_in] error:', e.message); }
+        break;
+      }
+
+      case 'ag_zoom_out': {
+        log('[ag_zoom_out] sending ⌘- to AG');
+        try {
+          await cdpEvaluate('if (document.activeElement) document.activeElement.blur();');
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyDown', key: '-', code: 'Minus', windowsVirtualKeyCode: 189, nativeVirtualKeyCode: 189, modifiers: 4 });
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyUp',   key: '-', code: 'Minus', windowsVirtualKeyCode: 189, nativeVirtualKeyCode: 189, modifiers: 4 });
+        } catch(e) { log('[ag_zoom_out] error:', e.message); }
+        break;
+      }
+
+      case 'ag_actual_size': {
+        log('[ag_actual_size] sending ⌘0 to AG');
+        try {
+          await cdpEvaluate('if (document.activeElement) document.activeElement.blur();');
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyDown', key: '0', code: 'Digit0', windowsVirtualKeyCode: 48, nativeVirtualKeyCode: 48, modifiers: 4 });
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyUp',   key: '0', code: 'Digit0', windowsVirtualKeyCode: 48, nativeVirtualKeyCode: 48, modifiers: 4 });
+        } catch(e) { log('[ag_actual_size] error:', e.message); }
+        break;
+      }
+
+      case 'ag_new_window': {
+        log('[ag_new_window] sending ⇧⌘N to AG');
+        try {
+          await cdpEvaluate('if (document.activeElement) document.activeElement.blur();');
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyDown', key: 'n', code: 'KeyN', windowsVirtualKeyCode: 78, nativeVirtualKeyCode: 78, modifiers: 12 });
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyUp',   key: 'n', code: 'KeyN', windowsVirtualKeyCode: 78, nativeVirtualKeyCode: 78, modifiers: 12 });
+        } catch(e) { log('[ag_new_window] error:', e.message); }
+        break;
+      }
+
+      case 'ag_close_window': {
+        log('[ag_close_window] sending ⌘W to AG');
+        try {
+          await cdpEvaluate('if (document.activeElement) document.activeElement.blur();');
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyDown', key: 'w', code: 'KeyW', windowsVirtualKeyCode: 87, nativeVirtualKeyCode: 87, modifiers: 4 });
+          await cdpSend('Input.dispatchKeyEvent', { type: 'keyUp',   key: 'w', code: 'KeyW', windowsVirtualKeyCode: 87, nativeVirtualKeyCode: 87, modifiers: 4 });
+        } catch(e) { log('[ag_close_window] error:', e.message); }
+        break;
+      }
+
+      case 'ag_switch_window': {
+        // Activate next AG window via CDP Target.getTargets + Target.activateTarget
+        log('[ag_switch_window] switching to next AG window');
+        try {
+          const targetsRaw = await cdpSend('Target.getTargets', {}, null);
+          const targets = (targetsRaw?.targetInfos || []).filter(t => t.type === 'page' && !t.url.startsWith('devtools://'));
+          if (targets.length > 1) {
+            // Find current target, activate next one
+            const curr = targets.findIndex(t => t.targetId === sessionId);
+            const next = targets[(curr + 1) % targets.length];
+            await cdpSend('Target.activateTarget', { targetId: next.targetId }, null);
+            log(`[ag_switch_window] activated: ${next.url.slice(0, 60)}`);
+          } else {
+            log('[ag_switch_window] only one window found, nothing to switch to');
+          }
+        } catch(e) { log('[ag_switch_window] error:', e.message); }
         break;
       }
     }

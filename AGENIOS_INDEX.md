@@ -429,11 +429,11 @@ Task: M5 above.
 
 | ID | Task | Status | Notes |
 |:---|:-----|:-------|:------|
-| W5.1 | Mobile: Command Palette — ⌘ button in header → bottom-sheet overlay, searchable, grouped actions | [ ] |
-| W5.2 | Desktop: Menu Bar — File · View · Window dropdowns in header (AG-style), keyboard shortcuts shown | [ ] |
-| W5.3 | CDP backend: ag-bridge.js WS handlers for reload, force-reload, zoom-in/out/actual, new-window, close-window, switch-window | [ ] |
-| W5.4 | About AGenIOS section — version, bridge status, GitHub link | [ ] |
-| W5.5 | Close Window: confirmation dialog before executing | [ ] |
-| W5.6 | Index + governance update on completion | [ ] |
+| W5.1 | Mobile: Command Palette — ⌘ button in header → bottom-sheet overlay, searchable, grouped actions | [x] | ⌘⚡ btn, slideUp sheet, live search, grouped rows |
+| W5.2 | Desktop: Menu Bar — File · View · Window dropdowns in header (AG-style), keyboard shortcuts shown | [x] | @media ≥600px, glassmorphism dropdowns, outside-click close |
+| W5.3 | CDP backend: ag-bridge.js WS handlers for reload, force-reload, zoom-in/out/actual, new-window, close-window, switch-window | [x] | Input.dispatchKeyEvent with correct VK codes + modifiers |
+| W5.4 | About AGenIOS section — version, bridge status, GitHub link | [x] | Fetches /status → version field; shown at palette bottom + Window menu |
+| W5.5 | Close Window: confirmation dialog before executing | [x] | Inline confirm row in palette + palette-on-confirm from desktop menu |
+| W5.6 | Index + governance update on completion | [x] | This commit |
 
 *Last updated: 2026-05-29T17:15+03:00 by AG Studio*
