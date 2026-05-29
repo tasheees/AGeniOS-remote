@@ -361,6 +361,17 @@
     }
     #right-drawer.open { transform: translateX(0); }
 
+    /* Desktop: right drawer PUSHES chat instead of overlaying */
+    @media (min-width: 600px) {
+      #right-drawer {
+        top: 0; /* already set */ 
+      }
+      body.right-drawer-open #app {
+        margin-right: 340px; /* matches default drawer width */
+        transition: margin-right 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      }
+    }
+
     /* Resize handle — right drawer left edge */
     .resize-handle-right {
       position: absolute;
@@ -3697,8 +3708,8 @@ function connect() {
           // Sync right drawer open/closed to match AG
           const rd = document.getElementById('right-drawer');
           if (rd) {
-            if (msg.data.rightPanel.open) rd.classList.add('open');
-            else rd.classList.remove('open');
+            if (msg.data.rightPanel.open) openRightDrawer();
+            else closeRightDrawer();
           }
         }
         // Update breadcrumb with real names
@@ -5955,7 +5966,7 @@ function openDrawer(side) {
         ws.send(JSON.stringify({ type: 'toggle_ag_panel', panel: 'right' }));
       }
     }
-    document.getElementById('right-drawer').classList.add('open');
+    openRightDrawer();
     renderActions();
   }
 }
@@ -5993,8 +6004,28 @@ function closeDrawer(side) {
         ws.send(JSON.stringify({ type: 'toggle_ag_panel', panel: 'right' }));
       }
     }
-    document.getElementById('right-drawer').classList.remove('open');
+    closeRightDrawer();
   }
+}
+
+function openRightDrawer() {
+  const rd = document.getElementById('right-drawer');
+  if (!rd) return;
+  rd.classList.add('open');
+  // Desktop push: sync margin to actual drawer width
+  if (window.matchMedia('(min-width: 600px)').matches) {
+    document.body.classList.add('right-drawer-open');
+    const w = rd.offsetWidth || 340;
+    document.getElementById('app').style.marginRight = w + 'px';
+  }
+}
+
+function closeRightDrawer() {
+  const rd = document.getElementById('right-drawer');
+  if (!rd) return;
+  rd.classList.remove('open');
+  document.body.classList.remove('right-drawer-open');
+  document.getElementById('app').style.marginRight = '';
 }
 
 function toggleDrawerExpand() {
