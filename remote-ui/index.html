@@ -78,6 +78,10 @@
     }
     /* Hide chat-header sidebar toggle when drawer is open — toggle lives inside drawer header */
     body.drawer-left-open #toggle-sidebar-btn { display: none; }
+    /* Desktop: no title in sidebar header — AG native has none */
+    @media (min-width: 600px) {
+      .drawer-title { display: none; }
+    }
 
     #main-content {
       flex: 1;

@@ -1120,7 +1120,7 @@ async function broadcastState() {
     scrapeChat(), scrapePendingActions(), scrapeChatList(), scrapeTheme(), scrapeRightPanel(), scrapeLeftPanel(), scrapeInputBar(),
   ]);
   const mentionSuggestions = await scrapeMentionSuggestions(chatList.currentId);
-  log(`[broadcastState] convLinks=${chatList.convLinks?.length || 0} chatName=${chatList.activeName} rightPanel=${rightPanel.open ? rightPanel.activeTabName : 'closed'} tasks=${inputBar.count} model=${inputBar.currentModel}`);
+  log(`[broadcastState] convLinks=${chatList.convLinks?.length || 0} chatName=${chatList.activeName} rightPanel=${rightPanel.open ? rightPanel.activeTabName : 'closed'} leftPanel=${leftPanel.open ? 'open' : 'closed'} leftW=${leftPanel.width} rightW=${rightPanel.width} tasks=${inputBar.count} model=${inputBar.currentModel}`);
   _lastActions = actions;  // cache for use in HTTP handlers
   if (actions.length > 0) {
     log('⚠️  actions detected:', JSON.stringify(actions.map(a => ({type:a.type, text:(a.text||'').slice(0,50), opts:a.options?.length}))));
