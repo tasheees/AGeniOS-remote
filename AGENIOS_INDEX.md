@@ -494,8 +494,13 @@ Task: M5 above.
 | W6.4 | Header refinement (glass background, backdrop-filter, lighter border, adjusted padding, bc-chip border) | [x] DONE |
 | W6.5 | Code block header restructure (flex header above code, SVG icon-only copy btn, language class on code el) | [x] DONE |
 | W6.6 | Micro-polish (animation-fill-mode, quick-btn:active scale, panel-toggle 0.12s, pre/inline-code glass, chat scrollbar) | [x] DONE |
+| W6.7 | PWA manifest → /manifest.json + /icons/icon-512.png (brand icon replaces 🤖 emoji) | [x] DONE |
+| W6.8 | Zoom fix: transform:scale on #app (not style.zoom); restores persisted zoom on boot | [x] DONE |
+| W6.9 | Prism CDN → local /prism/ routes (syntax highlighting now works in PWA standalone mode) | [x] DONE |
+| W6.10 | file:// image proxy: /file?path= endpoint + renderMarkdown file://→proxy + https:// pass-through | [x] DONE |
+| W6.11 | Chat images: scrapeChat preserves real imgs as data-local-src; broadcastState embeds as base64; blob URLs get 📷 prefix | [x] DONE |
 
-*Last updated: 2026-05-30T10:40+03:00 by Impl — W6 · PWA Visual Refresh*
+*Last updated: 2026-05-30T22:32+03:00 by Studio*
 
 
 *Changes this session (2026-05-29):*

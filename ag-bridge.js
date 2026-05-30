@@ -549,15 +549,27 @@ async function scrapeChat() {
          Array.from(clone.querySelectorAll('img')).forEach(function(img){
            var src = img.getAttribute('src') || '';
            var alt = (img.getAttribute('alt') || '').trim();
-           var sp = document.createElement('span');
-           sp.textContent = alt || '\uD83D\uDCC4';
            var idx = src.lastIndexOf('/files/');
            if (idx >= 0) {
+             // File-type icon (e.g. /files/typescript.svg) — keep as text badge
+             var sp = document.createElement('span');
+             sp.textContent = alt || '\uD83D\uDCC4';
              var after = src.substring(idx + 7);
              var dot = after.indexOf('.');
              if (dot > 0) sp.setAttribute('data-file-icon', after.substring(0, dot).toLowerCase());
+             img.parentNode.replaceChild(sp, img);
+           } else if (src.startsWith('blob:')) {
+             // Blob URLs cannot be read server-side — show emoji placeholder
+             var sp = document.createElement('span');
+             sp.textContent = '\uD83D\uDCF7 ' + (alt || 'Image');
+             img.parentNode.replaceChild(sp, img);
+           } else if (src && !src.startsWith('data:')) {
+             // Real image (local path, https:) — mark for server-side base64 embed
+             img.setAttribute('data-local-src', src);
+             img.removeAttribute('src');
+             img.setAttribute('alt', alt || 'image');
            }
-           img.parentNode.replaceChild(sp, img);
+           // data: images pass through unchanged
          });
          // Strip data-* but PRESERVE data-state (open/closed collapsible state)
          Array.from(clone.querySelectorAll('*')).forEach(function(n){
@@ -1142,8 +1154,10 @@ async function broadcastState() {
   if (rightPanel.content) {
     rightPanel.content = embedLocalImages(rightPanel.content);
   }
+  // Embed local images in chat dump (user-attached screenshots etc.)
+  let chatDumpEmbedded = chatDump ? embedLocalImages(chatDump) : chatDump;
   broadcast('state', {
-    chatDump,              // full AG HTML dump
+    chatDump: chatDumpEmbedded, // full AG HTML dump with images base64-embedded
     cssVars,               // AG CSS custom properties for theming
     actions,
     cdpConnected,
@@ -1957,6 +1971,45 @@ const httpServer = http.createServer(async (req, res) => {
     } catch {
       res.writeHead(404);
       res.end('Icon not found');
+    }
+    return;
+  }
+
+  // GET /prism/:file — serve locally-cached Prism.js syntax highlighting files
+  // CDN unavailable in PWA standalone mode; files live in remote-ui/prism*.{js,css}
+  if (url.pathname.startsWith('/prism/')) {
+    const prismFile = path.basename(url.pathname);
+    const prismPath = path.join(__dirname, 'remote-ui', prismFile);
+    try {
+      const data = fs.readFileSync(prismPath);
+      const ext  = path.extname(prismFile).slice(1).toLowerCase();
+      const mime = ext === 'css' ? 'text/css' : 'application/javascript';
+      res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=86400' });
+      res.end(data);
+    } catch {
+      res.writeHead(404);
+      res.end('Prism file not found');
+    }
+    return;
+  }
+
+  // GET /file?path=... — secure proxy for local files (images in artifacts)
+  // Allows PWA to display file:// images that browsers block for security reasons
+  if (url.pathname === '/file') {
+    if (!isAuthenticated(req)) { res.writeHead(401); res.end('Unauthorized'); return; }
+    const filePath = url.searchParams.get('path');
+    if (!filePath) { res.writeHead(400); res.end('Missing path'); return; }
+    try {
+      const data = fs.readFileSync(filePath);
+      const ext  = path.extname(filePath).slice(1).toLowerCase();
+      const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+                     gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml',
+                     pdf: 'application/pdf' }[ext] || 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
+      res.end(data);
+    } catch {
+      res.writeHead(404);
+      res.end('File not found');
     }
     return;
   }

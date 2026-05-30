@@ -3213,9 +3213,15 @@
   </style>
 
   <!-- Prism.js syntax highlighting -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <!-- Prism.js syntax highlighting — served locally so it works in PWA standalone mode -->
+  <link rel="stylesheet" href="/prism/prism-tomorrow.min.css">
+  <script src="/prism/prism.min.js"></script>
+  <script src="/prism/prism-javascript.min.js"></script>
+  <script src="/prism/prism-typescript.min.js"></script>
+  <script src="/prism/prism-python.min.js"></script>
+  <script src="/prism/prism-bash.min.js"></script>
+  <script src="/prism/prism-json.min.js"></script>
+  <script src="/prism/prism-css.min.js"></script>
 </head>
 <body>
 <!-- Transparent tap-to-close backdrop (no visual, just closes drawer on tap outside) -->
@@ -4231,6 +4237,15 @@ function renderMarkdown(text) {
   if (!text) return '';
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   function inlineFmt(s) {
+    // Images FIRST — before esc() so src URLs aren't mangled
+    // file:// → /file proxy (browser blocks file:// from http origins)
+    s = s.replace(/!\[([^\]]*)\]\((file:\/\/\/([^)]+))\)/g, function(_, alt, _full, filePath) {
+      return '<img src="/file?path=' + encodeURIComponent('/' + filePath) + '" alt="' + alt.replace(/"/g,'&quot;') + '" style="max-width:100%;border-radius:8px;margin:6px 0;display:block;">';
+    });
+    // https:// images — pass through as-is
+    s = s.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, function(_, alt, url) {
+      return '<img src="' + url + '" alt="' + alt.replace(/"/g,'&quot;') + '" style="max-width:100%;border-radius:8px;margin:6px 0;display:block;">';
+    });
     s = esc(s);
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
     s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
