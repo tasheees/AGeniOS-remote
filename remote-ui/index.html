@@ -2822,26 +2822,41 @@
 
     #scroll-btn {
       position: fixed;
-      bottom: calc(110px + var(--safe-bottom));
-      right: 16px;
-      width: 38px; height: 38px;
-      background: var(--accent);
-      border: none;
-      border-radius: 50%;
-      color: white;
-      font-size: 18px;
-      cursor: pointer;
+      bottom: calc(74px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      background: rgba(15,15,25,0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 20px;
+      color: rgba(200,210,230,0.75);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      padding: 5px 12px 5px 10px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 16px rgba(124,58,237,0.5);
+      gap: 4px;
+      cursor: pointer;
       opacity: 0;
-      transform: translateY(10px);
-      transition: opacity 0.2s, transform 0.2s;
       pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
       z-index: 150;
+      white-space: nowrap;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.35);
     }
-    #scroll-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    #scroll-btn.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+    #scroll-btn:hover {
+      background: rgba(30,30,50,0.88);
+      color: rgba(220,230,245,0.95);
+      border-color: rgba(255,255,255,0.18);
+    }
+    #scroll-btn svg { flex-shrink: 0; }
 
     #toast {
       position: fixed;
@@ -3626,7 +3641,12 @@
 <div id="reconnect-banner">⚡ Reconnecting…</div>
 
 <!-- Scroll to bottom -->
-<button id="scroll-btn" onclick="scrollToBottom()" title="Jump to latest">↓</button>
+<button id="scroll-btn" onclick="scrollToBottom()" title="Jump to latest">
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="2,4 6,8 10,4"/>
+  </svg>
+  latest
+</button>
 
 <!-- Toast -->
 <div id="toast"></div>
@@ -3965,12 +3985,28 @@ function scrollToBottom() {
   panel.scrollTop = panel.scrollHeight;
 }
 
+let _scrollBtnTimer = null;
+
 function updateScrollBtn() {
   const panel = document.getElementById('chat-panel');
   const btn   = document.getElementById('scroll-btn');
   const distFromBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
-  _userScrolledAway = distFromBottom > 200;   // reading threshold
-  btn.classList.toggle('visible', distFromBottom > 80);
+  _userScrolledAway = distFromBottom > 200;
+
+  // Hide immediately when user returns near bottom
+  if (distFromBottom < panel.clientHeight) {
+    clearTimeout(_scrollBtnTimer);
+    btn.classList.remove('visible');
+    return;
+  }
+
+  // Show only after: ≥1 full viewport scrolled up + 1.5s cooldown since scroll stopped
+  clearTimeout(_scrollBtnTimer);
+  _scrollBtnTimer = setTimeout(() => {
+    if ((panel.scrollHeight - panel.scrollTop - panel.clientHeight) >= panel.clientHeight) {
+      btn.classList.add('visible');
+    }
+  }, 1500);
 }
 
 // ─── Verbosity state (1–5, persisted) ───────────────────────────────────────
