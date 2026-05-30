@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 218 32" width="436" height="64">
+  <g transform="translate(0, 4)">
+    <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+          fill="none" stroke="#7c3aed" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="34" y="18"
+        font-family="Geist, Helvetica Neue, Arial, sans-serif"
+        font-weight="700" font-size="18" fill="#ffffff">AGeniOS</text>
+  <text x="34" y="29"
+        font-family="Geist, Helvetica Neue, Arial, sans-serif"
+        font-weight="400" font-size="9" fill="#6b7280">remote</text>
+  <line x1="34" y1="31" x2="62" y2="31"
+        stroke="#7c3aed" stroke-width="0.8" stroke-opacity="0.55"/>
+</svg>

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "opentype.js": "^2.0.0",
+    "puppeteer-core": "^24.43.1"
+  }
+}

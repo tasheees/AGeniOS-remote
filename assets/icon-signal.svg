@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 36 28">
+  <!-- Lucide Zap bolt (AGeniOS brand, unchanged) -->
+  <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+        fill="none" stroke="#7c3aed" stroke-width="1.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Signal arcs — "remote" broadcasting right from bolt -->
+  <!-- Arc 1 — inner, full opacity -->
+  <path d="M 22,9 C 25.5,9 25.5,15 22,15"
+        fill="none" stroke="#7c3aed" stroke-width="1.4"
+        stroke-linecap="round"/>
+  <!-- Arc 2 — middle -->
+  <path d="M 23,6.5 C 28.5,6.5 28.5,17.5 23,17.5"
+        fill="none" stroke="#7c3aed" stroke-width="1.2"
+        stroke-linecap="round" opacity="0.65"/>
+  <!-- Arc 3 — outer, faintest -->
+  <path d="M 24,4 C 32,4 32,20 24,20"
+        fill="none" stroke="#7c3aed" stroke-width="1.0"
+        stroke-linecap="round" opacity="0.4"/>
+</svg>

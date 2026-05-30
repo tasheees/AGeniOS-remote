@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 38" width="190" height="38">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;700');
+      .ag-name { font-family: 'Geist', -apple-system, 'Helvetica Neue', Arial, sans-serif; font-weight: 700; }
+      .ag-sub  { font-family: 'Geist', -apple-system, 'Helvetica Neue', Arial, sans-serif; font-weight: 400; }
+    </style>
+  </defs>
+
+  <!-- Lucide Zap — outline, no fill, violet -->
+  <g transform="translate(0, 7)">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+         stroke="#7c3aed" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
+    </svg>
+  </g>
+
+  <!-- AGeniOS — white, bold, 18px -->
+  <text x="34" y="22" class="ag-name" font-size="18" fill="#ffffff">AGeniOS</text>
+
+  <!-- remote — grey, 9px, tight under AGeniOS -->
+  <text x="34" y="32" class="ag-sub" font-size="9" fill="#6b7280">remote</text>
+
+  <!-- violet accent line under remote — approx AG width -->
+  <line x1="34" y1="34.5" x2="62" y2="34.5" stroke="#7c3aed" stroke-width="1" stroke-opacity="0.55"/>
+</svg>
