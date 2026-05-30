@@ -22,6 +22,9 @@ module.exports = {
       script: 'ag-bridge.py',
       interpreter: '/opt/homebrew/bin/python3',
       cwd: '/Users/marwantzenios/projects/AGenIOS',
+      env: {
+        BRIDGE_PORT: 9101,   // ag-bridge.js owns :9100 — py sidecar uses :9101
+      },
       restart_delay: 5000,
       max_restarts: 10,
       out_file:   './logs/ag-bridge-py-out.log',

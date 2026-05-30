@@ -9,7 +9,7 @@ Architecture:
                                      ├── PostTurnHook       → content streaming
                                      ├── PreToolCallDecide  → policy gate (log only)
                                      ├── PostToolCallHook   → tool log
-                                     ├── HTTP :9100         → serves PWA + /status
+                                     ├── HTTP :9101         → sidecar status (ag-bridge.js owns :9100)
                                      ├── WebSocket /ws      → real-time events
                                      └── ngrok/cloudflare   → mobile tunnel
 
