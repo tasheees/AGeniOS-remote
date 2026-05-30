@@ -6389,9 +6389,24 @@ function showInlineChatPicker() {
 const SLASH_COMMANDS = [
   { name: 'goal',             desc: 'Run until goal is fully finished',      icon: '🎯' },
   { name: 'schedule',         desc: 'Recurring schedule or one-time timer',  icon: '⏱' },
-  { name: 'browser',          desc: 'Invoke a browser agent',                icon: '🌐' },
+  { name: 'browser',          desc: 'Invoke a browser agent for web tasks',  icon: '🌐' },
   { name: 'grill-me',         desc: 'Interview to align on a plan',          icon: '🔥' },
   { name: 'teamwork-preview', desc: 'Team of agents for large projects',      icon: '👥' },
+];
+
+// MCP prompts: registered by MCP servers as slash commands (not tools).
+// These match exactly what AG Normal shows in its / picker.
+// Format: mcp:server-name:category:action — inserted as-is so AG executes them.
+const MCP_PROMPTS = [
+  { name: 'mcp:firebase-mcp-server:firebase:deploy',
+    desc: 'Deploy resources to your Firebase project.',
+    icon: '□', isMcp: true, insertText: 'mcp:firebase-mcp-server:firebase:deploy' },
+  { name: 'mcp:firebase-mcp-server:firebase:init',
+    desc: 'Set up Firebase services, like backend and AI features.',
+    icon: '□', isMcp: true, insertText: 'mcp:firebase-mcp-server:firebase:init' },
+  { name: 'mcp:firebase-mcp-server:firestore:generate_security_rules',
+    desc: 'Generate secure Firebase Firestore Security Rules.',
+    icon: '□', isMcp: true, insertText: 'mcp:firebase-mcp-server:firestore:generate_security_rules' },
 ];
 
 // MCP tools loaded from bridge — populated once on init
@@ -6421,11 +6436,19 @@ function _pickerOpen(type, filter) {
   if (type === 'slash') {
     const q = filter.toLowerCase();
 
-    // Only real AG slash commands — MCP tools are not slash commands
+    // MCP prompts first (matches AG Normal ordering: □ prompts above <> slash commands)
+    const promptItems = MCP_PROMPTS.filter(p =>
+      !q || p.name.includes(q) || p.desc.toLowerCase().includes(q)
+    );
+
+    // Real AG slash commands
     const slashItems = SLASH_COMMANDS.filter(c => !q || c.name.startsWith(q) || c.name.includes(q));
 
-    sections = slashItems.length ? [{ header: 'Slash Commands', icon: '/', items: slashItems }] : [];
-    items = slashItems;
+    sections = [
+      ...(promptItems.length ? [{ header: 'MCP Commands', icon: '□', items: promptItems }] : []),
+      ...(slashItems.length  ? [{ header: 'Slash Commands', icon: '/', items: slashItems }] : []),
+    ];
+    items = sections.flatMap(s => s.items);
 
   } else if (type === 'mention') {
     const q = filter.toLowerCase();
