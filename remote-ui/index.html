@@ -6487,18 +6487,15 @@ let _pwaZoom = parseFloat(localStorage.getItem('pwaZoom') || '1');
 
 function _applyPwaZoom(level, showToast) {
   _pwaZoom = Math.min(_PWA_ZOOM_MAX, Math.max(_PWA_ZOOM_MIN, parseFloat(level.toFixed(2))));
-  const z    = _pwaZoom === 1 ? '' : String(_pwaZoom);
-  const zInv = _pwaZoom === 1 ? '' : String(+(1 / _pwaZoom).toFixed(6));
+  const z = _pwaZoom === 1 ? '' : String(_pwaZoom);
 
   // Central chat area (below header, above input bar)
   const zoomContent = document.getElementById('zoom-content');
   if (zoomContent) zoomContent.style.zoom = z;
 
-  // Left drawer: whole body zooms, but Settings button counter-zooms back to 1×
+  // Left drawer: whole body zooms (including settings button)
   const drawerBody = document.querySelector('#left-drawer .drawer-body');
   if (drawerBody) drawerBody.style.zoom = z;
-  const settingsBtn = document.querySelector('.drawer-settings-btn');
-  if (settingsBtn) settingsBtn.style.zoom = zInv;
 
   // Right drawer: content area only (tab bar at top stays exempt)
   const rightContent = document.getElementById('right-panel-content');
