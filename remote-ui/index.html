@@ -6487,20 +6487,13 @@ let _pwaZoom = parseFloat(localStorage.getItem('pwaZoom') || '1');
 
 function _applyPwaZoom(level, showToast) {
   _pwaZoom = Math.min(_PWA_ZOOM_MAX, Math.max(_PWA_ZOOM_MIN, parseFloat(level.toFixed(2))));
-  // Zoom #app — works reliably in iOS PWA standalone mode
+  // CSS zoom on #zoom-content: fonts + layout scale, header stays fixed
+  // Unlike transform:scale, CSS zoom is layout-aware — no overflow/clipping issues
+  const zoomEl = document.getElementById('zoom-content');
+  if (zoomEl) zoomEl.style.zoom = _pwaZoom === 1 ? '' : String(_pwaZoom);
+  // Also clear any leftover #app transform from previous approach
   const app = document.getElementById('app');
-  if (!app) return;
-  if (_pwaZoom === 1) {
-    app.style.transform       = '';
-    app.style.transformOrigin = '';
-    app.style.width           = '';
-    app.style.height          = '';
-  } else {
-    app.style.transform       = `scale(${_pwaZoom})`;
-    app.style.transformOrigin = 'top left';
-    app.style.width           = `${(100 / _pwaZoom).toFixed(4)}%`;
-    app.style.height          = `${(100 / _pwaZoom).toFixed(4)}dvh`;
-  }
+  if (app) { app.style.transform = ''; app.style.width = ''; app.style.height = ''; }
   localStorage.setItem('pwaZoom', _pwaZoom);
   if (showToast) toast('🔍 Zoom ' + Math.round(_pwaZoom * 100) + '%');
 }
