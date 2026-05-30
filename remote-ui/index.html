@@ -4346,6 +4346,23 @@ function postProcessDump(panel) {
       el.textContent = icon === 'md' ? 'M\u2193' : icon === 'html' ? '</>' : icon.toUpperCase();
       el.className = 'lang-badge';
       el.setAttribute('data-lang', icon);
+
+      // If this badge is the SOLE element-child of a block wrapper, merge it
+      // into the next sibling so badge + "Analyzed filename#L..." appear on ONE line.
+      // This mirrors AG Normal where they share a single flex row.
+      const parent = el.parentElement;
+      if (parent && parent !== panel && parent.childElementCount === 1) {
+        const nextSib = parent.nextElementSibling;
+        if (nextSib) {
+          nextSib.insertBefore(el, nextSib.firstChild);
+          // Ensure a space between badge and the first text in that row
+          if (!el.nextSibling || el.nextSibling.nodeType !== 3 || !el.nextSibling.textContent.startsWith(' ')) {
+            nextSib.insertBefore(document.createTextNode(' '), el.nextSibling);
+          }
+          if (!parent.hasChildNodes()) parent.remove();
+        }
+      }
+
       // Ensure space after badge so it doesn't overlap filename text
       if (el.nextSibling && el.nextSibling.nodeType === 3 && !el.nextSibling.textContent.startsWith(' ')) {
         el.nextSibling.textContent = ' ' + el.nextSibling.textContent;
