@@ -568,7 +568,8 @@
       text-align: center;
     }
     #about-modal.open #about-card { transform: scale(1); opacity: 1; }
-    #about-icon { font-size: 42px; margin-bottom: 10px; }
+    #about-icon { width: 64px; height: 64px; margin-bottom: 10px; }
+    #about-icon img { width: 100%; height: 100%; border-radius: 16px; }
     #about-name { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
     #about-version { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
     #about-desc {
@@ -3384,7 +3385,7 @@
           <div class="menu-dropdown" id="menu-dropdown-window">
             <button class="menu-item" onclick="execMenuAction('ag_switch_window','Switch Window')"><span class="menu-item-icon">⇄</span><span class="menu-item-label">Switch Window</span><span class="menu-item-shortcut"></span></button>
             <div class="menu-separator"></div>
-            <button class="menu-item" onclick="openAboutModal()"><span class="menu-item-icon">🛰</span><span class="menu-item-label">About AGenIOS Remote</span></button>
+            <button class="menu-item" onclick="openAboutModal()"><span class="menu-item-icon"><img src="/icons/icon-512.png" alt="" style="width:14px;height:14px;border-radius:4px;vertical-align:middle;"></span><span class="menu-item-label">About AGenIOS Remote</span></button>
           </div>
         </div>
       </div>
@@ -3566,7 +3567,7 @@
 <!-- About AGenIOS Remote Modal -->
 <div id="about-modal" onclick="if(event.target===this) closeAboutModal()">
   <div id="about-card">
-    <div id="about-icon">🛰</div>
+    <div id="about-icon"><img src="/icons/icon-512.png" alt="AGenIOS"></div>
     <div id="about-name">AGenIOS Remote</div>
     <div id="about-version">v<span id="about-ver-num">1.5.0</span> · Bridge</div>
     <div id="about-desc">
@@ -3625,7 +3626,7 @@
     </div>
     <!-- About AGenIOS Remote footer -->
     <div id="cmd-about-row">
-      <span id="cmd-about-icon">🛰</span>
+      <span id="cmd-about-icon"><img src="/icons/icon-512.png" alt="" style="width:16px;height:16px;border-radius:4px;vertical-align:middle;"></span>
       <span id="cmd-about-text"><strong>AGenIOS Remote</strong> <span id="cmd-about-version">…</span></span>
       <a id="cmd-about-github" href="https://github.com/tasheees/AGeniOS-remote" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
