@@ -499,8 +499,9 @@ Task: M5 above.
 | W6.9 | Prism CDN → local /prism/ routes (syntax highlighting now works in PWA standalone mode) | [x] DONE |
 | W6.10 | file:// image proxy: /file?path= endpoint + renderMarkdown file://→proxy + https:// pass-through | [x] DONE |
 | W6.11 | Chat images: scrapeChat preserves real imgs as data-local-src; broadcastState embeds as base64; blob URLs get 📷 prefix | [x] DONE |
+| W6.12 | Artifact 3-dot menu in right panel: Copy content / Copy path / Export artifact (⬇ download) — mirrors AG native ⋮ button | [ ] PLANNED |
 
-*Last updated: 2026-05-30T22:32+03:00 by Studio*
+*Last updated: 2026-05-30T22:54+03:00 by Studio*
 
 
 *Changes this session (2026-05-29):*
