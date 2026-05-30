@@ -508,6 +508,16 @@ async function cdpEvaluate(expression, sid = sessionId) {
   return result?.result?.result?.value;
 }
 
+// Like cdpEvaluate but waits for Promises — needed when browser-side code is async (e.g. fetch/blob)
+async function cdpEvaluateAsync(expression, sid = sessionId) {
+  const result = await cdpSend('Runtime.evaluate', {
+    expression,
+    returnByValue: true,
+    awaitPromise: true,
+  }, sid);
+  return result?.result?.result?.value;
+}
+
 // ─── Scrape AG chat ───────────────────────────────────────────────────────────
 
 async function scrapeChat() {
@@ -948,6 +958,34 @@ async function scrapeRightPanel() {
         }
       })()
     `);
+    if (result && result.content) {
+      // blob: URLs can't be read server-side — fetch them inside Chrome and embed as base64
+      const blobMatches = [...result.content.matchAll(/data-local-src="(blob:[^"]+)"/g)];
+      for (const [, blobUrl] of blobMatches) {
+        try {
+          const safeUrl = blobUrl.replace(/'/g, "\\'");
+          const dataUrl = await cdpEvaluateAsync(`
+            (async () => {
+              try {
+                const resp = await fetch('${safeUrl}');
+                const blob = await resp.blob();
+                return await new Promise(resolve => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result);
+                  reader.readAsDataURL(blob);
+                });
+              } catch(e) { return null; }
+            })()
+          `);
+          if (dataUrl && dataUrl.startsWith('data:')) {
+            result.content = result.content.replace(
+              `data-local-src="${blobUrl}"`,
+              `src="${dataUrl}"`
+            );
+          }
+        } catch(e) { /* leave for server-side embedLocalImages */ }
+      }
+    }
     return result || { open: false, tabs: [], content: '' };
   } catch(e) {
     return { open: false, tabs: [], content: '' };
