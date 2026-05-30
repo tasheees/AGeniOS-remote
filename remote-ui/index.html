@@ -700,6 +700,12 @@
       backdrop-filter: blur(12px);
     }
     .menu-tab.open .menu-dropdown { display: block; }
+    /* Transparent backdrop — blocks scroll+clicks when any menu is open */
+    #menu-backdrop {
+      display: none; position: fixed; inset: 0;
+      z-index: 999; /* below header(1000) but above all content */
+    }
+    #menu-backdrop.active { display: block; }
     .menu-item {
       display: flex; align-items: center; gap: 8px;
       width: 100%; background: none; border: none;
@@ -3507,6 +3513,9 @@
 
 
 </div>
+
+<!-- Backdrop for header menus — blocks scroll/clicks, closes menu on tap -->
+<div id="menu-backdrop" onclick="closeAllMenuTabs()"></div>
 
 <!-- Right Drawer (Artifacts list & actions panel) -->
 <div id="right-drawer">
@@ -7133,7 +7142,10 @@ function toggleMenuTab(name) {
   const tab = document.getElementById('menu-tab-' + name);
   const isOpen = tab && tab.classList.contains('open');
   closeAllMenuTabs();
-  if (!isOpen && tab) tab.classList.add('open');
+  if (!isOpen && tab) {
+    tab.classList.add('open');
+    document.getElementById('menu-backdrop')?.classList.add('active');
+  }
 }
 
 function closeAllMenuTabs() {
@@ -7141,16 +7153,11 @@ function closeAllMenuTabs() {
     const t = document.getElementById('menu-tab-' + n);
     if (t) t.classList.remove('open');
   });
+  document.getElementById('menu-backdrop')?.classList.remove('active');
 }
 
-// ── Auto-close menus on click-outside, scroll, or keydown ───────────────────
-document.addEventListener('click', e => {
-  if (!e.target.closest('.menu-tab')) closeAllMenuTabs();
-}, true);
-document.addEventListener('scroll', () => closeAllMenuTabs(), true);
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' || !e.target.closest('.menu-tab')) closeAllMenuTabs();
-}, true);
+// Escape key closes any open menu
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllMenuTabs(); });
 
 function execMenuAction(type, label) {
   closeAllMenuTabs();
