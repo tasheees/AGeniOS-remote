@@ -3938,7 +3938,7 @@ function updateGhostBubble(state, text) {
     `<span style="font-size:10px;color:#7dd3fc;font-weight:700;letter-spacing:.05em;display:block;margin-bottom:5px">ANTIGRAVITY</span>` +
     `<span>${escapeHtml(text)}</span>` +
     `<span style="display:inline-block;width:2px;height:1em;background:#7dd3fc;vertical-align:text-bottom;margin-left:1px;animation:blink .7s step-end infinite"></span>`;
-  panel.scrollTop = panel.scrollHeight;
+  if (!_userScrolledAway) panel.scrollTop = panel.scrollHeight;
 }
 
 function removeGhostBubble() {
@@ -3955,9 +3955,13 @@ async function stopAG() {
   toast('⏹ Stopping AG...');
 }
 
+// ─── Scroll lock: true when user has scrolled away from bottom to read ─────────
+let _userScrolledAway = false;
+
 // ─── Scroll to bottom ────────────────────────────────────────────────────────
 function scrollToBottom() {
   const panel = document.getElementById('chat-panel');
+  _userScrolledAway = false;   // user explicitly chose to go to bottom
   panel.scrollTop = panel.scrollHeight;
 }
 
@@ -3965,6 +3969,7 @@ function updateScrollBtn() {
   const panel = document.getElementById('chat-panel');
   const btn   = document.getElementById('scroll-btn');
   const distFromBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
+  _userScrolledAway = distFromBottom > 200;   // reading threshold
   btn.classList.toggle('visible', distFromBottom > 80);
 }
 
@@ -4201,7 +4206,7 @@ function injectPendingBubble(text) {
   div.dataset.pending = '1';
   div.innerHTML = `<div class="bubble-inner">${escHtml(text)}</div>`;
   panel.appendChild(div);
-  panel.scrollTop = panel.scrollHeight;
+  if (!_userScrolledAway) panel.scrollTop = panel.scrollHeight;
   _pendingBubble = { el: div, text: text.trim() };
   return div;
 }
@@ -4220,6 +4225,11 @@ function applyDump(dumpHtml) {
 
   const confirmed = !_pendingBubble || dumpHtml.includes((_pendingBubble.text || '').slice(0, 30));
 
+  // Save scroll state before full innerHTML replace (applyDump wipes scrollTop to 0)
+  const _dumpScrollFrac = _userScrolledAway
+    ? (panel.scrollTop / Math.max(panel.scrollHeight, 1))
+    : 1;
+
   if (confirmed) {
     if (_pendingBubble) { _pendingBubble.el?.remove(); _pendingBubble = null; }
     panel.innerHTML = dumpHtml;
@@ -4230,7 +4240,12 @@ function applyDump(dumpHtml) {
   }
 
   postProcessDump(panel);
-  panel.scrollTop = panel.scrollHeight;
+
+  if (!_userScrolledAway) {
+    panel.scrollTop = panel.scrollHeight;          // following the stream
+  } else {
+    panel.scrollTop = _dumpScrollFrac * panel.scrollHeight;  // restore reading position
+  }
   updateScrollBtn();
 }
 
@@ -4518,8 +4533,8 @@ function renderChat() {
   if (newCount > prevCount) checkAIMessages(newCount);
 
   const distFromBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
-  const nearBottom = distFromBottom < 120;
-  if (prevCount === 0 || (newCount > prevCount && nearBottom)) {
+  const nearBottom = distFromBottom < 200;   // 200px threshold — must match _userScrolledAway > 200
+  if (prevCount === 0 || (newCount > prevCount && nearBottom && !_userScrolledAway)) {
     requestAnimationFrame(() => { panel.scrollTop = panel.scrollHeight; });
   }
   lastRenderedCount = newCount;
@@ -4535,7 +4550,7 @@ function showSystemMessage(text) {
   div.style.cssText = 'margin:6px 0;padding:10px 14px;background:#0f2027;border:1px solid #1e3a4a;border-radius:10px;font-size:13px;font-family:var(--mono);color:#7dd3fc;white-space:pre-wrap;word-break:break-word;animation:fadeInUp 0.2s ease';
   div.textContent = text;
   panel.appendChild(div);
-  panel.scrollTop = panel.scrollHeight;
+  if (!_userScrolledAway) panel.scrollTop = panel.scrollHeight;
 }
 
 // ─── Render Conversations (Left Drawer — AG-style sidebar) ────────────────
