@@ -2990,6 +2990,20 @@
     #chat-panel h2 { font-size: 1.15em; }
     #chat-panel h3 { font-size: 1em; }
 
+     /* Raw <button> elements from AG's scraped DOM get native macOS white rounded
+        pill appearance — -webkit-appearance:none removes it completely */
+     #chat-panel button {
+       -webkit-appearance: none;
+       appearance: none;
+       background: transparent;
+       border: none;
+       color: inherit;
+       font: inherit;
+       padding: 0;
+       cursor: pointer;
+       display: inline;
+     }
+
     #chat-panel code {
       background: rgba(255,255,255,0.08);
       color: #e879f9;
