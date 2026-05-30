@@ -2303,8 +2303,8 @@
     #right-panel-content blockquote { border-left: 3px solid var(--primary, #7c3aed); padding: 4px 12px; margin: 8px 0; color: var(--text-muted); }
     #right-panel-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 6px 0; display: block; cursor: zoom-in; transition: opacity 0.15s; }
     #right-panel-content img:hover { opacity: 0.88; }
-    /* Zoomable content area below the header — font-size zoom only, mirroring AG native zoom */
-    #zoom-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    /* Structural wrapper below header — zoom target is #app, not this element */
+    #zoom-content { flex: 1; display: flex; flex-direction: column; min-height: 0; }
     #right-panel-content a { color: #818cf8; text-decoration: none; }
 
     /* ─── AG File-Change Cards (preserved classes from scraper) ─── */
@@ -6487,21 +6487,19 @@ let _pwaZoom = parseFloat(localStorage.getItem('pwaZoom') || '1');
 
 function _applyPwaZoom(level, showToast) {
   _pwaZoom = Math.min(_PWA_ZOOM_MAX, Math.max(_PWA_ZOOM_MIN, parseFloat(level.toFixed(2))));
-  // Scale only the content below the header — header stays at natural size always
-  const zoomEl = document.getElementById('zoom-content');
-  if (!zoomEl) return;
+  // Zoom #app — works reliably in iOS PWA standalone mode
+  const app = document.getElementById('app');
+  if (!app) return;
   if (_pwaZoom === 1) {
-    zoomEl.style.transform       = '';
-    zoomEl.style.transformOrigin = '';
-    zoomEl.style.width           = '';
-    zoomEl.style.height          = '';
+    app.style.transform       = '';
+    app.style.transformOrigin = '';
+    app.style.width           = '';
+    app.style.height          = '';
   } else {
-    const headerH = document.getElementById('header')?.offsetHeight || 48;
-    const availH  = window.innerHeight - headerH;
-    zoomEl.style.transform       = `scale(${_pwaZoom})`;
-    zoomEl.style.transformOrigin = 'top left';
-    zoomEl.style.width           = `${(100 / _pwaZoom).toFixed(4)}%`;
-    zoomEl.style.height          = `${(availH  / _pwaZoom).toFixed(4)}px`;
+    app.style.transform       = `scale(${_pwaZoom})`;
+    app.style.transformOrigin = 'top left';
+    app.style.width           = `${(100 / _pwaZoom).toFixed(4)}%`;
+    app.style.height          = `${(100 / _pwaZoom).toFixed(4)}dvh`;
   }
   localStorage.setItem('pwaZoom', _pwaZoom);
   if (showToast) toast('🔍 Zoom ' + Math.round(_pwaZoom * 100) + '%');
