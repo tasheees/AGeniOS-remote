@@ -500,12 +500,12 @@ Task: M5 above.
 | W6.10 | file:// image proxy: /file?path= endpoint + renderMarkdown file://→proxy + https:// pass-through | [x] DONE |
 | W6.11 | Chat images: scrapeChat preserves real imgs as data-local-src; broadcastState embeds as base64; blob URLs get 📷 prefix | [x] DONE |
 | W6.12 | Artifact 3-dot menu in right panel: Copy content / Copy path / Export artifact (⬇ download) — mirrors AG native ⋮ button | [ ] PLANNED |
+| W6.13 | Right panel images: max-width:100% height:auto — images now fit drawer width, never overflow | [x] DONE |
+| W6.14 | Zoom rewrite: CSS zoom property on #zoom-content + left .drawer-body + #right-panel-content; header and bottom-bar fully exempt | [x] DONE |
+| W6.15 | Header z-index:1000 + position:relative — chat boxes no longer overlap header or dropdown menus on scroll | [x] DONE |
 
-*Last updated: 2026-05-30T22:54+03:00 by Studio*
+*Last updated: 2026-05-30T23:15+03:00 by Studio*
 
-
-*Changes this session (2026-05-29):*
-- *Commit 1 (in progress): ag-bridge.js — scrapeInputBar() with confirmed selectors (button[aria-label^="Select model"], button[aria-label="Add context"], data-testid="settings-button"); seeAllCounts via group/section ancestor walk; broadcastState() now emits tasks + currentModel + seeAllCounts; WS handlers: select_model, stop_task, open_context_menu, open_ag_settings.*
 
 ### W-Panel — Right Panel UI Fidelity
 
