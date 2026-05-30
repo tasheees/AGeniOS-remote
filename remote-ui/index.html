@@ -2303,6 +2303,8 @@
     #right-panel-content blockquote { border-left: 3px solid var(--primary, #7c3aed); padding: 4px 12px; margin: 8px 0; color: var(--text-muted); }
     #right-panel-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 6px 0; display: block; cursor: zoom-in; transition: opacity 0.15s; }
     #right-panel-content img:hover { opacity: 0.88; }
+    /* Zoomable content area below the header — font-size zoom only, mirroring AG native zoom */
+    #zoom-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
     #right-panel-content a { color: #818cf8; text-decoration: none; }
 
     /* ─── AG File-Change Cards (preserved classes from scraper) ─── */
@@ -3398,6 +3400,8 @@
       </div>
     </div>
 
+    <!-- Zoomable content area — header excluded from zoom -->
+    <div id="zoom-content">
     <!-- Chat Panel -->
     <div id="chat-panel">
       <div id="chat-empty">
@@ -3495,7 +3499,8 @@
         </div>
       </div>
     </div>
-  </div>
+    </div><!-- /#zoom-content -->
+  </div><!-- /#main-content -->
 
 
 
@@ -6482,21 +6487,11 @@ let _pwaZoom = parseFloat(localStorage.getItem('pwaZoom') || '1');
 
 function _applyPwaZoom(level, showToast) {
   _pwaZoom = Math.min(_PWA_ZOOM_MAX, Math.max(_PWA_ZOOM_MIN, parseFloat(level.toFixed(2))));
-  // Use transform:scale on #app — standard, works in iOS PWA standalone mode
-  // Fixed modals (settings, code-modal, toast) sit outside #app so they stay full-size
-  const app = document.getElementById('app');
-  if (app) {
-    if (_pwaZoom === 1) {
-      app.style.transform       = '';
-      app.style.transformOrigin = '';
-      app.style.width           = '';
-      app.style.height          = '';
-    } else {
-      app.style.transform       = `scale(${_pwaZoom})`;
-      app.style.transformOrigin = 'top left';
-      app.style.width           = `${(100 / _pwaZoom).toFixed(4)}%`;
-      app.style.height          = `${(100 / _pwaZoom).toFixed(4)}dvh`;
-    }
+  // Mimic AG native zoom: scale fonts only, not layout or images
+  // #zoom-content wraps everything below the header — header stays fixed
+  const zoomEl = document.getElementById('zoom-content');
+  if (zoomEl) {
+    zoomEl.style.fontSize = _pwaZoom === 1 ? '' : `${(_pwaZoom * 100).toFixed(1)}%`;
   }
   localStorage.setItem('pwaZoom', _pwaZoom);
   if (showToast) toast('🔍 Zoom ' + Math.round(_pwaZoom * 100) + '%');
