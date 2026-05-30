@@ -6383,6 +6383,18 @@ const SLASH_COMMANDS = [
   { name: 'teamwork-preview', desc: 'Team of agents for large projects',      icon: '👥' },
 ];
 
+// MCP tools loaded from bridge — populated once on init
+window._mcpTools = [];
+(async () => {
+  try {
+    const r = await fetch('/mcp-tools');
+    if (r.ok) window._mcpTools = await r.json();
+  } catch { /* bridge may not be running locally yet */ }
+})();
+
+const _MCP_SERVER_ICON  = { 'StitchMCP':'🎨', 'eduka-docs':'📚', 'firebase-mcp-server':'🔥' };
+const _MCP_SERVER_SHORT = { 'StitchMCP':'stitch', 'eduka-docs':'eduka', 'firebase-mcp-server':'firebase' };
+
 let _pickerType   = null;   // 'slash' | 'mention'
 let _pickerActive = -1;     // currently highlighted row index
 let _pickerRows   = [];     // current filtered items
@@ -6397,7 +6409,39 @@ function _pickerOpen(type, filter) {
 
   if (type === 'slash') {
     const q = filter.toLowerCase();
-    items = SLASH_COMMANDS.filter(c => c.name.startsWith(q) || c.name.includes(q));
+
+    // ── MCP Tools (grouped by server, filtered by q) ───────────────────
+    const mcpByServer = {};
+    (window._mcpTools || []).forEach(t => {
+      const matchName = t.name.includes(q);
+      const matchSrv  = t.server.toLowerCase().includes(q);
+      const matchDesc = t.description.toLowerCase().includes(q);
+      if (q && !matchName && !matchSrv && !matchDesc) return;
+      if (!mcpByServer[t.server]) mcpByServer[t.server] = [];
+      const short = _MCP_SERVER_SHORT[t.server] || t.server.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      mcpByServer[t.server].push({
+        name:       t.name,
+        desc:       t.description,
+        icon:       '🔧',
+        insertText: `mcp_${short}_${t.name}`,
+        isMcp:      true,
+      });
+    });
+
+    // ── Slash Commands ─────────────────────────────────────────────────
+    const slashItems = SLASH_COMMANDS.filter(c => !q || c.name.startsWith(q) || c.name.includes(q));
+
+    sections = [
+      ...Object.entries(mcpByServer).map(([srv, tools]) => ({
+        header: srv,
+        icon:   _MCP_SERVER_ICON[srv] || '🔧',
+        items:  tools,
+      })),
+      ...(slashItems.length ? [{ header: 'Slash Commands', icon: '/', items: slashItems }] : []),
+    ];
+
+    items = sections.flatMap(s => s.items);
+
   } else if (type === 'mention') {
     const q = filter.toLowerCase();
     const ms = window._mentionSuggestions || {};
@@ -6443,18 +6487,30 @@ function _pickerOpen(type, filter) {
   _pickerRows = items;
   _pickerActive = items.length > 0 ? 0 : -1;
 
-  // Build HTML
+  // Build HTML — render section headers when sections array is populated
   let html = '';
-  if (type === 'mention') {
-    html += '<div class="picker-section-header">Conversations</div>';
-  }
   if (items.length === 0) {
     html += '<div class="picker-empty">No matches</div>';
+  } else if (sections.length > 0) {
+    let idx = 0;
+    sections.forEach(sec => {
+      if (!sec.items.length) return;
+      const secIcon = sec.header === 'Slash Commands' ? '<span class="picker-sec-slash">/</span>' : sec.icon;
+      html += `<div class="picker-section-header">${secIcon} ${escHtml(sec.header)}</div>`;
+      sec.items.forEach(item => {
+        const activeClass = idx === 0 ? ' active' : '';
+        html += `<div class="picker-row${activeClass}" data-idx="${idx}" role="option" onclick="_pickerSelect(${idx})">`;
+        html += `<span class="picker-row-icon">${item.icon}</span>`;
+        html += `<span class="picker-row-name">${escHtml(item.name)}</span>`;
+        if (item.desc) html += `<span class="picker-row-desc">${escHtml(item.desc)}</span>`;
+        html += '</div>';
+        idx++;
+      });
+    });
   } else {
     items.forEach((item, i) => {
       const activeClass = i === 0 ? ' active' : '';
-      html += `<div class="picker-row${activeClass}" data-idx="${i}" role="option"`;
-      html += ` onclick="_pickerSelect(${i})">`;
+      html += `<div class="picker-row${activeClass}" data-idx="${i}" role="option" onclick="_pickerSelect(${i})">`;
       html += `<span class="picker-row-icon">${item.icon}</span>`;
       html += `<span class="picker-row-name">${escHtml(item.name)}</span>`;
       if (item.desc) html += `<span class="picker-row-desc">${escHtml(item.desc)}</span>`;
@@ -6466,7 +6522,8 @@ function _pickerOpen(type, filter) {
   // Position: directly above the textarea
   const textarea = document.getElementById('msg-input');
   const rect = textarea.getBoundingClientRect();
-  const overlayH = Math.min(items.length * 40 + (type === 'mention' ? 28 : 0) + 8, 260);
+  const sectionHeaders = sections.filter(s => s.items.length).length;
+  const overlayH = Math.min(items.length * 40 + sectionHeaders * 28 + 8, 320);
   overlay.style.left   = rect.left + 'px';
   overlay.style.width  = rect.width + 'px';
   overlay.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
@@ -6506,7 +6563,8 @@ function _pickerSelect(idx) {
   }
   if (triggerPos < 0) { _pickerClose(); return; }
 
-  const prefix = _pickerType === 'slash' ? '/' : '@';
+  // MCP tools: no '/' prefix — they're inserted as mcp_server_tool references, not AG slash commands
+  const prefix = (_pickerType === 'slash' && item.isMcp) ? '' : (_pickerType === 'slash' ? '/' : '@');
   const insertion = prefix + (item.insertText || item.name) + ' ';
   textarea.value = val.slice(0, triggerPos) + insertion + val.slice(pos);
   const newPos = triggerPos + insertion.length;

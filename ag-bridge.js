@@ -1690,6 +1690,37 @@ const httpServer = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET /mcp-tools — PWA slash picker loads MCP tool list on connect
+  if (req.method === 'GET' && url.pathname === '/mcp-tools') {
+    try {
+      const mcpDir = path.join(require('os').homedir(), '.gemini', 'antigravity', 'mcp');
+      const servers = fs.readdirSync(mcpDir).filter(f => {
+        try { return fs.statSync(path.join(mcpDir, f)).isDirectory(); } catch { return false; }
+      });
+      const tools = [];
+      for (const server of servers) {
+        const serverDir = path.join(mcpDir, server);
+        const files = fs.readdirSync(serverDir).filter(f => f.endsWith('.json'));
+        for (const file of files) {
+          try {
+            const data = JSON.parse(fs.readFileSync(path.join(serverDir, file), 'utf8'));
+            tools.push({
+              server,
+              name:        data.name        || file.replace('.json', ''),
+              description: (data.description || '').split('\n')[0].trim().slice(0, 100),
+            });
+          } catch { /* skip malformed */ }
+        }
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify(tools));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   // POST /action-response — Telegram inline button callback routed via daemon
   if (req.method === 'POST' && url.pathname === '/action-response') {
     const body = await parseBody(req);
