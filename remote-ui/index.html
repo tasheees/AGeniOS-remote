@@ -96,6 +96,8 @@
       -webkit-backdrop-filter: blur(20px);
       flex-shrink: 0;
       padding-top: max(14px, env(safe-area-inset-top));
+      position: relative;
+      z-index: 1000;  /* above all chat content — dropdowns render on top */
     }
 
     /* ─── Header: AG-native single-row breadcrumb ───────────── */
