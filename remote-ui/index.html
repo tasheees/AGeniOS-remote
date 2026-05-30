@@ -6487,13 +6487,27 @@ let _pwaZoom = parseFloat(localStorage.getItem('pwaZoom') || '1');
 
 function _applyPwaZoom(level, showToast) {
   _pwaZoom = Math.min(_PWA_ZOOM_MAX, Math.max(_PWA_ZOOM_MIN, parseFloat(level.toFixed(2))));
-  // CSS zoom on #zoom-content: fonts + layout scale, header stays fixed
-  // Unlike transform:scale, CSS zoom is layout-aware — no overflow/clipping issues
-  const zoomEl = document.getElementById('zoom-content');
-  if (zoomEl) zoomEl.style.zoom = _pwaZoom === 1 ? '' : String(_pwaZoom);
-  // Also clear any leftover #app transform from previous approach
+  const z    = _pwaZoom === 1 ? '' : String(_pwaZoom);
+  const zInv = _pwaZoom === 1 ? '' : String(+(1 / _pwaZoom).toFixed(6));
+
+  // Central chat area (below header, above input bar)
+  const zoomContent = document.getElementById('zoom-content');
+  if (zoomContent) zoomContent.style.zoom = z;
+
+  // Left drawer: whole body zooms, but Settings button counter-zooms back to 1×
+  const drawerBody = document.querySelector('#left-drawer .drawer-body');
+  if (drawerBody) drawerBody.style.zoom = z;
+  const settingsBtn = document.querySelector('.drawer-settings-btn');
+  if (settingsBtn) settingsBtn.style.zoom = zInv;
+
+  // Right drawer: content area only (tab bar at top stays exempt)
+  const rightContent = document.getElementById('right-panel-content');
+  if (rightContent) rightContent.style.zoom = z;
+
+  // Clear any stale #app transform from old approach
   const app = document.getElementById('app');
   if (app) { app.style.transform = ''; app.style.width = ''; app.style.height = ''; }
+
   localStorage.setItem('pwaZoom', _pwaZoom);
   if (showToast) toast('🔍 Zoom ' + Math.round(_pwaZoom * 100) + '%');
 }
