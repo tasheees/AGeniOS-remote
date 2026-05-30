@@ -13,7 +13,76 @@
 
 ---
 
+## 🎨 Brand & Logo
+
+> **Not a logo file.** The AGeniOS Remote wordmark is assembled in code — no `.svg`, `.png`, or design file exists.
+> It can be exported to SVG/PNG/vector at any time from the recipe below.
+>
+> **Origin:** Directly adapted from the GeniOS logo (see `GENIOS_INDEX.md §Brand & Logo`).
+> Same Lucide Zap icon, same Geist Bold font, same construction technique — recolored violet for AGeniOS Remote.
+
+### Construction
+
+| Element | Value |
+|:--------|:------|
+| Icon | Lucide `Zap` — outline stroke, no fill — **same path as GeniOS** |
+| Icon size | `24×24px` |
+| Font | **Geist Bold** (`font-weight: 700`) for "AGeniOS" |
+| Font size | `18px` "AGeniOS" · `9px` regular "remote" |
+| Color | Bolt + "AGeniOS" = `#7c3aed` (violet) · "remote" = `#6b7280` grey |
+| Layout | `display:flex; align-items:center; gap:10px` — bolt centers with "AGeniOS" only |
+| "remote" | `position:absolute; top:100%; margin-top:-3px; line-height:1` — out of flex flow so bolt doesn't shift down |
+| Accent line | `::after` violet underline `28px` wide, `2px` below "remote" — marks approx AG letter-width |
+
+### Exact SVG Path (Lucide Zap v0.563.0 — identical to GeniOS)
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+     fill="none" stroke="#7c3aed" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
+</svg>
+```
+
+### Full Reproducible HTML+CSS Lockup
+
+```html
+<div class="brand-lockup">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+       stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
+  </svg>
+  <div class="brand-lockup-text">
+    <span class="brand-lockup-name">AGeniOS</span>
+    <span class="brand-lockup-sub">remote</span>
+  </div>
+</div>
+```
+
+```css
+.brand-lockup      { display:flex; align-items:center; gap:10px; }
+.brand-lockup-text { position:relative; display:block; }
+.brand-lockup-name { display:block; font-size:18px; font-weight:700; color:#fff; line-height:1.15; }
+.brand-lockup-sub  { position:absolute; top:100%; left:0; margin-top:-3px;
+                     font-size:9px; line-height:1; color:#6b7280; white-space:nowrap; }
+.brand-lockup-sub::after { content:''; position:absolute; bottom:-2px; left:0;
+                           width:28px; height:1px; background:rgba(124,58,237,0.5); }
+```
+
+### Source File
+
+- **Live implementation:** [`remote-ui/index.html`](remote-ui/index.html) — search `.brand-lockup`
+
+### How to Export as Real Logo File
+
+Copy the SVG block above into a `.svg` file. Add "AGeniOS" in Geist Bold `18px #ffffff`
+and "remote" in Geist Regular `9px #6b7280`, left-aligned below "AGeniOS".
+Open in Figma, Illustrator, or Inkscape to export PNG/vector at any resolution.
+
+---
+
 ## Implementation Status Summary
+
 
 | Status | Count |
 |:-------|:------|

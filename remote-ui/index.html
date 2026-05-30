@@ -9,16 +9,8 @@
   <meta name="theme-color" content="#0d0d0f">
   <title>AGenIOS Remote</title>
 
-  <!-- Inline Web App Manifest -->
-  <link rel="manifest" href="data:application/json,{
-    &quot;name&quot;:&quot;AGenIOS Remote&quot;,
-    &quot;short_name&quot;:&quot;AGenIOS&quot;,
-    &quot;start_url&quot;:&quot;/&quot;,
-    &quot;display&quot;:&quot;standalone&quot;,
-    &quot;background_color&quot;:&quot;#0d0d0f&quot;,
-    &quot;theme_color&quot;:&quot;#7c3aed&quot;,
-    &quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]
-  }">
+  <!-- PWA Web App Manifest — served by bridge with icon-512.png -->
+  <link rel="manifest" href="/manifest.json">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -297,6 +289,47 @@
       font-size: 15px;
       font-weight: 700;
       color: var(--text);
+    }
+    /* ── AGeniOS Remote brand lockup ─────────────────────────── */
+    .brand-lockup {
+      display: flex;
+      align-items: center;    /* bolt centers with brand-name only */
+      gap: 10px;
+    }
+    .brand-lockup-text {
+      position: relative;     /* anchor for absolute remote */
+      display: block;
+    }
+    .brand-lockup-name {
+      display: block;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      font-family: var(--font);
+      line-height: 1.15;
+    }
+    .brand-lockup-name-row {
+      display: inline-flex;
+      align-items: center;
+    }
+    .brand-lockup-sub {
+      position: absolute;     /* out of flow — bolt stays aligned to name only */
+      top: 100%;
+      left: 0;
+      margin-top: -3px;
+      font-size: 9px;
+      line-height: 1;         /* element height = 9px exactly */
+      color: var(--text-muted);
+      font-family: var(--font);
+      white-space: nowrap;
+    }
+    .brand-lockup-sub::after {
+      content: '';
+      position: absolute;
+      bottom: -2px; left: 0;
+      width: 28px;            /* ≈ AG width */
+      height: 1px;
+      background: rgba(124, 58, 237, 0.5);
     }
     .drawer-close {
       background: none;
@@ -3199,7 +3232,20 @@
           <line x1="5.5" y1="2.5" x2="5.5" y2="13.5"/>
         </svg>
       </button>
-      <span class="drawer-title">Conversations</span>
+      <div class="brand-lockup">
+        <div class="brand-lockup-text">
+          <div class="brand-lockup-name-row">
+            <span class="brand-lockup-name">AGeniO</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                 stroke="#7c3aed" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 style="margin-left:-4px;position:relative;z-index:1;">
+              <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
+            </svg>
+          </div>
+          <span class="brand-lockup-sub">remote</span>
+        </div>
+      </div>
     </div>
     <div class="drawer-body">
       <button class="drawer-section-btn" onclick="if(ws&&ws.readyState===WebSocket.OPEN){ws.send(JSON.stringify({type:'new_conversation'}));}else{toast('Not connected');}">
@@ -6314,6 +6360,7 @@ function setZoomMode(enabled) {
   _zoomEnabled = enabled;
   localStorage.setItem('zoomEnabled', enabled);
   const viewport = document.querySelector('meta[name="viewport"]');
+
   if (viewport) {
     if (enabled) {
       viewport.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
@@ -6322,6 +6369,39 @@ function setZoomMode(enabled) {
     }
   }
 }
+
+// ─── PWA UI Zoom ──────────────────────────────────────────────────────────
+// Zoom In / Zoom Out / Actual Size zoom the PWA itself — NOT forwarded to bridge
+const _PWA_ZOOM_STEP = 0.1;
+const _PWA_ZOOM_MIN  = 0.5;
+const _PWA_ZOOM_MAX  = 2.0;
+let _pwaZoom = parseFloat(localStorage.getItem('pwaZoom') || '1');
+
+function _applyPwaZoom(level, showToast) {
+  _pwaZoom = Math.min(_PWA_ZOOM_MAX, Math.max(_PWA_ZOOM_MIN, parseFloat(level.toFixed(2))));
+  // Use transform:scale on #app — standard, works in iOS PWA standalone mode
+  // Fixed modals (settings, code-modal, toast) sit outside #app so they stay full-size
+  const app = document.getElementById('app');
+  if (app) {
+    if (_pwaZoom === 1) {
+      app.style.transform       = '';
+      app.style.transformOrigin = '';
+      app.style.width           = '';
+      app.style.height          = '';
+    } else {
+      app.style.transform       = `scale(${_pwaZoom})`;
+      app.style.transformOrigin = 'top left';
+      app.style.width           = `${(100 / _pwaZoom).toFixed(4)}%`;
+      app.style.height          = `${(100 / _pwaZoom).toFixed(4)}dvh`;
+    }
+  }
+  localStorage.setItem('pwaZoom', _pwaZoom);
+  if (showToast) toast('🔍 Zoom ' + Math.round(_pwaZoom * 100) + '%');
+}
+
+function pwaZoomIn()     { _applyPwaZoom(_pwaZoom + _PWA_ZOOM_STEP, true); }
+function pwaZoomOut()    { _applyPwaZoom(_pwaZoom - _PWA_ZOOM_STEP, true); }
+function pwaZoomActual() { _applyPwaZoom(1, true); }
 
 // ─── Code modal ─────────────────────────────────────────────────────────────
 function openCodeModal(preEl) {
@@ -6883,6 +6963,10 @@ function execPaletteAction(type, label, skipConfirm) {
     showPaletteCloseConfirm();
     return;
   }
+  // PWA-local zoom — do NOT forward to bridge
+  if (type === 'ag_zoom_in')     { pwaZoomIn();     closeCmdPalette(); return; }
+  if (type === 'ag_zoom_out')    { pwaZoomOut();    closeCmdPalette(); return; }
+  if (type === 'ag_actual_size') { pwaZoomActual(); closeCmdPalette(); return; }
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type }));
     toast('⚡ ' + label + '…');
@@ -6950,11 +7034,14 @@ function closeAllMenuTabs() {
 function execMenuAction(type, label) {
   closeAllMenuTabs();
   if (type === 'ag_close_window') {
-    // Show palette with close confirm pre-shown
     openCmdPalette();
     showPaletteCloseConfirm();
     return;
   }
+  // PWA-local zoom — do NOT forward to bridge
+  if (type === 'ag_zoom_in')     { pwaZoomIn();     return; }
+  if (type === 'ag_zoom_out')    { pwaZoomOut();    return; }
+  if (type === 'ag_actual_size') { pwaZoomActual(); return; }
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type }));
     toast('⚡ ' + label + '…');
@@ -6977,6 +7064,7 @@ if (chatPanel) chatPanel.addEventListener('scroll', updateScrollBtn);
 const zoomToggle = document.getElementById('zoom-toggle');
 if (zoomToggle) zoomToggle.checked = _zoomEnabled;
 setZoomMode(_zoomEnabled);
+_applyPwaZoom(_pwaZoom, false); // restore persisted zoom on load
 
 updateVerbosityUI();
 connect();

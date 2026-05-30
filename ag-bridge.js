@@ -1925,6 +1925,42 @@ const httpServer = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET /manifest.json — PWA Web App Manifest (proper file so icon paths resolve correctly)
+  if (url.pathname === '/manifest.json') {
+    const manifest = {
+      name: 'AGenIOS Remote',
+      short_name: 'AGenIOS',
+      start_url: '/',
+      display: 'standalone',
+      background_color: '#0a0a0c',
+      theme_color: '#7c3aed',
+      icons: [
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+        { src: '/icons/icon-512.png', sizes: 'any',     type: 'image/png' }
+      ]
+    };
+    res.writeHead(200, { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(manifest));
+    return;
+  }
+
+  // GET /icons/:file — serve brand assets (icon-512.png etc.)
+  if (url.pathname.startsWith('/icons/')) {
+    const iconFile = path.basename(url.pathname);
+    const iconPath = path.join(__dirname, 'assets', 'png', iconFile);
+    try {
+      const data = fs.readFileSync(iconPath);
+      const ext  = path.extname(iconFile).slice(1).toLowerCase();
+      const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', svg: 'image/svg+xml' }[ext] || 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=86400' });
+      res.end(data);
+    } catch {
+      res.writeHead(404);
+      res.end('Icon not found');
+    }
+    return;
+  }
+
   res.writeHead(404);
   res.end('Not found');
 });
