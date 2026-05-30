@@ -6487,11 +6487,21 @@ let _pwaZoom = parseFloat(localStorage.getItem('pwaZoom') || '1');
 
 function _applyPwaZoom(level, showToast) {
   _pwaZoom = Math.min(_PWA_ZOOM_MAX, Math.max(_PWA_ZOOM_MIN, parseFloat(level.toFixed(2))));
-  // Mimic AG native zoom: scale fonts only, not layout or images
-  // #zoom-content wraps everything below the header — header stays fixed
+  // Scale only the content below the header — header stays at natural size always
   const zoomEl = document.getElementById('zoom-content');
-  if (zoomEl) {
-    zoomEl.style.fontSize = _pwaZoom === 1 ? '' : `${(_pwaZoom * 100).toFixed(1)}%`;
+  if (!zoomEl) return;
+  if (_pwaZoom === 1) {
+    zoomEl.style.transform       = '';
+    zoomEl.style.transformOrigin = '';
+    zoomEl.style.width           = '';
+    zoomEl.style.height          = '';
+  } else {
+    const headerH = document.getElementById('header')?.offsetHeight || 48;
+    const availH  = window.innerHeight - headerH;
+    zoomEl.style.transform       = `scale(${_pwaZoom})`;
+    zoomEl.style.transformOrigin = 'top left';
+    zoomEl.style.width           = `${(100 / _pwaZoom).toFixed(4)}%`;
+    zoomEl.style.height          = `${(availH  / _pwaZoom).toFixed(4)}px`;
   }
   localStorage.setItem('pwaZoom', _pwaZoom);
   if (showToast) toast('🔍 Zoom ' + Math.round(_pwaZoom * 100) + '%');
