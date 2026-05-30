@@ -415,7 +415,19 @@ Task: M5 above.
 | W-Input.5e | Right panel header alignment: tabs-first in DOM (actions container was pushing +20px); rp-tab height:28px matches center header (54px total) | [x] DONE (50af223, c787b39) |
 | W-Input.6 | PWA `/` picker: add MCP tools section (read from ~/.gemini/antigravity/mcp/) above slash commands — AG shows 8+ total | [ ] NEXT |
 
-*Last updated: 2026-05-29T19:34+03:00 by AG Studio*
+### W6 — PWA Visual Refresh (2026-05-30)
+| ID | Task | Status |
+|:---|:-----|:-------|
+| W6.0 | Drawer backgrounds unified (both rgba(10,8,18,0.92)) | [x] DONE |
+| W6.1 | Design token refresh (bg, text, surface tokens; removed --user-bubble/--ai-bubble; added --surface-glass/--border-subtle) | [x] DONE |
+| W6.2 | Chat message quality (AI card subtle tray, user bubble gradient, msg-text sizing, msg-meta opacity) | [x] DONE |
+| W6.3 | Input bar refinement (glass wrap, focus ring, glass quick-btns, bottom-bar blur, placeholder color) | [x] DONE |
+| W6.4 | Header refinement (glass background, backdrop-filter, lighter border, adjusted padding, bc-chip border) | [x] DONE |
+| W6.5 | Code block header restructure (flex header above code, SVG icon-only copy btn, language class on code el) | [x] DONE |
+| W6.6 | Micro-polish (animation-fill-mode, quick-btn:active scale, panel-toggle 0.12s, pre/inline-code glass, chat scrollbar) | [x] DONE |
+
+*Last updated: 2026-05-30T10:40+03:00 by Impl — W6 · PWA Visual Refresh*
+
 
 *Changes this session (2026-05-29):*
 - *Commit 1 (in progress): ag-bridge.js — scrapeInputBar() with confirmed selectors (button[aria-label^="Select model"], button[aria-label="Add context"], data-testid="settings-button"); seeAllCounts via group/section ancestor walk; broadcastState() now emits tasks + currentModel + seeAllCounts; WS handlers: select_model, stop_task, open_context_menu, open_ag_settings.*
