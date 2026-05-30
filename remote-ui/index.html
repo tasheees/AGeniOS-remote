@@ -4448,7 +4448,32 @@ function postProcessDump(panel) {
       try { Prism.highlightElement(el); } catch(e) {}
     });
     panel.querySelectorAll('pre code:not([class*="language-"])').forEach(el => {
-      el.classList.add('language-text');
+      // Walk backwards from <pre> to find nearest lang-badge (set by file-icon conversion above)
+      const pre = el.closest('pre');
+      let detectedLang = null;
+      if (pre) {
+        // Check siblings and parent's siblings for a lang-badge
+        let sib = pre.previousElementSibling;
+        for (let i = 0; i < 6 && sib; i++, sib = sib.previousElementSibling) {
+          const badge = sib.classList?.contains('lang-badge') ? sib
+                      : sib.querySelector?.('.lang-badge[data-lang]');
+          if (badge?.dataset?.lang) { detectedLang = badge.dataset.lang; break; }
+        }
+        // Also check inside parent (badge may have been merged into prev sibling)
+        if (!detectedLang) {
+          const parent = pre.parentElement;
+          const badge = parent?.querySelector('.lang-badge[data-lang]');
+          if (badge?.dataset?.lang) detectedLang = badge.dataset.lang;
+        }
+      }
+      // Map lang-badge values to Prism language names
+      const LANG_MAP = { html: 'markup', jsx: 'jsx', tsx: 'tsx', sh: 'bash',
+                         yml: 'yaml', yaml: 'yaml', md: 'markdown', rs: 'rust',
+                         go: 'go', rb: 'ruby', java: 'java', kt: 'kotlin',
+                         swift: 'swift', cpp: 'cpp', c: 'c', h: 'c',
+                         dart: 'dart', vue: 'markup', svelte: 'markup' };
+      const prismLang = LANG_MAP[detectedLang] || detectedLang || 'javascript';
+      el.classList.add('language-' + prismLang);
       try { Prism.highlightElement(el); } catch(e) {}
     });
   }
